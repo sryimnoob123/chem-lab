@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f7f9;
+  --ink: #14181f;
+  --muted: #5b6472;
+  --line: #dfe3e9;
+  --accent: #1f6feb;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

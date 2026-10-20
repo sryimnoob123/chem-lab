@@ -1,0 +1,25 @@
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.log
+.DS_Store
+
+# 本地数据库（PGlite 数据目录）
+.pgdata/
+pgdata/
+
+# 环境变量
+.env
+.env.local
+.env*.local
+
+# 测试产物
+test-results/
+playwright-report/
+e2e-review/
+
+# 编辑器
+.vscode/
+.idea/
