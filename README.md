@@ -1,22 +1,119 @@
-# 化学实验虚拟仿真教学平台（chem-lab）
+# chem-lab · 无机及分析化学虚拟实验平台
 
-> 属于 `webapp` profile（Web 应用交付档）。共享区路径：`E:\workspace\public\NOBBBB\chem-lab\`
+> 面向《无机及分析化学实验》（03600004，36 学时，大一）的在线虚拟实验平台。
+> 学生在 2D/SVG 界面上拖试剂、看现象、拿反馈；教师端看学情、导数据。
 
-## 这是什么
-面向《无机及分析化学实验》（03600004，36 学时，大一）的在线虚拟实验平台。
-学生按实验流程在 2D/SVG 界面上操作器材，平台记录每一步、对违规操作给出强负反馈（爆炸/有毒气体等），
-教师端看学情与导出数据；学有余力的学生可以做拼凑式方案设计并由 AI 点评。
+---
 
-## 当前阶段
-- 目标：**周四（2026-10-22）晚** 给出一个能演示的 demo
-- demo 范围：待定（建议先做滴定线：实验 9 或 10）
-- 交付终点：扣子编程（code.coze.cn）一键部署
+## 30 秒上手
 
-## 关键约束（详见 skill）
-- skill `chem-lab-sim`：课程背景、产品深度、2D 方案、实验定义驱动架构
-- skill `coze-coding-webapp`：扣子部署硬约束（PG、环境变量、16MB、90s、3GB、main 分支）
+```powershell
+# 1) 依赖（Node 22）
+npm ci
 
-## 待定
-- demo 做哪 1-2 个实验
-- 数据库本地起法（Docker vs 本机 PG）
-- 教师端是否进 demo 范围
+# 2) 初始化数据库（本地 PGlite，单进程独占）
+$env:PGLITE_DIR = (Join-Path (Get-Location).Path ".pgdata-prod2")
+npm run db:init
+npm run db:demo          # 播种 40 人演示班级（可选，教师端要有数据才好看）
+
+# 3) 构建 + 起服务
+npm run build
+& ".\scripts\restart-prod.ps1"     # 会同步 static 到 standalone 并启动 :3001
+```
+
+打开 **http://localhost:3001**
+
+| 身份 | 凭证 | 落点 |
+|---|---|---|
+| 学生 | `20250101` / `周若曦`（登录页已预填） | `/experiments` |
+| 教师 | 口令 `2026` | `/teacher` |
+
+> ⚠️ `npm run build` 之后**必须**跑 `restart-prod.ps1`。
+> Next standalone 不会自动带 `.next/static`，漏了就是"整页无样式"。
+
+---
+
+## 演示动线（给老师看的那条）
+
+`门户 → 登录（点了就进）→ 我的实验（3 个重点）→ 新手教学 → 任务看板 → 拖试剂 → 正反馈 / 错误提示 → 重做 → 交卷 → 实验总结 + 导出 CSV`
+
+- 重点实验：**exp01 溶液配制 / exp09 酸碱标定 / exp08 称量练习**
+- 其余 7 个在「更多实验」里标「即将开放」，不可点（演示时不暴露半成品）
+- 演示模式加 `?demo=1` 会多出「跳过实验」按钮：不逐步操作，直接交卷看结果
+
+---
+
+## 目录速览
+
+```
+app/                    路由与页面（App Router）
+  exp/[id]/             实验台（场景 + 右栏 + 看板 + 结果条）
+  experiments/          实验列表（3 个重点 + 折叠的更多）
+  teacher/              教师端（学情总览 / 名单 / 学生明细）
+  api/                  session / runs / teacher / runs/[id]/export
+components/exp/         场景、反馈、事故、看板、新手教学
+components/portal/      门户与登录（SVG 场景动效）
+lib/scene/              试剂、器皿、液体混色（liquid-mix.ts）
+lib/chem/               物质库与反应规则
+lib/persist/            落库、重放、报告
+lib/report/summary.ts   实验总结的纯函数
+scripts/                验证与取证脚本
+docs/design/            设计契约、动效 token、风格裁定、素材许可
+.team/                  团队协作落盘（BUGS / DECISIONS / notes / handoff）
+```
+
+---
+
+## 常用脚本
+
+| 脚本 | 用途 | 用法 |
+|---|---|---|
+| `flow-smoke.mjs` | dev/生产都行，8 步冒烟 | `$env:BASE_URL="http://localhost:3001"; node scripts/flow-smoke.mjs exp01` |
+| `flow-chain.mjs` | 生产专用，10 项全链路 | `node scripts/flow-chain.mjs exp01` |
+| `contrast-audit.mjs` | 对比度审计（WCAG） | `node scripts/contrast-audit.mjs "/exp/exp01?force=1"` |
+| `motion-audit.mjs` | 动效/触控/性能审计 | `node scripts/motion-audit.mjs` |
+| `shot-workbench.mjs` | 实验台取证截图 | `node scripts/shot-workbench.mjs exp09 --advance=2` |
+| `restart-prod.ps1` | 同步 static + 重启 3001 | `& ".\scripts\restart-prod.ps1"` |
+| `db/seed-demo.mjs` | 播种/清空演示班级 | `node db/seed-demo.mjs [--purge]` |
+
+---
+
+## 当前状态（2026-10-21 晚）
+
+**已通过**
+- `tsc --noEmit` 干净 / `lint` 0 error / `vitest` 全绿 / `build` 成功
+- `flow-smoke exp01`、`exp09`：各 **8/8**
+- 对比度审计 `/exp/exp01`：**0 严重 / 0 偏低**
+- 液体混色单测 **19/19**，实验总结单测 **10/10**
+
+**本轮改动**
+- 实验台从暗场改**亮场**（纸白 + 墨线），事故时才压暗做反差
+- 液体颜色改按**化学语义**混合（红+黄不再同色），不再取"最后一次试剂"
+- 实验列表改「3 个重点 + 7 个即将开放」
+- 学生端与教师端彻底分开（学生端导航已无教师入口）
+- 登录页预填演示账号，一键进入
+- 报告页新增「本次总结」+「下载记录 CSV」
+- 演示模式新增「跳过实验」，仅 `?demo=1` 可见
+
+**已知限制**
+- 随机演示数据只铺在本地 `.pgdata-prod2`，线上靠 `db/seed-demo.mjs` 重播
+- 主动画仍是 SVG + CSS/WAAPI；GSAP 方案已评估（商用免费）但本轮未接入
+- 7 个"即将开放"实验：内容存在、交互未打磨
+- 登录仍是白名单校验（演示账号预填，不是关闭鉴权）
+
+---
+
+## 关键约定
+
+完整约定见 [`AGENTS.md`](./AGENTS.md)，其中与本项目演示最相关的四条：
+
+1. **不引动画库**（GSAP/Motion 等），动效一律 CSS transition/keyframes；只动 `transform/opacity`，交互 ≤300ms
+2. **改颜色只走 token**（`--paper` / `--ink` / `--line` / `--river-700` 等），不写字面量
+3. **`data-demo-id` 一个都不许改**——演示脚本和 e2e 全靠它定位
+4. **中文文件只用 `write`/`edit` 工具**，不要用 PowerShell 重定向（会变 GBK 乱码）
+
+设计口径：[`docs/design/STYLE-20261021.md`](./docs/design/STYLE-20261021.md)（风格唯一裁定）、
+[`docs/design/DESIGN-CONTRACT.md`](./docs/design/DESIGN-CONTRACT.md)、
+[`docs/design/MOTION.md`](./docs/design/MOTION.md)。
+
+素材许可：[`docs/design/ASSET-LICENSES.md`](./docs/design/ASSET-LICENSES.md)（代码依赖全部 MIT/Apache-2.0，外部素材 0 件）。

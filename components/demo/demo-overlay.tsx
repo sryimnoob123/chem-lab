@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { DemoStage } from "./stage";
-import { DEMO_SCRIPTS } from "@/lib/demo/scripts";
+import { DEMO_ORDER, DEMO_SCRIPTS } from "@/lib/demo/scripts";
 import { SCRIPT_NOTES } from "@/lib/demo/notes";
 
-const ORDER = ["home", "login", "catalog", "exp09", "report", "fx", "teacher"];
-
-/** 标准流程顺序：门户 → 登录 → 实验 → 交卷报告 → 事故 → 教师端 */
-const ordered = ORDER.map((id) => DEMO_SCRIPTS.find((s) => s.id === id)).filter(
+/** 标准流程顺序（单一来源 = lib/demo/scripts 的 DEMO_ORDER）：
+ *  门户 → 登录 → 实验 → 交卷报告 → 事故 → 教师端，然后接 10 个实验的操作演示。 */
+const ordered = DEMO_ORDER.map((id) => DEMO_SCRIPTS.find((s) => s.id === id)).filter(
   (s): s is NonNullable<typeof s> => Boolean(s),
 );
 const scripts = ordered.length ? ordered : DEMO_SCRIPTS;
@@ -58,9 +57,20 @@ export function DemoOverlay({ onClose }: { onClose: () => void }) {
   );
 }
 
+/**
+ * 「一键演示」入口开关（2026-10-21 用户决定：演示流程优先级最低，前端先下线）。
+ *
+ * 代码完整保留（lib/demo/** 的 10 场脚本、导演台、光标都还在），
+ * `/demo` 调试页也不受影响。需要重新上线时：
+ *   1) 把这里改成 true；
+ *   2) 确认 `data-demo-id="demo-mode-open"` 的入口回到首页/壳层。
+ */
+const DEMO_ENTRY_ENABLED = false;
+
 /** 右上角的「演示模式」按钮 + 浮层 */
 export function DemoLaunch({ label = "一键演示" }: { label?: string }) {
   const [open, setOpen] = useState(false);
+  if (!DEMO_ENTRY_ENABLED) return null;
   return (
     <>
       <button

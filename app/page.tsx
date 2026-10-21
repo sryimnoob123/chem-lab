@@ -65,12 +65,13 @@ export default function Cover() {
           background: #f6f7f5;
           color: var(--ink);
         }
+        /* 底部只留一条极窄的纸色接边，不再整片压白 */
         .cover__wash {
           position: absolute;
           inset: 0;
           z-index: 1;
           pointer-events: none;
-          background: linear-gradient(to top, #f6f7f5 0%, rgba(246,247,245,.28) 8%, transparent 26%);
+          background: linear-gradient(to top, #f6f7f5 0%, rgba(246,247,245,.18) 4%, transparent 11%);
         }
         .cover__tick { border-color: rgba(35, 48, 127, .28); z-index: 3; }
 
@@ -96,13 +97,14 @@ export default function Cover() {
           padding-left: clamp(32px, 7vw, 116px);
           padding-block: clamp(34px, 6vh, 64px) 22px;
         }
+        /* 文字压条：只压在文案所在的一列，右缘 200px 内柔和收掉，右侧校园图保持清晰 */
         .cover-hero::before {
           content: "";
           position: absolute;
-          inset: -10px -28px -14px 0;
+          inset: -10px -150px -14px 0;
           z-index: -1;
           pointer-events: none;
-          background: linear-gradient(90deg, rgba(246,247,245,.9) 0%, rgba(246,247,245,.86) 62%, rgba(246,247,245,.6) 88%, rgba(246,247,245,.16) 100%);
+          background: linear-gradient(90deg, rgba(246,247,245,.9) 0%, rgba(246,247,245,.87) 70%, rgba(246,247,245,.8) 85%, rgba(246,247,245,.42) 94%, rgba(246,247,245,0) 100%);
         }
         .cover-hero__inner { width: 100%; }
         .cover-hero__rule { background: var(--river-700); }
@@ -123,7 +125,7 @@ export default function Cover() {
         }
         .cover-hero__slogan {
           margin: 8px 0 0;
-          color: rgba(74, 87, 104, .78);
+          color: var(--ink-2);
           font-size: 12px;
           line-height: 1.6;
         }
@@ -166,6 +168,14 @@ export default function Cover() {
 
         @media (max-width: 900px) {
           .cover-hero { max-width: none; padding-left: clamp(20px, 5vw, 40px); padding-right: clamp(20px, 5vw, 40px); }
+          /* 竖屏：白雾压条上下渐强，上半段让校门/屋顶露出来，文字区保证可读 */
+          .cover-hero::before {
+            background: linear-gradient(180deg, rgba(246,247,245,.4) 0%, rgba(246,247,245,.54) 30%, rgba(246,247,245,.68) 100%);
+          }
+          .cover .cover-hero__sub,
+          .cover .cover-hero__slogan,
+          .cover .exp-list__note,
+          .cover .exp-list__all { color: #2e3a48; }
         }
         @media (max-width: 620px) {
           .cover-bar { padding: 0 16px; gap: 10px; }

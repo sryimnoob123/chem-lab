@@ -1,0 +1,177 @@
+/* ===================================================================
+   事故冲击增强层（components/exp/scene/fx/）
+   -------------------------------------------------------------------
+   1. 局部震动：只抖实验台/场景层（[data-scene] 或演示舞台），不抖整页。
+      时长复用 motion.css 的 --fx-shake-1..4（L1~L4）。
+   2. 事故后 1.2s「余波」：余烬 / 烟尾 / 电弧，≤8 个节点，只动 transform/opacity/filter。
+   3. reduced-motion：全部静止，余波停在终态一帧（信息不丢）。
+   铁律：只动 transform / opacity / filter；不写死时长（全部 CSS 变量）。
+   =================================================================== */
+
+/* 固定层：盖住整个舞台，不吃指针；原先 index.tsx 里的 .fxShell 没有对应样式，
+   导致外壳只是个空 div，这里补上定位（绝对定位对齐 .layer）。 */
+.shell {
+  --fx-aftermath: 1200ms;
+  --fx-aftermath-delay: 600ms;
+  --fx-ember-step: 90ms;
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: block;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ---------------- 局部震动（作用在场景层元素上） ---------------- */
+:global(.fx-scene-impact-1) {
+  animation: fx-scene-1 var(--fx-shake-1) linear 1 both;
+  will-change: transform;
+}
+:global(.fx-scene-impact-2) {
+  animation: fx-scene-2 var(--fx-shake-2) linear 1 both;
+  will-change: transform;
+}
+:global(.fx-scene-impact-3) {
+  animation: fx-scene-3 var(--fx-shake-3) linear 1 both;
+  will-change: transform;
+}
+:global(.fx-scene-impact-4) {
+  animation: fx-scene-4 var(--fx-shake-4) linear 1 both;
+  will-change: transform;
+}
+
+@keyframes fx-scene-1 {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-1px, 0); }
+  55% { transform: translate(1px, 0); }
+}
+@keyframes fx-scene-2 {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-2px, 1px); }
+  45% { transform: translate(2px, -1px); }
+  70% { transform: translate(-1px, 1px); }
+}
+@keyframes fx-scene-3 {
+  0%, 100% { transform: translate(0, 0); }
+  12% { transform: translate(-4px, 2px); }
+  30% { transform: translate(4px, -2px); }
+  48% { transform: translate(-3px, 1px); }
+  66% { transform: translate(2px, -1px); }
+  84% { transform: translate(-1px, 1px); }
+}
+@keyframes fx-scene-4 {
+  0%, 100% { transform: translate(0, 0); }
+  8% { transform: translate(-7px, 3px) rotate(-0.25deg); }
+  22% { transform: translate(7px, -3px) rotate(0.25deg); }
+  36% { transform: translate(-5px, 2px); }
+  52% { transform: translate(4px, -2px); }
+  68% { transform: translate(-3px, 1px); }
+  84% { transform: translate(2px, -1px); }
+}
+
+/* ---------------- 事故后余波 ---------------- */
+
+.aftermath {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12%;
+  height: 54%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* 余烬：从台面上浮、衰减，停在透明度很低的终态 */
+.aftermathEmber {
+  position: absolute;
+  left: var(--x, 50%);
+  bottom: var(--y, 4%);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--oxid);
+  opacity: 0.24;
+  transform: translateY(-18px) scale(0.7);
+  filter: blur(0.2px);
+  animation: fx-aftermath-ember var(--fx-aftermath) ease-out 1 both;
+  animation-delay: calc(var(--fx-aftermath-delay) + var(--d, 0ms));
+}
+
+.aftermathEmber:nth-child(1) { --x: 22%; --y: 6%; --d: 0ms; }
+.aftermathEmber:nth-child(2) { --x: 38%; --y: 12%; --d: var(--fx-ember-step); }
+.aftermathEmber:nth-child(3) { --x: 56%; --y: 3%; --d: calc(var(--fx-ember-step) * 2); }
+.aftermathEmber:nth-child(4) { --x: 72%; --y: 9%; --d: calc(var(--fx-ember-step) * 3); }
+
+@keyframes fx-aftermath-ember {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.4);
+  }
+  22% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0.24;
+    transform: translateY(-18px) scale(0.7);
+  }
+}
+
+/* 烟尾：横向摊开、变淡，只动 transform/opacity/filter */
+.aftermathWisp {
+  position: absolute;
+  left: var(--x, 46%);
+  bottom: var(--y, 2%);
+  width: 46px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(74, 87, 104, 0.32), transparent 70%);
+  opacity: 0.16;
+  transform: translate(var(--wx, -14px), -26px) scale(1.35);
+  filter: blur(5px);
+  animation: fx-aftermath-wisp var(--fx-aftermath) ease-out 1 both;
+  animation-delay: calc(var(--fx-aftermath-delay) + var(--fx-ember-step));
+}
+
+.aftermathWisp:nth-child(5) { --x: 40%; --y: 2%; }
+.aftermathWisp:nth-child(6) { --x: 62%; --y: 8%; --wx: 14px; }
+
+@keyframes fx-aftermath-wisp {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.75);
+  }
+  30% {
+    opacity: 0.24;
+  }
+  100% {
+    opacity: 0.16;
+    transform: translate(var(--wx, -14px), -26px) scale(1.35);
+  }
+}
+
+/* 电弧/火花形态：不给烟尾，只留两点冷光 */
+.aftermath[data-aftermath="spark"] .aftermathEmber {
+  background: #dfe9f5;
+  filter: blur(0.3px);
+}
+
+.aftermath[data-aftermath="spark"] .aftermathWisp {
+  display: none;
+}
+
+/* ---------------- 降级：静止，但保留余波终态一帧 ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  :global(.fx-scene-impact-1),
+  :global(.fx-scene-impact-2),
+  :global(.fx-scene-impact-3) {
+    animation: none;
+  }
+  :global(.fx-scene-impact-4) {
+    animation: none;
+  }
+  .aftermathEmber,
+  .aftermathWisp {
+    animation: none;
+  }
+}

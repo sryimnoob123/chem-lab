@@ -1,0 +1,252 @@
+/* ===================================================================
+   正反馈组件样式（components/exp/feedback/）
+   规格见 docs/design/STYLE-20261021.md §2 / §3；
+   色值取自 app/globals.css，时长/缓动取自 app/styles/motion.css。
+   本文件只新增组件级变量（--fb-*），不重复定义全局 token。
+   铁律：只动 transform / opacity / filter；无 transition: all；无循环庆祝。
+   =================================================================== */
+
+/* ---------------- SuccessBurst：刻度环扩散 ---------------- */
+/* 用法：放进器皿外层的定位容器，自身是正方形 relative 盒，不含偏移。 */
+
+.burst {
+  --fb-burst: var(--pulse, 360ms);
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+
+.burstRing {
+  position: absolute;
+  inset: 0;
+  animation: fb-burst var(--fb-burst) var(--ease-out) both;
+}
+
+.burstTick {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: var(--fb-tick, 8px);
+  border-radius: 1px;
+  background: var(--jade-600);
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--fb-angle, 0deg))
+    translateY(calc(var(--fb-radius, 32px) * -1));
+}
+
+/* L2/L3 只是刻度更长，节奏不变（时长仍 360ms，不阻塞下一步） */
+.burst[data-level="L2"] .burstTick {
+  height: calc(var(--fb-tick, 8px) * 1.15);
+}
+
+.burst[data-level="L3"] .burstTick {
+  height: calc(var(--fb-tick, 8px) * 1.3);
+}
+
+@keyframes fb-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+/* ---------------- ScoreOdometer：数字滚动 ---------------- */
+
+.odometer {
+  --fb-odometer: 800ms;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.odometerValue {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: var(--text-25, 25px);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.odometerSuffix {
+  font-size: var(--text-14, 14px);
+  font-weight: 400;
+  opacity: 0.72;
+}
+
+.odometerLabel {
+  font-family: var(--font-sans);
+  font-size: var(--text-12, 12px);
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  opacity: 0.62;
+}
+
+/* 常驻终值：读屏可读、截图/无 JS 也有正确数字 */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------- StreakPill：连对计数 ---------------- */
+
+.streak {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--jade-600);
+  border-radius: 999px;
+  background: var(--jade-100);
+  color: var(--jade-600);
+  font-family: var(--font-mono);
+  font-size: var(--text-12, 12px);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.streakInner {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.streakCount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.streakLabel {
+  font-family: var(--font-sans);
+  font-size: var(--text-12, 12px);
+  opacity: 0.86;
+}
+
+/* ---------------- EndingFlash：一次性高光 + 液色过渡 ---------------- */
+
+.flash {
+  --fb-flash: 700ms;
+  --fb-flash-wash: var(--tint, 600ms);
+  --fb-flash-brightness: 1.06;
+  --fb-flash-accent: var(--jade-600);
+  position: relative;
+  display: block;
+  animation: fb-flash var(--fb-flash) var(--ease-out) both;
+}
+
+/* 滴定终点 = 酚酞粉（STYLE §1 唯一化学高光色） */
+.flash[data-tone="endpoint"] {
+  --fb-flash-accent: #f48fb1;
+}
+
+.flashWash {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--fb-flash-accent);
+  opacity: 0;
+  animation: fb-wash var(--fb-flash-wash) var(--ease-out) both;
+}
+
+@keyframes fb-flash {
+  0% {
+    filter: brightness(1);
+  }
+  28% {
+    filter: brightness(var(--fb-flash-brightness));
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+/* 液色过渡：accent 淡入淡出，只动 opacity，不换真实液色 */
+@keyframes fb-wash {
+  0% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 0.18;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------------- 降级：减少动态效果（静止但信息不丢） ---------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .burstRing {
+    animation: none;
+    opacity: 0.55;
+    transform: none;
+  }
+
+  .flash {
+    animation: none;
+  }
+
+  /* 静态描边压在 children 之上，保证"终点/完成"信息可见 */
+  .flash::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 2px var(--fb-flash-accent);
+  }
+
+  .flashWash {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* 组件属性（hook 水合后）与媒体查询双保险：即使 JS 未就绪也静止 */
+.burst[data-reduced="true"] .burstRing {
+  animation: none;
+  opacity: 0.55;
+  transform: none;
+}
+
+.flash[data-reduced="true"] {
+  animation: none;
+}
+
+.flash[data-reduced="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px var(--fb-flash-accent);
+}
+
+.flash[data-reduced="true"] .flashWash {
+  animation: none;
+  opacity: 0;
+}

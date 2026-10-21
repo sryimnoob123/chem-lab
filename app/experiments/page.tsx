@@ -8,6 +8,13 @@ import { getStudent } from "@/lib/session";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "我的实验" };
 
+/**
+ * 三个"精做"实验：交互、动效、反馈都打磨过，可以现场完整演示。
+ * 其余 7 个收进"更多实验"，默认禁用 —— 与其让观众点开一个半成品，
+ * 不如明确标"即将开放"（用户 2026-10-21 拍板）。
+ */
+const FEATURED_IDS = ["exp01", "exp09", "exp08"] as const;
+
 function StateBadge({ playable }: { playable: boolean }) {
   return playable ? (
     <span className="cat-state" data-kind="open">
@@ -22,7 +29,7 @@ function StateBadge({ playable }: { playable: boolean }) {
         <rect x="3.5" y="7" width="9" height="6.5" rx="1" fill="none" stroke="currentColor" strokeWidth="1.4" />
         <path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" strokeWidth="1.4" />
       </svg>
-      待开放
+      即将开放
     </span>
   );
 }
@@ -32,12 +39,26 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const student = await getStudent();
   if (!student) redirect("/login");
   const { unlock } = await searchParams;
-  // ?unlock=all 给调试/演示用，跳过分层解锁
-  const { groups, totalHours, playable } = await loadCatalog(student.studentNo, { unlockAll: unlock === "all" });
+  /** ?unlock=all 给调试/演示用：跳过精做筛选，10 个全部可点 */
+  const debugAll = unlock === "all";
+  const { groups, totalHours, playable } = await loadCatalog(student.studentNo, { unlockAll: debugAll });
 
-  const navExperiments: NavExperiment[] = groups.flatMap((g) =>
-    g.items.map((i) => ({ id: i.id, no: i.no, title: i.title, playable: i.playable, group: g.title })),
+  const allItems = groups.flatMap((g) =>
+    g.items.map((item) => ({ ...item, groupId: g.id, groupTitle: g.title, unlocked: g.unlocked })),
   );
+
+  const navExperiments: NavExperiment[] = allItems.map((i) => ({
+    id: i.id,
+    no: i.no,
+    title: i.title,
+    playable: i.playable,
+    group: i.groupTitle,
+  }));
+
+  const featured = FEATURED_IDS.map((id) => allItems.find((item) => item.id === id)).filter(
+    (item): item is (typeof allItems)[number] => Boolean(item),
+  );
+  const rest = allItems.filter((item) => !FEATURED_IDS.includes(item.id as (typeof FEATURED_IDS)[number]));
 
   return (
     <AppShell
@@ -49,72 +70,98 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           <span className="cat-head__rule" aria-hidden="true" />
           <h1>我的实验</h1>
           <p>
-            按教学进度完成 {navExperiments.length} 次实验，点击进入。
-            <span className="mono"> 已开放 {playable}</span>
+            本学期重点三个，做完整流程。
+            <span className="mono"> 已开放 {debugAll ? navExperiments.length : featured.length}</span>
           </p>
         </Reveal>
 
-        {groups.map((group, gi) => (
-          <section key={group.id} className="cat-group" aria-labelledby={`g-${group.id}`}>
-            <Reveal as="div" className="cat-group__head" index={0}>
-              <h2 id={`g-${group.id}`}>{group.title}</h2>
-              <p>{group.note}</p>
-              {group.unlocked ? (
-                <span className="cat-group__progress mono">
-                  {group.done}/{group.total} 已完成
-                </span>
-              ) : (
-                <span className="cat-group__lock mono" data-demo-id={`demo-group-locked-${group.id}`}>
-                  <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
-                    <rect x="3.5" y="7" width="9" height="6.5" rx="1" fill="none" stroke="currentColor" strokeWidth="1.4" />
-                    <path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" strokeWidth="1.4" />
-                  </svg>
-                  {group.unlockHint}
-                </span>
-              )}
-            </Reveal>
-            <ol className="cat-list" data-locked={group.unlocked ? "false" : "true"}>
-              {group.items.map((item, i) => {
-                // 已完成的实验永远可进（回看/重做），不受档位锁定限制
-                const open = item.playable && (group.unlocked || Boolean(item.completed));
-                return (
-                  <Reveal key={item.id} as="li" index={Math.min(i, 5)} className="cat-row" data-state={open ? "open" : "locked"}>
-                    <Link
-                      className="cat-row__link ix-lift"
-                      href={open ? `/exp/${item.id}` : "/experiments"}
-                      aria-disabled={!open}
-                      data-demo-id={`demo-catalog-${item.id}`}
-                    >
-                      <span className="cat-row__no mono">{item.no}</span>
-                      <span className="cat-row__icon" aria-hidden="true">
-                        <svg width="20" height="20" viewBox="0 0 24 24">
-                          <path d="M4 18h16M6 18V9m4 9V6m4 12v-7m4 7v-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                        </svg>
+        <Reveal as="section" className="cat-featured" index={1} aria-labelledby="cat-featured-head">
+          <div className="cat-featured__head">
+            <h2 id="cat-featured-head">重点实验</h2>
+            <p>每一步都有动画和反馈，错了可以原地重做。</p>
+          </div>
+          <ul className="cat-featured__list">
+            {featured.map((item) => (
+              <li key={item.id}>
+                <Link
+                  className="cat-card ix-lift"
+                  href={`/exp/${item.id}`}
+                  data-demo-id={`demo-catalog-${item.id}`}
+                >
+                  <span className="cat-card__top">
+                    <span className="cat-card__no mono">{item.no}</span>
+                    <span className="cat-card__hours mono">{item.hours} 学时</span>
+                  </span>
+                  <span className="cat-card__title">{item.title}</span>
+                  <span className="cat-card__desc">{item.desc}</span>
+                  <span className="cat-card__foot">
+                    <span className="mono">{item.kind}</span>
+                    {item.bestScore != null ? (
+                      <span className="cat-card__score mono">{item.bestScore} 分</span>
+                    ) : (
+                      <span className="cat-card__score mono" data-empty="true">
+                        未做
                       </span>
-                      <span className="cat-row__main">
-                        <span className="cat-row__title">
-                          {item.title}
-                          {item.completed ? (
-                            <span className="cat-row__done" title="已完成" aria-label="已完成">
-                              ✓
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="cat-row__desc">{item.desc}</span>
-                      </span>
-                      <span className="cat-row__meta mono">
-                        {item.bestScore != null ? `${item.bestScore} 分 · ` : ""}
-                        {item.hours} 学时 · {item.kind}
-                      </span>
-                      <StateBadge playable={open} />
+                    )}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+
+        <Reveal as="details" className="cat-more" index={2}>
+          <summary className="cat-more__summary">
+            <span className="cat-more__title">更多实验</span>
+            <span className="cat-more__count mono">{rest.length} 个 · 即将开放</span>
+            <span className="cat-more__chev" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 16 16">
+                <path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </span>
+          </summary>
+          <ol className="cat-list cat-list--more" data-locked="true">
+            {rest.map((item) => {
+              const open = debugAll && item.playable;
+              const body = (
+                <>
+                  <span className="cat-row__no mono">{item.no}</span>
+                  <span className="cat-row__icon" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                      <path d="M4 18h16M6 18V9m4 9V6m4 12v-7m4 7v-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                  <span className="cat-row__main">
+                    <span className="cat-row__title">{item.title}</span>
+                    <span className="cat-row__desc">{item.desc}</span>
+                  </span>
+                  <span className="cat-row__meta mono">
+                    {item.hours} 学时 · {item.kind}
+                  </span>
+                  <StateBadge playable={open} />
+                </>
+              );
+              return (
+                <li key={item.id} className="cat-row" data-state={open ? "open" : "locked"}>
+                  {open ? (
+                    <Link className="cat-row__link ix-lift" href={`/exp/${item.id}`} data-demo-id={`demo-catalog-${item.id}`}>
+                      {body}
                     </Link>
-                  </Reveal>
-                );
-              })}
-            </ol>
-            {gi < groups.length - 1 ? <span className="cat-group__sep" aria-hidden="true" /> : null}
-          </section>
-        ))}
+                  ) : (
+                    <div
+                      className="cat-row__link"
+                      aria-disabled="true"
+                      data-demo-id={`demo-catalog-${item.id}`}
+                      data-locked-why="即将开放"
+                    >
+                      {body}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </Reveal>
       </div>
     </AppShell>
   );

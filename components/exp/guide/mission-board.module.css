@@ -1,0 +1,452 @@
+/* ===================================================================
+   MissionBoard —— 左上角任务看板（纸白卡 / 1px 线 / 圆角 2px）。
+   桌面：常驻 4 行，宽 244px，和左侧试剂架同一列；不铺满、不抢实验台。
+   窄屏：收窄到 196px 并压缩字号；点整张卡的头展开「详情」。
+   动效只动 transform / opacity / background-color，≤160ms；reduce 下全静止。
+   =================================================================== */
+
+.board {
+  width: 244px;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* 卡片头 = 展开按钮：点整张卡就够，省掉一行常驻控件 */
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px 9px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms var(--ease-out);
+}
+
+.head:hover {
+  background: var(--paper);
+}
+
+.head:focus-visible {
+  outline: 2px solid var(--river-700);
+  outline-offset: -2px;
+}
+
+.rowHead {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.expNo {
+  flex: 0 0 auto;
+  color: var(--river-700);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  opacity: 0.72;
+}
+
+.caret {
+  display: inline-block;
+  transition: transform 160ms var(--ease-out);
+}
+
+.caret[data-open="true"] {
+  transform: rotate(180deg);
+}
+
+/* 第二行：一句话目标 */
+.goal {
+  display: -webkit-box;
+  overflow: hidden;
+  padding-left: 6px;
+  border-left: 2px solid var(--river-700);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* 第三行：只要进度（点 + 第 N/M 步） */
+.rowProgress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dots {
+  flex: 0 0 auto;
+  display: inline-flex;
+  gap: 3px;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  background: var(--line);
+}
+
+.dot[data-state="done"] {
+  background: var(--jade-600);
+}
+
+.dot[data-state="current"] {
+  background: var(--river-700);
+  outline: 1px solid var(--river-700);
+  outline-offset: 1px;
+}
+
+.progress {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 第四行：当前一步的一句指引（≤20 字） */
+.guide {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.guideMark {
+  flex: 0 0 3px;
+  width: 3px;
+  height: 11px;
+  background: var(--river-700);
+}
+
+/* 指引最多两行：省略号只由 CSS 截一次（JS 那侧只做字数上限） */
+.guideText {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* ---------------- 折叠区：详细流程 / 参数 / 提示 / 老师会说 ---------------- */
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: min(58vh, 440px);
+  overflow-y: auto;
+  padding: 8px 10px 10px;
+  border-top: 1px solid var(--line);
+  scrollbar-width: thin;
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stepItem[data-state="current"] {
+  background: var(--paper);
+}
+
+.stepButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 26px;
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms var(--ease-out);
+}
+
+.stepButton:hover {
+  background: var(--paper);
+}
+
+.stepButton:focus-visible {
+  outline: 2px solid var(--river-700);
+  outline-offset: -2px;
+}
+
+.stepNo {
+  flex: 0 0 14px;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-align: center;
+}
+
+.stepItem[data-state="done"] .stepNo {
+  color: var(--jade-600);
+}
+
+.stepItem[data-state="todo"] .stepButton {
+  color: var(--ink-2);
+  opacity: 0.7;
+}
+
+.stepName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stepTime {
+  flex: 0 0 auto;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  opacity: 0.7;
+}
+
+.stepNow {
+  flex: 0 0 auto;
+  color: var(--river-700);
+  font-family: var(--font-mono);
+  font-size: 8px;
+}
+
+/* 参数格：两列，每格「小标题 + 数字 + 一句说明」 */
+.params {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin: 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+}
+
+.param {
+  min-width: 0;
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.param[data-tone="warn"] {
+  border-color: var(--warn);
+}
+
+.paramLabel {
+  color: var(--ink-2);
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.paramValue {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.paramValue em {
+  color: var(--ink-2);
+  font-size: 9px;
+  font-style: normal;
+}
+
+.paramNote {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 9px;
+  line-height: 1.35;
+  opacity: 0.8;
+}
+
+/* 提示阶梯 */
+.hintBox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+}
+
+.hintLevel {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.hintMeter {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.hintTick {
+  width: 12px;
+  height: 2px;
+  background: var(--line);
+}
+
+.hintTick[data-active="true"] {
+  background: var(--river-700);
+}
+
+.hintTick[data-warn="true"][data-active="true"] {
+  background: var(--warn);
+}
+
+.hintButton {
+  margin-left: auto;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  transition: border-color 140ms var(--ease-out);
+}
+
+.hintButton:hover {
+  border-color: var(--river-700);
+  color: var(--ink);
+}
+
+.hintButton:focus-visible {
+  outline: 2px solid var(--river-700);
+  outline-offset: 1px;
+}
+
+.hintWarn {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--warn);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.note {
+  margin: 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+  font-family: var(--font-kai);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.note span {
+  margin-right: 3px;
+  color: var(--river-700);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+/* ---------------- 窄屏：更小更扁，仍不盖实验台主体 ---------------- */
+@media (max-width: 900px) {
+  .board {
+    width: 196px;
+  }
+
+  .head {
+    gap: 4px;
+    padding: 6px 8px 7px;
+  }
+
+  .goal {
+    font-size: 11px;
+    -webkit-line-clamp: 2;
+  }
+
+  .guide {
+    font-size: 11px;
+  }
+
+  .detail {
+    max-height: min(50vh, 300px);
+    padding: 6px 8px 8px;
+  }
+
+  .stepButton {
+    min-height: 44px;
+  }
+
+  .hintButton {
+    min-height: 44px;
+    padding: 0 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .toggleText {
+    display: none;
+  }
+}
+
+/* ---------------- 降级：减少动态偏好 ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  .head,
+  .caret,
+  .stepButton,
+  .hintButton {
+    transition: none;
+  }
+
+  .head:hover,
+  .stepButton:hover {
+    background: transparent;
+  }
+}

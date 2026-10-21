@@ -39,7 +39,7 @@
   gap: 12px;
   padding: 0 16px;
   border-bottom: 1px solid var(--bench-line);
-  background: rgba(10, 16, 24, 0.78);
+  background: rgba(246, 247, 245, 0.92);
   backdrop-filter: blur(8px);
 }
 
@@ -57,7 +57,7 @@
 }
 
 .back:hover {
-  color: #fff;
+  color: var(--river-700);
 }
 
 .topName {
@@ -81,7 +81,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #fff;
+  color: var(--ink);
   font-size: var(--text-12);
   font-weight: 500;
 }
@@ -136,7 +136,7 @@
   gap: 2px;
   padding: 2px;
   border: 1px solid var(--bench-line);
-  background: rgba(10, 16, 24, 0.85);
+  background: rgba(237, 240, 238, 0.96);
 }
 
 .modeLabel {
@@ -165,7 +165,7 @@
 }
 
 .modeButton:hover {
-  color: #fff;
+  color: var(--river-700);
 }
 
 .readonlyBadge {
@@ -198,7 +198,7 @@
   align-items: center;
   justify-content: center;
   border-top: 1px solid var(--bench-line);
-  background: rgba(10, 16, 24, 0.94);
+  background: rgba(246, 247, 245, 0.96);
   color: var(--bench-text);
   font-family: var(--font-mono);
   font-size: 9px;
@@ -223,23 +223,24 @@
 }
 
 .exit:hover {
-  color: #fff;
+  color: var(--river-700);
+  text-decoration-thickness: 2px;
 }
 
 .finishTop {
   min-height: 30px;
   padding: 0 10px;
   border: 1px solid var(--jade-600);
-  background: rgba(15, 123, 108, 0.16);
-  color: #b7e3d6;
+  background: rgba(15, 123, 108, 0.12);
+  color: #0f7b6c;
   font: inherit;
   font-size: 10px;
   white-space: nowrap;
 }
 
 .finishTop:hover:not(:disabled) {
-  background: rgba(15, 123, 108, 0.28);
-  color: #fff;
+  background: rgba(15, 123, 108, 0.22);
+  color: #0b5e52;
 }
 
 .finishTop:disabled {
@@ -260,6 +261,16 @@
   overflow: hidden;
 }
 
+/* 左上角任务看板：和左侧试剂架同一列，压在场景之上但不进实验台中心 */
+.missionSlot {
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  z-index: 12;
+  width: 244px;
+  max-width: calc(100% - 32px);
+}
+
 .sceneTodo {
   position: absolute;
   top: 8px;
@@ -269,8 +280,8 @@
   padding: 3px 8px;
   transform: translateX(-50%);
   border: 1px solid rgba(245, 158, 11, 0.3);
-  background: rgba(10, 16, 24, 0.82);
-  color: #d8b36a;
+  background: rgba(246, 247, 245, 0.94);
+  color: #b45309;
   font-family: var(--font-mono);
   font-size: 8px;
   white-space: nowrap;
@@ -286,12 +297,12 @@
 .rack {
   position: absolute;
   left: 16px;
-  top: 14px;
+  top: 156px;
   z-index: 8;
-  width: 196px;
+  width: 244px;
   padding: 10px;
   border: 1px solid var(--bench-line);
-  background: rgba(14, 22, 32, 0.72);
+  background: rgba(246, 247, 245, 0.92);
   backdrop-filter: blur(8px);
 }
 
@@ -301,7 +312,7 @@
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 8px;
-  color: #fff;
+  color: var(--ink);
   font-size: 11px;
   font-weight: 500;
 }
@@ -324,8 +335,8 @@
   min-height: 30px;
   padding: 0 10px;
   border: 1px solid var(--river-100);
-  background: rgba(14, 22, 32, 0.94);
-  color: #fff;
+  background: rgba(246, 247, 245, 0.94);
+  color: var(--ink-2);
   font-size: 10px;
   white-space: nowrap;
   pointer-events: none;
@@ -348,6 +359,7 @@
 }
 
 .reagent {
+  position: relative;
   width: 100%;
   min-height: 48px;
   display: flex;
@@ -355,11 +367,22 @@
   gap: 8px;
   padding: 5px 7px;
   border: 1px solid var(--bench-line);
-  background: rgba(26, 37, 49, 0.55);
+  background: var(--paper-2);
   color: var(--bench-text);
   font: inherit;
   text-align: left;
   cursor: grab;
+}
+
+/* 场景内流程指引：下一步该用的那瓶微亮（只动 opacity，不换色板） */
+.reagent[data-next="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 1px solid var(--river-700);
+  opacity: 0.2;
+  pointer-events: none;
+  animation: bench-next 2400ms ease-in-out infinite;
 }
 
 .reagent:hover {
@@ -412,7 +435,7 @@
 }
 
 .reagentName {
-  color: #fff;
+  color: var(--ink);
   font-size: 11px;
   line-height: 1.25;
 }
@@ -439,7 +462,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 366px 48px 226px;
+  padding: 8px 328px 48px 276px;
 }
 
 .apparatusWrap {
@@ -494,7 +517,7 @@
   height: 17%;
   z-index: 0;
   border-top: 1px solid var(--bench-line);
-  background: rgba(26, 37, 49, 0.32);
+  background: rgba(246, 247, 245, 0.90);
 }
 
 .flaskTarget {
@@ -530,6 +553,31 @@
   background: rgba(140, 180, 220, 0.08);
 }
 
+/* 场景内流程指引：这一步要投试剂 → 锥形瓶热区缓慢脉冲（和试剂架微亮同相位） */
+.flaskTarget[data-next="true"] {
+  border-color: var(--river-700);
+}
+
+.flaskTarget[data-next="true"][data-active="false"]::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 1px dashed var(--river-700);
+  opacity: 0.18;
+  pointer-events: none;
+  animation: bench-next 2400ms ease-in-out infinite;
+}
+
+@keyframes bench-next {
+  0%,
+  100% {
+    opacity: 0.16;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
 .dropLabel {
   position: absolute;
   left: 50%;
@@ -545,28 +593,17 @@
   opacity: 0.72;
 }
 
-.stageCaption {
-  position: absolute;
-  left: 20px;
-  bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--bench-text);
-  font-size: 10px;
-  line-height: 1.4;
-  opacity: 0.55;
-}
-
-.captionMark {
-  width: 12px;
-  height: 1px;
-  background: var(--bench-text);
+/* 拖拽松手前 120ms 变亮：热区先"接住"，再进入吸附/倒入。 */
+.flaskTarget {
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    filter 120ms ease;
 }
 
 .fxSlot {
   position: absolute;
-  inset: 0 360px 0 0;
+  inset: 0 328px 0 0;
   z-index: 6;
   pointer-events: none;
 }
@@ -583,11 +620,13 @@
   border-top-color: var(--bench-line) !important;
 }
 
+/* 事故特效的压场薄雾：亮场里是"压淡"，不是盖一张 90% 的白板
+   （旧暗场是 rgba(246, 247, 245, 0.90)；批量换色时被误写成 0.90 纸白，整台器皿被冲淡） */
 .fxSlot::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(14, 22, 32, 0.28);
+  background: rgba(246, 247, 245, 0.28);
 }
 
 /* 失败时先让器皿抖完，再露出事故特效；时长/缓动取 motion token。 */
@@ -595,7 +634,7 @@
   animation: ix-enter var(--enter) var(--ease-out) var(--shake) both;
 }
 
-/* 四角坐标刻度 */
+/* 四角坐标刻度：装饰件已从 JSX 收起（保留样式类名以免影响其他引用） */
 .coordTl,
 .coordTr,
 .coordBl,
@@ -635,15 +674,15 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  bottom: 12px;
   z-index: 10;
-  width: 344px;
+  width: 304px;
+  max-height: calc(100% - 24px);
   display: flex;
   flex-direction: column;
   gap: 9px;
   padding: 12px;
   border: 1px solid var(--bench-line);
-  background: rgba(14, 22, 32, 0.72);
+  background: rgba(246, 247, 245, 0.94);
   backdrop-filter: blur(8px);
   overflow: auto;
   scrollbar-width: thin;
@@ -665,7 +704,7 @@
 
 .railTitle {
   margin: 3px 0 0;
-  color: #fff;
+  color: var(--ink);
   font-size: 18px;
   font-weight: 500;
   line-height: 1.3;
@@ -717,7 +756,7 @@
 
 .ledger li[data-state="current"] {
   opacity: 1;
-  color: #fff;
+  color: var(--ink);
 }
 
 .ledgerNo {
@@ -759,7 +798,7 @@
   gap: 1px;
   padding: 7px 8px;
   border: 1px solid var(--bench-line);
-  background: rgba(26, 37, 49, 0.5);
+  background: var(--paper-2);
 }
 
 .param[data-tone="warn"] {
@@ -777,7 +816,7 @@
   display: flex;
   align-items: baseline;
   gap: 4px;
-  color: #fff;
+  color: var(--ink);
   font-family: var(--font-mono);
   font-size: 22px;
   font-variant-numeric: tabular-nums;
@@ -822,7 +861,7 @@
 }
 
 .hintTitle {
-  color: #fff;
+  color: var(--ink);
   font-size: 11px;
   font-weight: 500;
 }
@@ -867,7 +906,7 @@
 
 .hintButton:hover {
   border-color: var(--river-100);
-  color: #fff;
+  color: var(--river-700);
 }
 
 .hintText {
@@ -903,7 +942,7 @@
   padding: 8px 9px;
   border: 1px solid var(--bench-line);
   border-left: 3px solid var(--river-100);
-  background: rgba(26, 37, 49, 0.55);
+  background: rgba(246, 247, 245, 0.90);
 }
 
 .feedback[data-severity="warn"] {
@@ -941,7 +980,7 @@
 
 .feedbackTitle {
   min-width: 0;
-  color: #fff;
+  color: var(--ink);
   font-size: 11px;
   font-weight: 500;
   line-height: 1.35;
@@ -963,7 +1002,7 @@
 }
 
 .feedbackText span {
-  color: #fff;
+  color: var(--ink);
 }
 
 .terminate {
@@ -992,7 +1031,7 @@
 
 .actionsHead h3 {
   margin: 0;
-  color: #fff;
+  color: var(--ink);
   font-size: 11px;
   font-weight: 500;
 }
@@ -1018,7 +1057,7 @@
   gap: 2px;
   padding: 6px 8px;
   border: 1px solid var(--bench-line);
-  background: rgba(26, 37, 49, 0.5);
+  background: rgba(246, 247, 245, 0.90);
   color: var(--bench-text);
   font: inherit;
   font-size: 11px;
@@ -1029,8 +1068,8 @@
 
 .action:hover:not(:disabled) {
   border-color: var(--river-100);
-  background: rgba(47, 66, 86, 0.6);
-  color: #fff;
+  background: rgba(246, 247, 245, 0.90);
+  color: var(--river-700);
 }
 
 .action:active:not(:disabled) {
@@ -1072,7 +1111,7 @@
 
 .finishScore {
   margin: 2px 0 0;
-  color: #fff;
+  color: var(--ink);
   font-family: var(--font-mono);
   font-size: 34px;
   line-height: 1;
@@ -1116,7 +1155,7 @@
 
 .resetButton:hover {
   border-color: var(--river-100);
-  color: #fff;
+  color: var(--river-700);
 }
 
 .reportLink {
@@ -1127,7 +1166,7 @@
 }
 
 .reportLink:hover {
-  color: #fff;
+  color: var(--river-700);
 }
 
 .note {
@@ -1143,7 +1182,7 @@
 }
 
 .note span {
-  color: #fff;
+  color: var(--ink-2);
   font-family: var(--font-sans);
 }
 
@@ -1158,7 +1197,7 @@
   gap: 9px;
   padding: 0 12px 0 16px;
   border-top: 1px solid var(--bench-line);
-  background: rgba(10, 16, 24, 0.96);
+  background: rgba(246, 247, 245, 0.97);
   color: var(--bench-text);
   overflow: hidden;
 }
@@ -1289,7 +1328,7 @@
 
 .retryButton:hover {
   background: rgba(192, 57, 43, 0.16);
-  color: #fff;
+  color: var(--river-700);
 }
 
 .retryButton:focus-visible {
@@ -1318,7 +1357,7 @@
   gap: 8px;
   padding: 0 12px;
   border-top: 1px solid var(--bench-line);
-  background: rgba(10, 16, 24, 0.96);
+  background: rgba(246, 247, 245, 0.97);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -1371,7 +1410,7 @@
 .dockItem[data-active="true"] {
   opacity: 1;
   border-color: var(--river-700);
-  background: rgba(26, 37, 49, 0.72);
+  background: rgba(246, 247, 245, 0.90);
   box-shadow: inset 2px 0 0 var(--river-700);
 }
 
@@ -1381,7 +1420,7 @@
 }
 
 .dockNo {
-  color: #fff;
+  color: var(--ink-2);
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1;
@@ -1414,20 +1453,20 @@
 /* ------------------------------------------------------------------ 窄屏 */
 @media (max-width: 1180px) {
   .rail {
-    width: 320px;
+    width: 292px;
   }
 
   .benchArea {
-    padding-right: 338px;
-    padding-left: 206px;
+    padding-right: 316px;
+    padding-left: 268px;
   }
 
   .rack {
-    width: 180px;
+    width: 244px;
   }
 
   .fxSlot {
-    right: 338px;
+    right: 316px;
   }
 }
 
@@ -1443,7 +1482,7 @@
     right: 8px;
     z-index: 40;
     justify-content: center;
-    background: rgba(10, 16, 24, 0.94);
+    background: rgba(246, 247, 245, 0.96);
   }
 
   .modeLabel {
@@ -1462,7 +1501,7 @@
     right: 8px;
     z-index: 41;
     height: 20px;
-    background: rgba(10, 16, 24, 0.94);
+    background: rgba(246, 247, 245, 0.96);
   }
 
   .keyFooter {
@@ -1509,14 +1548,22 @@
     position: static;
     width: auto;
     flex: 1 1 auto;
+    max-height: none;
     min-height: 0;
     margin: 0;
     border: 0;
     border-top: 1px solid var(--bench-line);
-    background: rgba(14, 22, 32, 0.55);
+    background: rgba(246, 247, 245, 0.90);
     backdrop-filter: none;
     padding: 9px 12px 12px;
     gap: 7px;
+  }
+
+  /* 窄屏看板：贴左上、避开「交互方式」那一条；172px 刚好不压滴定管本体 */
+  .missionSlot {
+    left: 8px;
+    top: 42px;
+    width: 172px;
   }
 
   .rack {
@@ -1629,8 +1676,9 @@
     order: 4;
   }
 
+  /* 窄屏：大字读数排到主操作之前（HUD 是主角，别被挤到折叠区下面） */
   .params {
-    order: 5;
+    order: -1;
   }
 
   .ledger {
@@ -1725,4 +1773,69 @@
   .actionOk,
   .actionFail {
     animation: none;
-  }}
+  }
+
+  /* 场景指引只留静态描边，不再脉冲 */
+  .reagent[data-next="true"]::after,
+  .flaskTarget[data-next="true"]::after {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+/* ===================================================================
+   触控可达（STYLE §5 / DESIGN-CONTRACT rubric 7）：窄屏可点元素 ≥44px
+   桌面保持 HUD 紧凑，只在 ≤720px 放大触控区，不改变布局宽度语义。
+   =================================================================== */
+@media (max-width: 720px) {
+  .back,
+  .exit {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 6px;
+  }
+
+  .modeButton {
+    min-height: 44px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .finishTop {
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 11px;
+  }
+
+  .modeLabel {
+    display: none;
+  }
+
+  .hintButton {
+    min-height: 44px;
+    padding: 0 12px;
+  }
+
+  /* 底部实验切换条（DEV Dock）：窄屏条目也要可点，≥44px */
+  .dockItem {
+    min-height: 44px;
+    padding-block: 8px;
+  }
+}
+
+/* light-theme overrides: rack title + finish button contrast */
+.rackHead > span:first-child { color: var(--ink-2); }
+.finishTop { color: #0b5e52; }
+
+/* ===== 跳过实验（仅演示模式） ===== */
+.finishTop[data-kind="skip"] {
+  border-color: var(--line);
+  background: #fff;
+  color: var(--ink-2);
+}
+.finishTop[data-kind="skip"]:hover:not(:disabled) {
+  border-color: var(--ink-2);
+  background: #fff;
+  color: var(--ink);
+}

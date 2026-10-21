@@ -10,9 +10,7 @@ export type NavExperiment = { id: string; no: string; title: string; playable: b
 const MAIN_NAV = [
   { href: "/", label: "课程首页" },
   { href: "/experiments", label: "我的实验" },
-  { href: "/lab/design", label: "方案设计" },
-  { href: "/demo", label: "演示模式" },
-  { href: "/teacher", label: "教师端" },
+  { href: "/lab/design", label: "进阶学习" },
 ];
 
 /** APP 外壳：常驻顶栏 + 左侧导航 + 内容列（+ 可选右信息栏）。 */
@@ -82,13 +80,7 @@ export function AppShell({
             <li>
               <Link href="/lab/design" data-active={pathname.startsWith("/lab")}>
                 <span className="app-side__no mono">◆</span>
-                <span className="app-side__text">拼接式方案设计</span>
-              </Link>
-            </li>
-            <li>
-              <Link href="/teacher" data-active={pathname.startsWith("/teacher")}>
-                <span className="app-side__no mono">◆</span>
-                <span className="app-side__text">教师端</span>
+                <span className="app-side__text">进阶学习</span>
               </Link>
             </li>
           </ul>

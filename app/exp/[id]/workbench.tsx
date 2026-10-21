@@ -6,20 +6,36 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { getDefinition } from "@/lib/engine";
 import type { Action, FxKey as EngineFxKey } from "@/lib/engine.types";
 import { FxByKey } from "@/components/exp/scene/fx";
+import { ScoreOdometer, StreakPill } from "@/components/exp/feedback";
+import { MissionBoard, type MissionParam } from "@/components/exp/guide/mission-board";
 import { NextActionCard } from "@/components/exp/guide/NextActionCard";
 import { ResultBar } from "@/components/exp/guide/ResultBar";
-import { StepTimeline } from "@/components/exp/guide/StepTimeline";
 import {
+  ACTION_VERB,
   guideName,
   nextLine,
   resultText,
   whyLine,
   type StepDotState,
 } from "@/components/exp/guide/copy";
+import { missionGoal, missionGuide, missionProgress } from "@/components/exp/guide/mission-copy";
+import { nextReagentId, resolveDrop, type DropReject } from "@/components/exp/guide/drop-resolve";
+// 新手教学（Lead 交付）：不传 open = 没看过就自动弹，看过不再打扰。
+import { ExperimentOnboarding } from "@/components/exp/onboarding";
+import {
+  ErrorToast,
+  IncidentBanner,
+  RejectHint,
+  errorMessage,
+} from "@/components/exp/incident";
 import guide from "@/components/exp/guide/guide.module.css";
+import { SoundToggle } from "@/components/audio/sound-toggle";
+import { ensureAudio, playSound } from "@/lib/audio/engine";
 import type { FxKey as SceneFxKey } from "@/lib/scene/fx";
 import { ExperimentDock } from "./experiment-dock";
+import { rackIdsFor } from "./rack-ids";
 import { SceneStage } from "./scene-stage";
+import { teacherNote } from "./teacher-notes";
 import {
   createWorkbenchState,
   currentStep,
@@ -27,6 +43,13 @@ import {
   workbenchReducer,
 } from "./use-workbench";
 import styles from "./workbench.module.css";
+
+/** RejectHint 的兜底三行（拒收永远给完整的三段信息，不留空）。 */
+const REJECT_FALLBACK = [
+  "这一步投不进去",
+  "当前步骤不接受这个试剂",
+  "按上方「建议动作」再试一次",
+] as const;
 
 const FX_MAP: Record<EngineFxKey, SceneFxKey> = {
   "boil-over": "boilOver",
@@ -37,62 +60,6 @@ const FX_MAP: Record<EngineFxKey, SceneFxKey> = {
   fire: "fire",
   "heavy-metal": "heavyMetal",
   "device-accident": "deviceAccident",
-};
-
-const TEACHER_NOTES: Record<number, string> = {
-  0: "称 NaOH 要快：它吸潮，称完立刻盖紧，别在秤盘上久放。",
-  1: "只能酸入水，不能水入酸——顺序错了会局部沸腾、酸雾喷溅。",
-  2: "碱式滴定管不能装酸；检漏之后再润洗，别省这一步。",
-  3: "调零后先记初读数，视线与凹液面最低点相平，估读到 0.01 mL。",
-  4: "移液管自然流尽后停 15 s，绝不把残液吹进锥形瓶。",
-  5: "终点是浅粉红 30 s 不褪，不是颜色越深越好。",
-  6: "先写公式再代数：c(碱)/c(酸) = V(酸)/V(碱)，别取倒。",
-};
-
-const TEACHER_NOTES_EXP01: Record<number, string> = {
-  0: "洗干净的判据是内壁水膜均匀、不挂水珠；容量瓶和量筒不能擦内壁，也不能烘。",
-  1: "先调水平再开机预热；空载回零、示数稳定后才是可信的称量起点。",
-  2: "差减法两次读数都要等稳定；热称量瓶先放干燥器冷却，别直接上秤盘。",
-  3: "热溶液不能直接进容量瓶；转移后烧杯和玻璃棒要洗 3 次，洗液全部并入。",
-  4: "定容接近刻度改用胶头滴管；视线与刻度线水平，凹液面最低点相切，盖塞摇匀。",
-  5: "移液管先用待移取液润洗 3 次；自然流下停 15 s，不吹残液。",
-  6: "稀释浓硫酸只许酸入水：沿壁、缓慢、边加边搅拌，冷却后再贴标签。",
-};
-
-const TEACHER_NOTES_EXP08: Record<number, string> = {
-  0: "认领即责任移交：件数、规格、配套三项逐项打勾再签字；缺盖/裂口当场换。",
-  1: "天平最怕碰刀口与吊耳；只能碰底座、侧门把手和加码旋钮，构造认知只看不动。",
-  2: "先调水平，再预热 ≥30 min，内校后回零，最后用 100 g 砝码回测。",
-  3: "上秤前先看铭牌 Max 200 g；整瓶约 500 g，严禁上秤。称量纸折角、药匙取样。",
-  4: "瓶与盖分持，垂直放入秤盘中央；开侧门取放，关侧门读数；洒落试样弃回收瓶。",
-  5: "原始记录用不溶性墨水笔；错处划单横线保留原值，旁边写正确值并签名。",
-  6: "软毛刷由内向外清扫；关机、罩罩、断电，试剂归位、台面擦净。",
-};
-
-const TEACHER_NOTES_EXP02: Record<number, string> = {
-  0: "加水量按 8 mL/g 粗盐取 40 mL；BaCl₂ 加至不再沉淀后再过量约 1 mL，取上清液复检才算除尽。",
-  1: "先 NaOH 调 pH≈11 沉 Mg²⁺，再 Na₂CO₃ 沉 Ca²⁺ 与过量 Ba²⁺；两项都要取上清液复检。",
-  2: "滤纸双层朝外、润湿贴紧；玻璃棒引流、三靠，液面低于滤纸边缘；破了重滤。",
-  3: "HCl 逐滴加到 pH 4~5，再煮沸 2~3 min 赶尽 CO₂，冷却后复测；不要加到 pH<2。",
-  4: "出现晶膜立即停火，利用余热；关火后室温自然冷却，绝不用冷水冲热容器。",
-  5: "用 2 mL 饱和 NaCl 冰溶液洗 2 次；105 ℃ 干燥至恒重，两次差 ≤0.0005 g；产率分母是 m(粗盐)×w。",
-};
-
-const TEACHER_NOTES_EXP03: Record<number, string> = {
-  0: "冰醋酸有腐蚀、易燃两个 GHS 图示：通风橱内、酸入水、沿壁搅拌；系列浓度必须用移液管+容量瓶。",
-  1: "移液管用待移液润洗 3 次；容量瓶只定容不盛放；凹液面与刻度相切，标签写 c 与配制人。",
-  2: "Kₐ 随温度变：25 ℃ 水浴恒温 10 min，4 份同温，温度计读数记入表格。",
-  3: "两点校准求零点与斜率：每点前冲洗吸干；斜率 95%~105%，回测 4.00 偏差 ≤0.05。",
-  4: "由稀到浓、每份冲洗吸干；球泡悬于液面下约 1 cm，30 s 内变化 ≤0.01 再读。",
-  5: "[H⁺]=10⁻ᵖᴴ，α=[H⁺]/c，Kₐ=cα²/(1−α)；电极冲净吸干浸 3 mol/L KCl，废液入桶断电。",
-};
-
-const TEACHER_NOTES_EXP04: Record<number, string> = {
-  0: "离心管逐支对光看管壁与管底；有裂纹一律弃用，不能“先用着看”。",
-  1: "AgCl 按计算量 1.2 倍加 NaCl，加后取上清液回检；KI 瓶别拿错。",
-  2: "对称孔等量配平（液面差 ≤0.1 mL）；盖盖启动，完全停转后再开盖；蒸馏水洗 2~3 次。",
-  3: "6 mol/L 氨水逐滴加至 AgCl 刚溶；通风橱内操作，不俯身闻；KI 转化白→黄。",
-  4: "分步沉淀逐滴加、先黄后白；Mg(OH)₂ 用 NH₄Cl 溶；含银废液全部入重金属桶。",
 };
 
 const PARAM_NAMES: Record<string, string> = {
@@ -152,9 +119,26 @@ export function Workbench({
   const [notice, setNotice] = useState<string | null>(null);
   const [studentNo, setStudentNo] = useState("—");
   const [finishing, setFinishing] = useState(false);
+  /**
+   * 「跳过实验」只在演示模式出现（?demo=1 或 ?play=demo）。
+   * 学生正常流程看不到 —— 否则等于教人逃课（用户 2026-10-21 的顾虑）。
+   */
+  const [skipVisible, setSkipVisible] = useState(false);
   const [mode, setMode] = useState<InputMode>("drag");
   const [lastInputMode, setLastInputMode] = useState<InputMode | null>(null);
   const [autoTick, setAutoTick] = useState(0);
+  /** 拖拽被拒（E1）：+1 让底部结果条重播一次 ✗ 抖动，本步不动。 */
+  const [reject, setReject] = useState<{
+    seq: number;
+    lines: readonly [string, string, string];
+    point?: { x: number; y: number };
+  } | null>(null);
+  /** E3 系统错误：人话一句 + 可选重试（技术原文不上面）。 */
+  const [systemError, setSystemError] = useState<{
+    message: string;
+    detail?: string;
+    canRetry: boolean;
+  } | null>(null);
   const actionsRef = useRef<HTMLElement | null>(null);
   const runIdRef = useRef<string | null>(null);
   const queueRef = useRef<Array<{ action: Action; inputMode: InputMode }>>([]);
@@ -198,7 +182,12 @@ export function Workbench({
             body: JSON.stringify({ events: [payload] }),
           });
         })
-        .catch(() => undefined);
+        .catch((error: unknown) => {
+          // E3 系统错误：接口没落库；音效只提示，不承载信息。
+          playSound("error-system");
+          const detail = errorMessage(error);
+          setSystemError({ message: detail.message, canRetry: detail.retryable });
+        });
       sendChainRef.current = task;
       inflightRef.current.push(task);
     },
@@ -221,7 +210,9 @@ export function Workbench({
             body: JSON.stringify(drop),
           });
         })
-        .catch(() => undefined);
+        .catch(() => {
+          playSound("error-system");
+        });
       sendChainRef.current = task;
       inflightRef.current.push(task);
     },
@@ -391,6 +382,9 @@ export function Workbench({
 
   const total = definition.steps.length;
   const stepNo = step.index + 1;
+  /** 刚走完上一步（L2）：器皿一次性高光，只在推进那一帧给。 */
+  const stepDoneKey =
+    ui.event?.outcome === "success" && ui.event.stepNumber < stepNo ? ui.event.stepNumber : undefined;
   const expNo = expId.startsWith("exp") ? expId.slice(3) : definition.id;
   const isExp09 = expId === "exp09";
   const terminated = ui.exp.incidents.some((record) => record.terminate);
@@ -426,6 +420,9 @@ export function Workbench({
     step.choices[0];
   const suggestedKey = suggested ? step.choices.indexOf(suggested) + 1 : undefined;
   const otherChoices = step.choices.filter((item) => item.choiceId !== suggested?.choiceId);
+
+  /** 场景内流程指引：下一步该用哪瓶试剂 —— 试剂架微亮 + 锥形瓶脉冲，和看板指向同一动作。 */
+  const nextReagent = nextReagentId(step, performed, rackIdsFor(expId));
 
   // 每步用时：时间线显示 "✓ 第 1 步 · 洗涤 12s"。时间只在 effect/事件里读，渲染期不调 Date.now()
   const stepClockRef = useRef<{ index: number; start: number } | null>(null);
@@ -509,6 +506,33 @@ export function Workbench({
     ui.exp.stepIndex < 3 ? "滴定管尚未装液" : reading === 0 ? "已调零，待滴定" : "凹液面读数";
   const hasAbnormality = ui.exp.incidents.length + ui.exp.violations.length > 0;
 
+  /**
+   * 看板折叠抽屉里的参数格（减法）：右栏只留大字读数 + 允许误差，
+   * 其余（已用体积 / 指示剂 / 观察记录 / 违规事故）都收进看板折叠区。
+   */
+  const boardParams: MissionParam[] = isExp09
+    ? [
+        { label: "已用体积 V", value: reading.toFixed(2), unit: "mL", note: "初读数 0.00 起算" },
+        { label: "指示剂颜色", value: indicator, note: "酚酞 2 滴 / 第 05 步加入" },
+      ]
+    : [
+        {
+          label: "观察记录",
+          value: String(ui.exp.observations.length),
+          unit: "条",
+          note: "按 doc 记录",
+        },
+        {
+          label: "违规 / 事故",
+          value: String(ui.exp.violations.length + ui.exp.incidents.length),
+          unit: "条",
+          note: "已记录",
+          tone: hasAbnormality ? "warn" : "normal",
+        },
+      ];
+  /** 第四行：本步指引；取过提示就换成那条提示（同屏只留一条）。 */
+  const boardGuide = missionGuide(ui.hint?.text, step.title);
+
   const eventState = notice
     ? "warn"
     : sceneCaption
@@ -548,6 +572,9 @@ export function Workbench({
       const choice = current?.choices.find((item) => item.choiceId === choiceId);
       if (choice) {
         setLastInputMode(resolved);
+        // 音效要在用户手势里把 AudioContext 建起来；之后 effect 里的反馈音才发得出来。
+        ensureAudio();
+        if (choice.type === "readInstrument" || choice.type === "titrate") playSound("tick");
         sendAction(
           {
             type: choice.type,
@@ -564,6 +591,41 @@ export function Workbench({
     },
     [armNextPhase, mode, sendAction],
   );
+
+  /** 拖拽三段式 · 段 3a：倒入动画播完后才走到这里 —— 这时才推进步骤。 */
+  const handleDropAccepted = useCallback(
+    (choiceId: string, inputMode: "drag" | "click" | "event") => choose(choiceId, inputMode),
+    [choose],
+  );
+
+  /** 拖拽三段式 · 段 3b：拒收只给一句为什么，本步不动，允许原地再投。 */
+  const handleDropRejected = useCallback((verdict: DropReject, point?: { x: number; y: number }) => {
+    setSceneCaption(null);
+    setNotice(verdict.line);
+    setReject((previous) => ({ seq: (previous?.seq ?? 0) + 1, lines: verdict.lines, point }));
+    playSound("fail-reject");
+  }, []);
+
+  /** 这一投算不算：用当前步 + 本步已做的动作同步判定（纯函数，见 guide/drop-resolve）。 */
+  const resolveCurrentDrop = (reagentId: string) => resolveDrop(step, reagentId, performed);
+
+  /** 音效与结果条同步：同一次反馈只响一次（ok-l1 单动作 / ok-l2 一步完成 / 事故 / 拒收）。 */
+  const sfxSeqRef = useRef(ui.feedbackSeq);
+  useEffect(() => {
+    if (ui.feedbackSeq === sfxSeqRef.current) return;
+    sfxSeqRef.current = ui.feedbackSeq;
+    const event = ui.event;
+    if (!event) return;
+    if (event.incident && (event.level === "L3" || event.level === "L4")) {
+      playSound("fail-incident");
+      return;
+    }
+    if (event.outcome === "success") {
+      playSound(event.stepNumber < stepNo ? "ok-l2" : "ok-l1");
+      return;
+    }
+    if (!event.incident) playSound("fail-reject");
+  }, [stepNo, ui.event, ui.feedbackSeq]);
 
   const retry = useCallback(() => {
     setSceneCaption(null);
@@ -610,6 +672,15 @@ export function Workbench({
       );
     }
   }, [demoReadonly, expId, router]);
+
+  useEffect(() => {
+    // 放进 setTimeout(0)：Next 16 的 react-hooks/set-state-in-effect 不允许在 effect 里同步 setState
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      setSkipVisible(params.get("demo") === "1" || params.get("play") === "demo");
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -704,6 +775,7 @@ export function Workbench({
               />
             ))}
           </span>
+          <StreakPill count={ui.streak} demoId="demo-streak" />
         </div>
         <div className={styles.topRight}>
           <span className={styles.student}>学号 {studentNo}</span>
@@ -728,6 +800,20 @@ export function Workbench({
               演示模式 · 不记录
             </span>
           ) : null}
+          <SoundToggle />
+          {skipVisible ? (
+            <button
+              type="button"
+              className={`${styles.finishTop} ix`}
+              data-kind="skip"
+              data-demo-id="demo-skip"
+              onClick={() => void finish()}
+              disabled={finishing}
+              title="演示用：不再逐步操作，直接交卷看结果"
+            >
+              跳过实验
+            </button>
+          ) : null}
           <button
             type="button"
             className={`${styles.finishTop} ix`}
@@ -748,6 +834,34 @@ export function Workbench({
           <h1 className={styles.srOnly} id="stage-title">
             实验 {pad2(Number(expNo) || 0)} 操作台，第 {stepNo} 步 {step.title}
           </h1>
+          {/* 左上角任务看板：一句话目标 + 进度点 + 当前一步一句指引；细则全在折叠区 */}
+          <div className={styles.missionSlot}>
+            <MissionBoard
+              expNo={expNo.padStart(2, "0")}
+              title={definition.title}
+              goal={missionGoal(expId, definition.title, total)}
+              progress={missionProgress(stepNo, total, ACTION_VERB[suggested.type])}
+              guide={boardGuide}
+              dots={dots}
+              steps={definition.steps.map((item) => ({ index: item.index, title: item.title }))}
+              seconds={stepSeconds}
+              onPeek={(index) =>
+                setSceneCaption(`第 ${index + 1} 步：${definition.steps[index]?.title ?? ""}`)
+              }
+              params={boardParams}
+              hint={{
+                level: ui.hint?.level ?? 0,
+                active: Boolean(ui.hint),
+                deduct: Boolean(ui.hint?.shouldDeduct),
+                onAsk: () => dispatch({ type: "hint" }),
+              }}
+              note={{ label: "老师会说", text: teacherNote(expId, step.index) }}
+              done={ui.exp.done}
+            />
+          </div>
+
+          {/* 新手教学：首次进任一实验自动弹 4 步（localStorage 记"看过"），看完即可上手 */}
+          <ExperimentOnboarding />
           <SceneStage
             expId={expId}
             onCaption={handleSceneCaption}
@@ -759,6 +873,11 @@ export function Workbench({
             }
             feedbackTone={ui.event?.outcome ?? null}
             feedbackSeq={ui.feedbackSeq}
+            resolveDrop={resolveCurrentDrop}
+            onDropAccepted={handleDropAccepted}
+            onDropRejected={handleDropRejected}
+            stepDoneKey={stepDoneKey}
+            nextReagent={nextReagent}
           >
             {fx}
           </SceneStage>
@@ -775,86 +894,36 @@ export function Workbench({
                     : "场景复用 exp09 器皿（称量 / 容量瓶 / 通风橱待替换 · TODO）"}
             </p>
           ) : null}
-          <span className={styles.coordTl} aria-hidden="true">
-            00 / 00
-          </span>
-          <span className={styles.coordTr} aria-hidden="true">
-            720 / 00
-          </span>
-          <span className={styles.coordBl} aria-hidden="true">
-            00 / 420
-          </span>
-          <span className={styles.coordBr} aria-hidden="true">
-            720 / 420
-          </span>
         </section>
 
         <aside className={styles.rail} aria-label="操作面板">
-          <section ref={actionsRef} className={guide.railLead} tabIndex={-1} aria-label="建议动作">
-            <NextActionCard
-              stepNo={stepNo}
-              total={total}
-              stepTitle={step.title}
-              type={suggested.type}
-              name={guideName(suggested.label)}
-              why={whyLine(step.judge.criterion)}
-              dots={dots}
-              keyHint={suggestedKey ? String(suggestedKey) : undefined}
-              demoId={suggested.demoId}
-              disabled={ui.exp.done}
-              phase={guidePhase}
-              onChoose={() => choose(suggested.choiceId)}
-            />
-          </section>
-
-          <StepTimeline
-            steps={definition.steps.map((item) => ({ index: item.index, title: item.title }))}
-            states={dots}
-            seconds={stepSeconds}
-            onPeek={(index) =>
-              setSceneCaption(`第 ${index + 1} 步：${definition.steps[index]?.title ?? ""}`)
-            }
-          />
-
-          {isExp09 ? (
-          <div className={styles.params} aria-label="实时参数">
-            <div
-              className={`${styles.param} ix`}
-              data-tone={hasAbnormality ? "warn" : "normal"}
-              role="button"
-              tabIndex={0}
-              onClick={() => setSceneCaption(`滴定管读数：${readingNote}`)}
-            >
-              <span className={styles.paramLabel}>滴定管读数</span>
-              <span
-                key={`read-${ui.feedbackSeq}`}
-                className={`${styles.paramValue}${numberPop ? " ix-pop" : ""}`}
-                data-pop={numberPop}
+          {/* 大字读数（HUD 灵魂）：exp09 = 滴定管读数；其余实验只在本步有判据时报允许误差
+              （没有读数就不摆一张空卡 —— 减法：不给"—"占地方） */}
+          {isExp09 || tolerance ? (
+          <div className={styles.params} aria-label="实时读数">
+            {isExp09 ? (
+              <div
+                className={`${styles.param} ix`}
+                data-tone={hasAbnormality ? "warn" : "normal"}
+                role="button"
+                tabIndex={0}
+                onClick={() => setSceneCaption(`滴定管读数：${readingNote}`)}
               >
-                {reading.toFixed(2)}
-                <em>mL</em>
-              </span>
-              <span className={styles.paramNote}>{readingNote}</span>
-            </div>
+                <span className={styles.paramLabel}>滴定管读数</span>
+                <span
+                  key={`read-${ui.feedbackSeq}`}
+                  className={`${styles.paramValue}${numberPop ? " ix-pop" : ""}`}
+                  data-pop={numberPop}
+                >
+                  {reading.toFixed(2)}
+                  <em>mL</em>
+                </span>
+                <span className={styles.paramNote}>{readingNote}</span>
+              </div>
+            ) : null}
             <div
               className={`${styles.param} ix`}
-              role="button"
-              tabIndex={0}
-              onClick={() => setSceneCaption("已用体积 V：从初读数 0.00 mL 起算。")}
-            >
-              <span className={styles.paramLabel}>已用体积 V</span>
-              <span
-                key={`used-${ui.feedbackSeq}`}
-                className={`${styles.paramValue}${numberPop ? " ix-pop" : ""}`}
-                data-pop={numberPop}
-              >
-                {reading.toFixed(2)}
-                <em>mL</em>
-              </span>
-              <span className={styles.paramNote}>初读数 0.00 起算</span>
-            </div>
-            <div
-              className={`${styles.param} ix`}
+              style={isExp09 ? undefined : { gridColumn: "1 / -1" }}
               role="button"
               tabIndex={0}
               onClick={() =>
@@ -874,131 +943,20 @@ export function Workbench({
                 {tolerance ? `${toleranceName}判据 · 期望 ${tolerance.expected} ${tolerance.unit}` : "本步无读数判据"}
               </span>
             </div>
-            <div
-              className={`${styles.param} ix`}
-              role="button"
-              tabIndex={0}
-              onClick={() =>
-                setSceneCaption(
-                  indicatorAdded
-                    ? `指示剂颜色：酚酞已加入，当前${indicator}；终点为浅粉红 30 s 不褪。`
-                    : "指示剂颜色：本步尚未加入酚酞。",
-                )
-              }
-            >
-              <span className={styles.paramLabel}>指示剂颜色</span>
-              <span className={styles.paramValue}>
-                {indicatorAdded ? (
-                  <span
-                    className={styles.swatch}
-                    style={{ background: endpointReached ? "#f6d7de" : "#dce9f2" }}
-                    aria-hidden="true"
-                  />
-                ) : null}
-                {indicator}
-              </span>
-              <span className={styles.paramNote}>酚酞 2 滴 / 第 05 步加入</span>
-            </div>
           </div>
-          ) : (
-            <div className={styles.params} aria-label="实时参数">
-              <div
-                className={`${styles.param} ix`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setSceneCaption(`本步观察记录：${ui.exp.observations.length} 条。`)}
-              >
-                <span className={styles.paramLabel}>观察记录</span>
-                <span className={styles.paramValue}>
-                  {ui.exp.observations.length}
-                  <em>条</em>
-                </span>
-                <span className={styles.paramNote}>按 doc 记录</span>
-              </div>
-              <div
-                className={`${styles.param} ix`}
-                data-tone={hasAbnormality ? "warn" : "normal"}
-                role="button"
-                tabIndex={0}
-                onClick={() => setSceneCaption("违规与事故会进入报告时间线和事故复盘。")}
-              >
-                <span className={styles.paramLabel}>违规 / 事故</span>
-                <span className={styles.paramValue}>
-                  {ui.exp.violations.length + ui.exp.incidents.length}
-                  <em>条</em>
-                </span>
-                <span className={styles.paramNote}>已记录</span>
-              </div>
-              <div
-                className={`${styles.param} ix`}
-                role="button"
-                tabIndex={0}
-                onClick={() =>
-                  setSceneCaption(
-                    tolerance
-                      ? `允许误差：${toleranceName}判据，期望 ${tolerance.expected} ${tolerance.unit}，容差 ±${tolerance.tolerance} ${tolerance.unit}。`
-                      : "允许误差：本步不做读数判定。",
-                  )
-                }
-              >
-                <span className={styles.paramLabel}>允许误差</span>
-                <span className={styles.paramValue}>
-                  {toleranceValue}
-                  <em>{toleranceUnit}</em>
-                </span>
-                <span className={styles.paramNote}>
-                  {tolerance ? `${toleranceName}判据` : "本步无读数判据"}
-                </span>
-              </div>
-              <div
-                className={`${styles.param} ix`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setSceneCaption(`实验进度：第 ${stepNo} 步 / 共 ${total} 步。`)}
-              >
-                <span className={styles.paramLabel}>实验进度</span>
-                <span className={styles.paramValue}>
-                  {stepNo}
-                  <em>/ {total}</em>
-                </span>
-                <span className={styles.paramNote}>{step.title}</span>
-              </div>
-            </div>
-          )}
+          ) : null}
 
-          <div className={styles.hintBox}>
-            <div className={styles.hintHead}>
-              <span className={styles.hintTitle}>要提示吗？</span>
-              <span className={styles.hintLevel}>
-                {ui.hint ? `H${ui.hint.level}` : "H0–H3"}
-              </span>
-              <span className={styles.hintMeter} aria-hidden="true">
-                {[0, 1, 2, 3].map((level) => (
-                  <span
-                    key={level}
-                    className={styles.hintTick}
-                    data-active={ui.hint ? ui.hint.level >= level : false}
-                    data-warn={level >= 2}
-                  />
-                ))}
-              </span>
-              <button
-                type="button"
-                className={`${styles.hintButton} ix`}
-                onClick={() => dispatch({ type: "hint" })}
-              >
-                取一条提示
-              </button>
-            </div>
-            {ui.hint ? (
-              <p className={styles.hintText}>{ui.hint.text}</p>
-            ) : (
-              <p className={styles.hintLead}>连续出错会升级提示；H2 起扣独立完成分。</p>
-            )}
-            {ui.hint?.shouldDeduct ? (
-              <p className={styles.hintWarn}>使用提示将扣独立完成分</p>
-            ) : null}
-          </div>
+          <section ref={actionsRef} className={guide.railLead} tabIndex={-1} aria-label="建议动作">
+            <NextActionCard
+              name={guideName(suggested.label)}
+              why={whyLine(step.judge.criterion)}
+              keyHint={suggestedKey ? String(suggestedKey) : undefined}
+              demoId={suggested.demoId}
+              disabled={ui.exp.done}
+              phase={guidePhase}
+              onChoose={() => choose(suggested.choiceId)}
+            />
+          </section>
 
           {ui.event && ui.event.outcome === "failure" ? (
             <details
@@ -1064,8 +1022,12 @@ export function Workbench({
             <section className={styles.finish} aria-label="本次操作结果">
               <p className={styles.finishKicker}>{terminated ? "实验终止" : "实验完成"}</p>
               <p className={styles.finishScore}>
-                {terminated ? "0" : score.score}
-                <span> 操作分</span>
+                <ScoreOdometer
+                  value={terminated ? 0 : score.score}
+                  suffix=" 操作分"
+                  demoId="demo-finish-score"
+                  className={styles.finishOdometer}
+                />
               </p>
               <p className={styles.finishMeta}>
                 违规 −{score.violationDeduct} · 事故 −{score.incidentDeduct} · 提示 −
@@ -1087,25 +1049,11 @@ export function Workbench({
             </section>
           ) : null}
 
-          <p className={styles.note}>
-            <span>老师会说：</span>
-            {(isExp09
-              ? TEACHER_NOTES
-              : expId === "exp08"
-                ? TEACHER_NOTES_EXP08
-                : expId === "exp02"
-                  ? TEACHER_NOTES_EXP02
-                  : expId === "exp03"
-                    ? TEACHER_NOTES_EXP03
-                    : expId === "exp04"
-                      ? TEACHER_NOTES_EXP04
-                      : TEACHER_NOTES_EXP01)[step.index] ?? "按判据做，别抢在读数前记录。"}
-          </p>
         </aside>
       </div>
 
       <ResultBar
-        key={ui.feedbackSeq}
+        key={`${ui.feedbackSeq}-${reject?.seq ?? 0}`}
         tone={eventState}
         line={resultLine}
         line2={resultLine2}
@@ -1114,7 +1062,8 @@ export function Workbench({
             ? `${ui.event.level ? `${ui.event.level} · ` : ""}−${ui.event.deduction} 分`
             : undefined
         }
-        next={nextText}
+        // 失败时只留「重做本步」：不再同时滑出"下一步"，同屏只有一条该做的事。
+        next={showRetry ? null : nextText}
         demoId={feedbackDemoId}
         retry={
           showRetry
@@ -1124,7 +1073,7 @@ export function Workbench({
               }
             : undefined
         }
-        hint={ui.event?.terminate ? "实验已终止" : "每步只记一次"}
+        hint={ui.event?.terminate ? "实验已终止" : undefined}
       />
 
       <p className={styles.keyFooter} data-demo-id="demo-key-hint">
@@ -1132,6 +1081,24 @@ export function Workbench({
       </p>
 
       <ExperimentDock currentId={expId} onNotice={setNotice} />
+
+      {/* E1 拒收：三行（错在哪 / 为什么 / 怎么改），180ms 淡入 + 目标抖动一次 */}
+      <RejectHint
+        open={Boolean(reject)}
+        lines={reject?.lines ?? REJECT_FALLBACK}
+        point={reject?.point}
+        onDismiss={() => setReject(null)}
+        demoId="demo-reject-hint"
+      />
+
+      {/* E3 系统错误：人话一句 + 重试，不把技术错误码抛给学生 */}
+      <ErrorToast
+        open={Boolean(systemError)}
+        message={systemError?.message ?? ""}
+        detail={systemError?.detail}
+        onDismiss={() => setSystemError(null)}
+        demoId="demo-error-toast"
+      />
     </div>
   );
 }

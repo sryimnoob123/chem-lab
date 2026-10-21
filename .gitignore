@@ -35,3 +35,6 @@ tsconfig.tsbuildinfo
 
 # 预览端口声明文件（不提交 git）
 .preview
+
+# 验证截图（运行时产物，不入库）
+public/shots-prod/

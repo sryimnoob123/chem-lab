@@ -15,7 +15,7 @@
   padding: 10px 11px 11px;
   border: 1px solid var(--bench-line);
   border-left: 3px solid var(--river-100);
-  background: rgba(26, 37, 49, 0.62);
+  background: rgba(246, 247, 245, 0.90);
 }
 
 .progress {
@@ -73,7 +73,7 @@
   gap: 3px;
   padding: 9px 11px;
   border: 1px solid var(--river-100);
-  background: linear-gradient(180deg, rgba(47, 66, 86, 0.85), rgba(30, 43, 58, 0.85));
+  background: linear-gradient(180deg, rgba(246, 247, 245, 0.90), rgba(246, 247, 245, 0.90));
   color: #fff;
   font: inherit;
   text-align: left;
@@ -86,7 +86,7 @@
 
 .next:hover:not(:disabled) {
   border-color: var(--river-100);
-  background-color: rgba(47, 66, 86, 0.95);
+  background-color: rgba(246, 247, 245, 0.95);
 }
 
 .next:active:not(:disabled) {
@@ -129,6 +129,7 @@
   font-size: 14px;
   line-height: 1.35;
   font-weight: 500;
+  color: var(--ink);
 }
 
 .nextWhy {
@@ -288,7 +289,7 @@
   gap: 9px;
   padding: 0 132px 0 16px;
   border-top: 1px solid var(--bench-line);
-  background: rgba(10, 16, 24, 0.96);
+  background: rgba(246, 247, 245, 0.97);
   overflow: hidden;
 }
 
@@ -468,7 +469,7 @@
 
 .retry:hover {
   background: rgba(192, 57, 43, 0.16);
-  color: #fff;
+  color: var(--river-700);
 }
 
 .retry:focus-visible {
@@ -542,7 +543,7 @@
   min-height: 44px;
   padding: 6px 8px;
   border: 1px solid var(--bench-line);
-  background: rgba(26, 37, 49, 0.5);
+  background: rgba(246, 247, 245, 0.90);
   color: var(--bench-text);
   font: inherit;
   font-size: 11px;
@@ -557,7 +558,7 @@
 
 .otherButton:hover:not(:disabled) {
   border-color: var(--river-100);
-  color: #fff;
+  color: var(--ink);
 }
 
 .otherButton:active:not(:disabled) {
@@ -630,7 +631,7 @@
 
 .whyTitle {
   margin: 4px 0 2px;
-  color: #fff;
+  color: var(--ink);
   font-size: 11px;
   line-height: 1.5;
 }
@@ -690,5 +691,13 @@
 @media (max-width: 640px) {
   .resultBar {
     padding: 0 96px 0 12px;
+  }
+}
+
+/* 触控可达（STYLE §5 / rubric 7）：窄屏步骤时间线按钮 ≥44px */
+@media (max-width: 720px) {
+  .timelineButton {
+    min-height: 44px;
+    padding-block: 8px;
   }
 }

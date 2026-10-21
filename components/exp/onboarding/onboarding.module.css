@@ -1,0 +1,175 @@
+/* 新手教学：白底小卡 + 河大蓝强调。只动 transform / opacity。 */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(22, 32, 44, 0.24);
+  animation: ob-fade 200ms var(--ease-snap, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+
+.card {
+  position: relative;
+  width: min(420px, 100%);
+  box-sizing: border-box;
+  padding: 22px 22px 18px;
+  border: 1px solid var(--line, #d5dce4);
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 18px 44px rgba(22, 32, 44, 0.18);
+  animation: ob-in 260ms var(--ease-snap, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+
+.kicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--ink-2, #4a5768);
+}
+
+.dots {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.dot {
+  width: 18px;
+  height: 2px;
+  background: var(--line, #d5dce4);
+}
+
+.dot[data-active="true"] {
+  background: var(--river-700, #23307f);
+}
+
+.body {
+  display: flex;
+  gap: 14px;
+  margin-top: 16px;
+  min-height: 92px;
+}
+
+.icon {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line, #d5dce4);
+  border-radius: 2px;
+  color: var(--river-700, #23307f);
+}
+
+.text {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink, #16202c);
+}
+
+.desc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2, #4a5768);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.skip {
+  margin-right: auto;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2, #4a5768);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.next {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--river-700, #23307f);
+  border-radius: 2px;
+  background: var(--river-700, #23307f);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.next:active {
+  transform: scale(0.97);
+}
+
+.next:focus-visible,
+.skip:focus-visible,
+.close:focus-visible {
+  outline: 2px solid var(--river-500, #3a4a9e);
+  outline-offset: 2px;
+}
+
+.close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2, #4a5768);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+@keyframes ob-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ob-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .card {
+    animation: none;
+  }
+  .card {
+    transform: none;
+  }
+}

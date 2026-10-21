@@ -60,6 +60,8 @@ export interface WorkbenchState {
   feedbackSeq: number;
   /** 重做本步 +1，用来把焦点移回动作区。 */
   retrySeq: number;
+  /** 连续正确次数（正反馈 StreakPill 用）；出错/事故/重做都归零。 */
+  streak: number;
 }
 
 export type WorkbenchAction =
@@ -81,6 +83,7 @@ export function createWorkbenchState(expId: string): WorkbenchState {
     lastChoiceId: null,
     feedbackSeq: 0,
     retrySeq: 0,
+    streak: 0,
   };
 }
 
@@ -112,6 +115,7 @@ export function workbenchReducer(
       lastChoiceId: null,
       feedbackSeq: state.feedbackSeq + 1,
       retrySeq: state.retrySeq + 1,
+      streak: 0,
     };
   }
 
@@ -162,6 +166,7 @@ function runChoice(
       },
       lastChoiceId: choice.choiceId,
       feedbackSeq: state.feedbackSeq + 1,
+      streak: 0,
     };
   }
 
@@ -213,6 +218,7 @@ function runChoice(
     finished: result.state.done,
     lastChoiceId: choice.choiceId,
     feedbackSeq: state.feedbackSeq + 1,
+    streak: wrong ? 0 : state.streak + 1,
   };
 }
 

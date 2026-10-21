@@ -18,6 +18,12 @@ export type FxKey =
 
 export type FxSemantic = "danger" | "warn" | "oxid" | "toxic";
 
+/**
+ * 事故后 1.2s「余波」的表现：余烬 / 烟尾 / 电弧。
+ * 只影响装饰层（aria-hidden），不承载化学解释，不改变事故语义。
+ */
+export type FxAftermath = "ember" | "smoke" | "spark";
+
 export type FxMeta = {
   key: FxKey;
   /** React 组件名（components/exp/scene/fx/<component>.tsx）。 */
@@ -32,6 +38,8 @@ export type FxMeta = {
   durationMs: number;
   loop: boolean;
   semantic: FxSemantic;
+  /** 可选：事故后余波形态；缺省按 "smoke" 处理（见 getFxAftermath）。 */
+  aftermath?: FxAftermath;
 };
 
 export const FX_LIST: readonly FxMeta[] = [
@@ -44,6 +52,7 @@ export const FX_LIST: readonly FxMeta[] = [
     durationMs: 1400,
     loop: false,
     semantic: "danger",
+    aftermath: "ember",
   },
   {
     key: "toxicGas",
@@ -54,6 +63,7 @@ export const FX_LIST: readonly FxMeta[] = [
     durationMs: 2000,
     loop: false,
     semantic: "toxic",
+    aftermath: "smoke",
   },
   {
     key: "fire",
@@ -64,6 +74,7 @@ export const FX_LIST: readonly FxMeta[] = [
     durationMs: 0,
     loop: true,
     semantic: "danger",
+    aftermath: "smoke",
   },
   {
     key: "boilOver",
@@ -74,6 +85,7 @@ export const FX_LIST: readonly FxMeta[] = [
     durationMs: 1800,
     loop: false,
     semantic: "warn",
+    aftermath: "smoke",
   },
   {
     key: "burn",
@@ -84,6 +96,7 @@ export const FX_LIST: readonly FxMeta[] = [
     durationMs: 1200,
     loop: false,
     semantic: "danger",
+    aftermath: "ember",
   },
   {
     key: "glassBreak",
@@ -94,6 +107,7 @@ export const FX_LIST: readonly FxMeta[] = [
     durationMs: 1200,
     loop: false,
     semantic: "warn",
+    aftermath: "spark",
   },
   {
     key: "heavyMetal",
@@ -104,6 +118,7 @@ export const FX_LIST: readonly FxMeta[] = [
     durationMs: 2000,
     loop: false,
     semantic: "toxic",
+    aftermath: "smoke",
   },
   {
     key: "deviceAccident",
@@ -114,6 +129,7 @@ export const FX_LIST: readonly FxMeta[] = [
     durationMs: 1500,
     loop: false,
     semantic: "danger",
+    aftermath: "spark",
   },
 ];
 
@@ -123,6 +139,11 @@ export function getFx(key: FxKey): FxMeta {
   const found = BY_KEY.get(key);
   if (!found) throw new Error(`未知事故特效：${key}`);
   return found;
+}
+
+/** 余波形态：未标注的特效按 smoke（烟尾）处理，组件无需判空。 */
+export function getFxAftermath(key: FxKey): FxAftermath {
+  return getFx(key).aftermath ?? "smoke";
 }
 
 /** 语义色 → CSS 变量名（契约 §2）。 */

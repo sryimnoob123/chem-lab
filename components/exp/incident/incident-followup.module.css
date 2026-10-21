@@ -1,0 +1,241 @@
+/* ===================================================================
+   事故后线条样式（components/exp/incident/）—— E2 事故条 + 重做条
+   规格见 docs/design/STYLE-20261021.md §4；色值取自 app/globals.css，
+   时长/缓动优先复用 app/styles/motion.css 的 token。
+   铁律：只动 transform / opacity / filter；不用大面积红色底。
+   =================================================================== */
+
+/* ===================================================================
+   IncidentBanner（E2 事故后）：事故名 + 三行事件条，不遮实验台
+   =================================================================== */
+
+.incidentBanner {
+  --ix-incident-enter: var(--enter, 260ms);
+  position: absolute;
+  left: 50%;
+  z-index: 30;
+  width: min(560px, calc(100% - 24px));
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--danger);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 10px 22px rgba(22, 32, 44, 0.14);
+  pointer-events: auto;
+  animation: ix-incident-in var(--ix-incident-enter) var(--ease-out, ease-out) 1 both;
+}
+
+.incidentBanner[data-placement="top"] {
+  top: 12px;
+}
+
+.incidentBanner[data-placement="bottom"] {
+  bottom: 12px;
+}
+
+@keyframes ix-incident-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.incidentHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px 7px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.incidentMark {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  background: var(--danger);
+}
+
+.incidentTitle {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.incidentKicker {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  opacity: 0.72;
+}
+
+.incidentClose {
+  flex: 0 0 44px;
+  width: 44px;
+  min-height: 44px;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.incidentClose:hover {
+  color: var(--ink);
+}
+
+.incidentClose:focus-visible {
+  outline: 2px solid var(--river-700);
+  outline-offset: 2px;
+}
+
+.incidentLines {
+  margin: 0;
+  padding: 7px 12px 9px;
+  list-style: none;
+}
+
+.incidentLine {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 7px;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.incidentLine + .incidentLine {
+  margin-top: 4px;
+}
+
+.incidentKey {
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.incidentText {
+  color: var(--ink-2);
+}
+
+/* ===================================================================
+   RetryBar：重做本步（≥44px、focus-visible）
+   =================================================================== */
+
+.retryBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+  animation: ix-retry-in var(--enter, 260ms) var(--ease-out, ease-out) 1 both;
+}
+
+@keyframes ix-retry-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.retryMark {
+  flex: 0 0 3px;
+  align-self: stretch;
+  min-height: 28px;
+  background: var(--danger);
+}
+
+.retryHint {
+  flex: 1 1 140px;
+  min-width: 120px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.retryActions {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.retryPrimary,
+.retryGhost {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--hover, 80ms) var(--ease-press, ease);
+}
+
+.retryPrimary:hover,
+.retryGhost:hover {
+  background: rgba(192, 57, 43, 0.12);
+}
+
+.retryGhost {
+  border-color: var(--line);
+  color: var(--ink-2);
+}
+
+.retryGhost:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.retryPrimary:focus-visible,
+.retryGhost:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
+.retryGhost:focus-visible {
+  outline-color: var(--river-700);
+}
+
+.retryPrimary:disabled,
+.retryGhost:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* ===================================================================
+   降级：reduced-motion 下静止，但事故信息照常显示
+   =================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .incidentBanner,
+  .retryBar {
+    animation: none;
+  }
+
+  .incidentBanner {
+    transform: translateX(-50%);
+  }
+}

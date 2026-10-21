@@ -84,7 +84,7 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
         <Link href="/experiments" className="mono" style={{ fontSize: 12, color: "#1f5fa8", textDecoration: "none" }}>
           ← 实验列表
         </Link>
-        <h1 style={{ fontSize: 22, margin: 0, letterSpacing: "-.01em" }}>拼接式方案设计 · 实验 10</h1>
+        <h1 style={{ fontSize: 22, margin: 0, letterSpacing: "-.01em" }}>进阶学习 · 实验 10</h1>
         <span className="mono" style={{ fontSize: 12, color: "#7b8a9c" }}>
           学号 {studentNo}
         </span>

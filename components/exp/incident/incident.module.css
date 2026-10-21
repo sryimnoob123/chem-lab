@@ -1,0 +1,260 @@
+/* ===================================================================
+   错误反馈样式（components/exp/incident/）—— E1 拒收 + E3 系统错误
+   规格见 docs/design/STYLE-20261021.md §4；色值取自 app/globals.css，
+   时长/缓动优先复用 app/styles/motion.css 的 token，只新增组件级变量（--ix-*）。
+   铁律：只动 transform / opacity / filter；不用大面积红色底；无 transition: all。
+   注：E2 事故条 / 重做条在 incident-followup.module.css（单文件 ≤300 行）。
+   =================================================================== */
+
+/* ===================================================================
+   RejectHint（E1 拒收）：目标红色虚线框 1 次 + 提示 180ms 淡入
+   =================================================================== */
+
+.rejectRoot {
+  --ix-reject-fade: var(--pop, 180ms);
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.rejectFrame {
+  position: fixed;
+  border: 2px dashed var(--danger);
+  border-radius: 3px;
+  animation: ix-reject-frame var(--shake, 240ms) ease-out 1 both;
+}
+
+@keyframes ix-reject-frame {
+  0% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+}
+
+.rejectAnchor {
+  position: fixed;
+  width: 300px;
+  max-width: calc(100vw - 16px);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.rejectAnchor[data-placement="above"] {
+  transform: translateY(-100%);
+}
+
+.rejectBubble {
+  padding: 10px 12px 11px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--danger);
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(22, 32, 44, 0.14);
+  animation: ix-reject-in var(--ix-reject-fade) var(--ease-out, ease-out) 1 both;
+}
+
+@keyframes ix-reject-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rejectTag {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  line-height: 1.3;
+}
+
+.rejectLine {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 6px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.rejectLine + .rejectLine {
+  margin-top: 3px;
+}
+
+.rejectKey {
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+/* ===================================================================
+   ErrorToast（E3 系统错误）：顶部下滑 240ms + 3.5s 自动收，最多 1 条
+   =================================================================== */
+
+.toastWrap {
+  --ix-toast-enter: 240ms;
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  width: min(520px, calc(100vw - 24px));
+  pointer-events: none;
+}
+
+.toast {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 8px 10px 15px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(22, 32, 44, 0.18);
+  pointer-events: auto;
+  animation: ix-toast-in var(--ix-toast-enter) var(--ease-drawer, ease-out) 1 both;
+}
+
+@keyframes ix-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 只左侧 3px 竖条，不做红色大面积底（§4.3） */
+.toastMark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--danger);
+}
+
+.toastIcon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--danger);
+  border-radius: 50%;
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.toastBody {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.toastText {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.toastDetail {
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font-size: 10px;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+.toastAction {
+  flex: 0 0 auto;
+  min-width: 64px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--hover, 80ms) var(--ease-press, ease);
+}
+
+.toastAction:hover {
+  background: rgba(192, 57, 43, 0.12);
+}
+
+.toastAction:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
+.toastClose {
+  flex: 0 0 44px;
+  width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toastClose:hover {
+  color: var(--ink);
+}
+
+.toastClose:focus-visible {
+  outline: 2px solid var(--river-700);
+  outline-offset: 2px;
+}
+
+/* ===================================================================
+   降级：reduced-motion 下全部静止，但错误信息照常显示
+   =================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .rejectFrame,
+  .rejectBubble,
+  .toast {
+    animation: none;
+  }
+
+  .rejectAnchor[data-placement="above"] {
+    transform: translateY(-100%);
+  }
+
+  /* 拒收虚线框保留静态可见，信息不丢 */
+  .rejectFrame {
+    opacity: 0.72;
+  }
+}

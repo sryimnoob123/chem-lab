@@ -64,12 +64,20 @@
   --toxic: #5f7a3a;
   --corrode: #8b5e3c;
 
-  /* 场景 */
-  --bench: #e9eef3;
-  --bench-ink: #0e1620;
-  --bench-2: #1a2531;
-  --bench-line: #2a3644;
-  --bench-text: #c9d6e4;
+  /* 场景 —— 2026-10-21 改亮场（纸白实验台）。
+     原因：暗底 #0E1620 + 器皿墨线 #16202C@70% 对比度≈1.3:1，学生看不清器皿与液体。
+     现在：纸白底 + 墨线，玻璃才有"玻璃感"；事故时才用下面的 dark token 压暗做反差。 */
+  --bench: #f6f7f5;
+  --bench-ink: #f6f7f5;
+  --bench-2: #edf0ee;
+  --bench-line: #d5dce4;
+  --bench-text: #4a5768;
+
+  /* 暗场（只在事故 L3/L4 反差、以及演示浮层等需要深底的局部使用） */
+  --bench-ink-dark: #0e1620;
+  --bench-2-dark: #1a2531;
+  --bench-line-dark: #2a3644;
+  --bench-text-dark: #c9d6e4;
 
   /* 动效 */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);

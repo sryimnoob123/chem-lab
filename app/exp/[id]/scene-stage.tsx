@@ -3,9 +3,13 @@
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { getSceneReagent } from "@/lib/scene/reagents";
+import { DEFAULT_RACK_IDS, rackIdsFor } from "./rack-ids";
 import { BenchScene } from "@/components/exp/scene/bench-scene";
-import { PourFX, tiltBottle, type PourState } from "@/components/exp/scene/pour";
+import { PourFX } from "@/components/exp/scene/pour";
+import { EndingFlash, SuccessBurst } from "@/components/exp/feedback";
+import { pourCopy, type DropReject, type DropVerdict } from "@/components/exp/guide/drop-resolve";
 import { LabApparatus } from "./lab-apparatus";
+import { useDropFlow, type DropMode } from "./use-drop-flow";
 import styles from "./workbench.module.css";
 
 /**
@@ -42,11 +46,7 @@ function useScene3d(): boolean {
   return enabled;
 }
 
-const RACK_IDS = ["naoh", "hcl", "phenolphthalein", "methylOrange"] as const;
-const EXP02_RACK_IDS = ["na2co3-solid", "water"] as const;
-const EXP03_RACK_IDS = ["water"] as const;
-const EXP04_RACK_IDS = ["na2co3-solid", "water"] as const;
-const EXP08_RACK_IDS = ["na2co3-solid"] as const;
+const RACK_IDS = DEFAULT_RACK_IDS;
 
 /** exp02 / exp03 / exp04 / exp08 暂时复用实验台 SVG：分析天平 + 烧杯 + 试管 + 容量瓶。 */
 const BENCH_CONTENTS: Readonly<Record<string, readonly string[]>> = {
@@ -76,14 +76,12 @@ const EXP04_BENCH_CONTENTS: Readonly<Record<string, readonly string[]>> = {
   volumetric: ["water"],
 };
 
-const DROP_COPY: Record<string, string> = {
-  naoh: "NaOH 逐滴加入锥形瓶：局部出现浅粉红又褪去，说明还在终点前；继续半滴、摇匀。",
-  hcl: "锥形瓶里已经是 HCl。再补酸只会让终点更晚，体积比会偏大。",
-  phenolphthalein: "酚酞在酸性溶液中无色；等 NaOH 滴到终点，才会出现 30 s 不褪的浅粉红。",
-  methylOrange: "甲基橙在酸性溶液中呈橙红；它和酚酞不能同时拿来判这个终点。",
-  "na2co3-solid": "Na₂CO₃ 试样：用药匙取用，称量纸折角盛放，不能直接倒在秤盘上。",
-  water: "蒸馏水：沿玻璃棒或杯壁加入，别直接冲起沉淀；除杂阶段按 8 mL/g 粗盐取水。",
-};
+/** 拖拽三段式的兜底判定：没有接线时只提示，不改状态。 */
+const NO_RESOLVE: (reagentId: string) => DropVerdict = () => ({
+  kind: "reject",
+  line: "先按上方步骤操作",
+  lines: ["这一步还没接上判定", "投放只在当前步骤有对应动作时才生效", "按上方「建议动作」做这一步"],
+});
 
 export function SceneStage({
   expId,
@@ -92,22 +90,49 @@ export function SceneStage({
   autoDrop,
   feedbackTone,
   feedbackSeq,
+  resolveDrop,
+  onDropAccepted,
+  onDropRejected,
+  stepDoneKey,
+  nextReagent,
   children,
 }: {
   expId?: string;
   onCaption: (text: string | null) => void;
-  onInput?: (mode: "drag" | "click" | "event") => void;
+  onInput?: (mode: DropMode) => void;
   autoDrop?: { reagentId: string; vesselId: string };
   feedbackTone: "success" | "failure" | null;
   feedbackSeq: number;
+  /** 同步判定"这投算不算"；由工作台用当前步 + 已做动作算。 */
+  resolveDrop?: (reagentId: string) => DropVerdict;
+  /** 倒入动画播完后工作台才 dispatch（用户要的"先动画、再下一步"）。 */
+  onDropAccepted?: (choiceId: string, mode: DropMode) => void;
+  /** 拒收：一句为什么，本步不动、允许原地重试。 */
+  onDropRejected?: (reject: DropReject, point?: { x: number; y: number }) => void;
+  /** 本步刚完成（L2）：器皿一次性高光。 */
+  stepDoneKey?: number;
+  /** 场景内流程指引：下一步该用哪瓶 → 试剂架微亮 + 锥形瓶脉冲（和看板指向同一动作）。 */
+  nextReagent?: string | null;
   children?: ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [overFlask, setOverFlask] = useState(false);
-  const [pour, setPour] = useState<PourState | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const use3d = useScene3d();
+  const flow = useDropFlow({
+    stageRef,
+    resolve: resolveDrop ?? NO_RESOLVE,
+    onPour: (reagentId, _verdict, mode) => {
+      onInput?.(mode);
+      const copy = pourCopy(reagentId);
+      if (copy) onCaption(copy);
+    },
+    onAccept: (verdict, mode) => onDropAccepted?.(verdict.choiceId, mode),
+    onReject: (verdict, _reagentId, mode, point) => {
+      onInput?.(mode);
+      onCaption(null);
+      onDropRejected?.(verdict, point);
+    },
+  });
 
   const isBenchScene =
     expId === "exp08" || expId === "exp02" || expId === "exp03" || expId === "exp04";
@@ -118,69 +143,28 @@ export function SceneStage({
   const sceneProgress = Math.min(1, feedbackSeq / 9);
   const sceneBuretteLevel = 1 - 0.52 * sceneProgress;
   const sceneFlaskLevel = 0.1 + 0.42 * sceneProgress;
-  const rackIds: readonly string[] =
-    expId === "exp02"
-      ? EXP02_RACK_IDS
-      : expId === "exp03"
-        ? EXP03_RACK_IDS
-        : expId === "exp04"
-          ? EXP04_RACK_IDS
-          : expId === "exp08"
-            ? EXP08_RACK_IDS
-            : RACK_IDS;
+  const rackIds: readonly string[] = rackIdsFor(expId);
   const reagents = rackIds.map((id) => getSceneReagent(id)).filter(
     (item): item is NonNullable<typeof item> => Boolean(item),
   );
 
-  /** 加入动画：量出瓶口 → 器皿口在舞台内的坐标，并让瓶子倾一下。 */
-  const playPour = (id: string, mode: "drag" | "click" | "event") => {
-    const stage = stageRef.current;
-    if (!stage) return;
-    const reagent = getSceneReagent(id);
-    const bottle = stage.querySelector(`[data-demo-id="demo-scene-reagent-${id}"]`);
-    const target = stage.querySelector(`[data-demo-id="demo-scene-drop-flask"]`);
-    if (!reagent || !bottle || !target) return;
-    const s = stage.getBoundingClientRect();
-    const b = bottle.getBoundingClientRect();
-    const t = target.getBoundingClientRect();
-    tiltBottle(bottle);
-    setPour({
-      key: Date.now(),
-      color: reagent.colorHex,
-      mode,
-      from: { x: b.left + b.width / 2 - s.left, y: b.top + 8 - s.top },
-      to: { x: t.left + t.width / 2 - s.left, y: t.top + t.height * 0.18 - s.top },
-    });
-  };
-
-  const applyReagent = (id: string, mode: "drag" | "click" | "event") => {
-    const copy = DROP_COPY[id];
-    playPour(id, mode);
-    setSelectedId(null);
-    setDraggingId(null);
-    setOverFlask(false);
-    if (copy) {
-      onInput?.(mode);
-      onCaption(copy);
-    }
-  };
-
   const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    const id = draggingId ?? event.dataTransfer.getData("text/plain");
-    if (id) applyReagent(id, "drag");
+    const id = flow.draggingId ?? event.dataTransfer.getData("text/plain");
+    if (id) flow.drop(id, { x: event.clientX, y: event.clientY });
   };
 
   useEffect(() => {
     if (!autoDrop || autoDrop.vesselId !== "flask") return;
     if (!RACK_IDS.includes(autoDrop.reagentId as (typeof RACK_IDS)[number])) return;
-    const timer = window.setTimeout(() => applyReagent(autoDrop.reagentId, "event"), 0);
+    const timer = window.setTimeout(() => flow.fireEvent(autoDrop.reagentId), 0);
     return () => window.clearTimeout(timer);
-    // 只在 URL 事件参数变化时重放一次。
+    // 只在 URL 事件参数变化时重放一次；flow 的方法每次渲染都是新引用。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoDrop?.reagentId, autoDrop?.vesselId]);
 
   const selected = reagents.find((item) => item.id === selectedId) ?? null;
+  const targetActive = Boolean(selectedId || flow.draggingId);
 
   const feedbackClass =
     feedbackTone === "success" ? "ix-snap" : feedbackTone === "failure" ? "ix-shake" : "";
@@ -194,14 +178,12 @@ export function SceneStage({
         // 点空白取消选中；按钮自己的 click 不在这里处理
         if ((event.target as Element).closest("button")) return;
         setSelectedId(null);
-        setDraggingId(null);
-        setOverFlask(false);
+        flow.endDrag();
       }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           setSelectedId(null);
-          setDraggingId(null);
-          setOverFlask(false);
+          flow.endDrag();
           onCaption(null);
         }
       }}
@@ -220,7 +202,8 @@ export function SceneStage({
                 draggable
                 data-demo-id={reagent.demoId}
                 data-selected={selectedId === reagent.id ? "true" : "false"}
-                data-dragging={draggingId === reagent.id ? "true" : "false"}
+                data-dragging={flow.draggingId === reagent.id ? "true" : "false"}
+                data-next={reagent.id === nextReagent ? "true" : "false"}
                 aria-pressed={selectedId === reagent.id}
                 aria-label={`${reagent.name} ${reagent.formula}，${selectedId === reagent.id ? "已选中" : "可拖动"}`}
                 onClick={() => {
@@ -236,13 +219,10 @@ export function SceneStage({
                 onDragStart={(event) => {
                   event.dataTransfer.setData("text/plain", reagent.id);
                   event.dataTransfer.effectAllowed = "copy";
-                  setDraggingId(reagent.id);
+                  flow.beginDrag(reagent.id);
                   setSelectedId(reagent.id);
                 }}
-                onDragEnd={() => {
-                  setDraggingId(null);
-                  setSelectedId(null);
-                }}
+                onDragEnd={() => flow.endDrag()}
               >
                 <span className={styles.reagentBottle} aria-hidden="true">
                   <span
@@ -271,7 +251,7 @@ export function SceneStage({
         </p>
       </aside>
 
-      {selected && !draggingId ? (
+      {selected && !flow.draggingId ? (
         <div className={styles.pickHint} role="status" aria-live="polite" data-demo-id="demo-pick-hint">
           已选中 {selected.name} · 再点目标器皿
           <span className={styles.pickHintKey}>Esc 取消</span>
@@ -285,6 +265,24 @@ export function SceneStage({
           data-bench={isBenchScene ? "true" : undefined}
           data-feedback={feedbackTone ?? undefined}
         >
+          {feedbackTone === "success" ? (
+            <SuccessBurst
+              level={stepDoneKey ? "L2" : "L1"}
+              replayKey={feedbackSeq}
+              className={styles.burstSlot}
+              demoId="demo-feedback-burst"
+            />
+          ) : null}
+          {stepDoneKey ? (
+            <EndingFlash
+              key={stepDoneKey}
+              tone="ok"
+              className={styles.endingFlashSlot}
+              demoId="demo-feedback-ending"
+            >
+              <span />
+            </EndingFlash>
+          ) : null}
           {show3d ? (
             <div
               className={styles.apparatus}
@@ -324,50 +322,36 @@ export function SceneStage({
           <button
             type="button"
             className={`${styles.flaskTarget} ix`}
-            data-active={selectedId || draggingId ? "true" : "false"}
-            data-drop-target={selectedId || draggingId ? "true" : "false"}
-            data-over={overFlask ? "true" : "false"}
+            data-active={targetActive ? "true" : "false"}
+            data-drop-target={targetActive ? "true" : "false"}
+            data-over={flow.overFlask ? "true" : "false"}
+            data-next={nextReagent ? "true" : "false"}
             data-demo-id="demo-scene-drop-flask"
             aria-label="锥形瓶：把选中的试剂放进来"
             onClick={() => {
-              if (selectedId) applyReagent(selectedId, "click");
+              if (selectedId) flow.tapTarget(selectedId);
             }}
             onDragOver={(event) => {
               event.preventDefault();
               event.dataTransfer.dropEffect = "copy";
-              setOverFlask(true);
+              flow.setOverFlask(true);
             }}
-            onDragLeave={() => setOverFlask(false)}
+            onDragLeave={() => flow.setOverFlask(false)}
             onDrop={handleDrop}
           >
             <span className={styles.dropLabel}>
-              {selectedId ? "放到锥形瓶" : "锥形瓶"}
+              {flow.overFlask ? "松手加入" : selectedId ? "放到锥形瓶" : "锥形瓶"}
             </span>
           </button>
         </div>
         <div className={styles.benchSurface} aria-hidden="true" />
       </div>
 
-      <div className={styles.stageCaption}>
-        <span className={styles.captionMark} aria-hidden="true" />
-        {expId === "exp02"
-          ? "图 02 · 分析天平 200 g / 0.1 mg · 烧杯 / 容量瓶 · 正视无透视"
-          : expId === "exp03"
-            ? "图 03 · pH 计 / 烧杯 / 容量瓶 · 正视无透视"
-            : expId === "exp04"
-              ? "图 04 · 离心管 / 烧杯 / 试管 / 容量瓶 · 正视无透视"
-              : expId === "exp08"
-                ? "图 08 · 分析天平 200 g / 0.1 mg · 称量瓶（烧杯占位）· 正视无透视"
-                : show3d
-                  ? "图 09 · 酸式滴定管 50 mL / 锥形瓶 250 mL · 3D 试点（拖拽旋转）"
-                  : "图 09 · 酸式滴定管 50 mL / 锥形瓶 250 mL · 正视无透视"}
-      </div>
-
       <div className={styles.fxSlot} data-feedback={feedbackTone ?? undefined}>
         {children}
       </div>
 
-      <PourFX pour={pour} onDone={() => setPour(null)} />
+      <PourFX pour={flow.pour} onDone={flow.clearPour} />
     </div>
   );
 }

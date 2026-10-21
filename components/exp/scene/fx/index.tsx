@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ComponentType } from "react";
-import type { FxKey } from "@/lib/scene/fx";
+import { useEffect, useRef, useState, type ComponentType, type RefObject } from "react";
+import { getFxAftermath, type FxKey } from "@/lib/scene/fx";
 import { FxBoilOver } from "./fx-boil-over";
 import { FxBurn } from "./fx-burn";
 import { FxDeviceAccident } from "./fx-device-accident";
@@ -12,6 +12,7 @@ import { FxHeavyMetal } from "./fx-heavy-metal";
 import { FxParticles } from "./fx-particles";
 import { FxToxicGas } from "./fx-toxic-gas";
 import type { FxLevel, FxProps } from "./types";
+import impact from "./fx-impact.module.css";
 import styles from "./fx.module.css";
 
 export type { FxProps };
@@ -43,32 +44,65 @@ function useReducedMotion(): boolean {
 /** 屏幕震动时长与 motion.css 里的 --fx-shake-* 对齐（L1~L4 分级）。 */
 const SHAKE_MS: Record<FxLevel, number> = { L1: 160, L2: 220, L3: 320, L4: 460 };
 
-/** 挂载时给 body 加临时等级类，整页位移；卸载或超时即移除，不残留。 */
-function useImpactShake(level: FxLevel) {
+/** 场景舞台兜底选择器：真实工作台的 [data-scene]，演示页的两个舞台。 */
+const SCENE_TARGETS = "[data-scene], [data-demo-id='demo-fx-stage'], [data-fx-active]";
+
+/**
+ * 事故后只抖「实验台/场景层」，不抖整页：
+ * 1. 找到最近的场景舞台（SceneStage 根 / 演示舞台）；
+ * 2. 舞台里有 [data-bench]（实验台）就只抖它，桌面试剂架等 UI 不动；
+ * 3. 找不到场景（如组件被单独使用）则退化为抖特效外壳。
+ * 时长走 --fx-shake-* 变量；reduced-motion 下全程静止；结束移除临时类，不残留样式。
+ */
+function useSceneImpact(level: FxLevel, shellRef: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
-    if (typeof document === "undefined") return;
+    const shell = shellRef.current;
+    if (!shell) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const cls = `fx-impact-${level.slice(1)}`;
-    document.body.classList.add(cls);
-    const timer = window.setTimeout(() => document.body.classList.remove(cls), SHAKE_MS[level]);
+    const stage = shell.closest<HTMLElement>(SCENE_TARGETS);
+    const bench = stage?.querySelector<HTMLElement>("[data-bench]") ?? null;
+    const target = bench ?? stage ?? shell;
+    const cls = `fx-scene-impact-${level.slice(1)}`;
+    target.classList.remove(cls);
+    // 读一次布局，强制重播（同一元素连续两次事故也能抖）。
+    target.getBoundingClientRect();
+    target.classList.add(cls);
+    const timer = window.setTimeout(() => target.classList.remove(cls), SHAKE_MS[level]);
     return () => {
       window.clearTimeout(timer);
-      document.body.classList.remove(cls);
+      target.classList.remove(cls);
     };
-  }, [level]);
+  }, [level, shellRef]);
 }
 
-/** 按 key 渲染对应事故特效，并叠加强负反馈冲击层（震动 / 暗场 / vignette / L4 粒子）。 */
+/** 每类事故固定 4 个余烬；粒子总数 6（4 余烬 + 2 烟尾），远低于 12 上限。 */
+function Remainder({ kind }: { kind: "ember" | "smoke" | "spark" }) {
+  return (
+    <div className={impact.aftermath} data-aftermath={kind} aria-hidden="true">
+      <span className={impact.aftermathEmber} />
+      <span className={impact.aftermathEmber} />
+      <span className={impact.aftermathEmber} />
+      <span className={impact.aftermathEmber} />
+      <span className={impact.aftermathWisp} />
+      <span className={impact.aftermathWisp} />
+    </div>
+  );
+}
+
+/** 按 key 渲染对应事故特效，并叠加强负反馈冲击层（局部震动 / 暗场 / vignette / 余波 / L4 粒子）。 */
 export function FxByKey({ fx, level = "L2", ...props }: { fx: FxKey; level?: FxLevel } & FxProps) {
   const Component = FX_COMPONENTS[fx];
-  useImpactShake(level);
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  useSceneImpact(level, shellRef);
   const reducedMotion = useReducedMotion();
   const heavy = level === "L3" || level === "L4";
+  const aftermath = level === "L1" ? null : getFxAftermath(fx);
   return (
-    <div className={styles.fxShell} data-fx-level={level} data-fx-key={fx}>
+    <div ref={shellRef} className={impact.shell} data-fx-level={level} data-fx-key={fx}>
       <Component {...props} />
       {heavy ? <div className={styles.impactDark} aria-hidden="true" /> : null}
       {heavy ? <div className={styles.impactVignette} aria-hidden="true" /> : null}
+      {aftermath ? <Remainder kind={aftermath} /> : null}
       {level === "L4" && !reducedMotion && (fx === "explosion" || fx === "glassBreak") ? (
         <FxParticles kind={fx} />
       ) : null}

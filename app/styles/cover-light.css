@@ -8,10 +8,9 @@
   color: var(--ink);
 }
 
-/* 主视觉：暗场图转成"白底蓝线工程图"（不重画 SVG，靠滤镜换色，构图完全保留） */
+/* 主视觉：校园实景彩色原图，不做换色滤镜（门户要"看得出是学校"） */
 .cover__scene {
-  filter: invert(0.93) hue-rotate(176deg) saturate(1.6) brightness(1.02) contrast(1.18);
-  opacity: 0.92;
+  opacity: 1;
 }
 
 /* 左侧实心纸色保可读，右侧几乎通透把器材露出来 */
@@ -159,16 +158,7 @@
    轻微动效（只动 transform / opacity，reduced-motion 归零）
    =================================================================== */
 
-/* 器材随呼吸微微浮动 */
-@keyframes cover-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-
-.cover__scene {
-  animation: cover-float 9s ease-in-out infinite;
-  transform-origin: 50% 70%;
-}
+/* 校园图本身有 26s Ken Burns（见 campus-slides），这里不再叠第二层位移动画 */
 
 /* 功能区卡片错峰浮现后常驻 */
 @keyframes cover-rise {
@@ -325,7 +315,7 @@
 
 @media (max-width: 980px) {
   .cover__scene {
-    opacity: 0.26;
+    opacity: 1;
   }
 
   .cover-hero {

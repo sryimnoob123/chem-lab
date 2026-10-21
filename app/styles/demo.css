@@ -218,6 +218,13 @@
   .demo-overlay__hint {
     position: static;
   }
+
+  /* 触控可达（STYLE §5 / rubric 7）：窄屏「一键演示」按钮 ≥44px */
+  .demo-launch {
+    height: auto;
+    min-height: 44px;
+    padding: 0 14px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

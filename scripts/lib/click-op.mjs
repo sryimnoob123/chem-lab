@@ -17,6 +17,31 @@
 
 /** 「其他做法」折叠区 */
 export const OTHER_WAYS_SELECTOR = '[data-demo-id="demo-other-ways"]';
+/** 新手教学（第一次进实验自动弹，会挡住整页点击） */
+export const ONBOARDING_SELECTOR = '[data-demo-id="demo-onboarding"]';
+
+/**
+ * 关掉新手教学卡（第一次进实验时自动弹出的 4 步引导）。
+ * 新 context 每次都是"第一次"，所以所有回归脚本进实验后都要先关它，否则遮罩吃掉点击。
+ * @returns {Promise<boolean>} 本次是否真的关了
+ */
+export async function dismissOnboarding(page, { waitMs = 1500 } = {}) {
+  const card = page.locator(ONBOARDING_SELECTOR).first();
+  try {
+    await card.waitFor({ state: "visible", timeout: waitMs });
+  } catch {
+    return false; // 没弹（本地存过"已看"）就什么都不做
+  }
+  const skip = card.getByRole("button", { name: /跳过/ }).first();
+  if (await skip.count()) {
+    await skip.click({ timeout: 2500 }).catch(() => {});
+  }
+  await card.waitFor({ state: "detached", timeout: 2500 }).catch(() => {});
+  if (await card.isVisible().catch(() => false)) {
+    await page.keyboard.press("Escape").catch(() => {});
+  }
+  return true;
+}
 /** 建议动作 + 折叠区里的动作（含不可见） */
 export const OP_SELECTOR = "[data-demo-id^='demo-op-']";
 /** 只数「当前能看见」的动作：引导式下正常为 1（建议动作） */
@@ -64,6 +89,9 @@ export async function expandOtherWays(page, { settleMs = EXPAND_SETTLE_MS } = {}
 export async function ensureOpVisible(page, target, { timeout = 3000 } = {}) {
   const locator = asLocator(page, target);
   if (await locator.isVisible().catch(() => false)) return false;
+
+  // 新手教学卡（首次进实验自动弹）会拦住所有点击：先关它再展开「其他做法」
+  await dismissOnboarding(page, { waitMs: 400 });
 
   const expanded = await expandOtherWays(page);
   await locator.waitFor({ state: "visible", timeout }).catch(() => {});

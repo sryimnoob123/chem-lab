@@ -1,5 +1,6 @@
 /* 登录页背景：与实验操作台同源的器皿（玻璃白 + 墨线 + 高光 + 真实液体色）。
-   动效只动 transform / opacity；prefers-reduced-motion 全部静止。 */
+   动效只动 transform / opacity / filter / stroke-dashoffset；
+   prefers-reduced-motion 下全部静止，液滴与涟漪不出现。 */
 
 .scene {
   position: absolute;
@@ -7,6 +8,8 @@
   z-index: 1;
   overflow: hidden;
   pointer-events: none;
+  /* 循环动画统一等首屏描绘播完（末件 1.6s + 3×120ms 错峰 ≈ 1.96s）再启动 */
+  --loop-start: 2s;
 }
 
 .layer {
@@ -17,65 +20,120 @@
   height: 100%;
 }
 
-/* 远景：整层压淡，形成纵深 */
+/* 噪点层：feTurbulence 自生成，不引位图，只为去掉数字平涂感 */
+.grain {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0.025;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* ---------- 景深 + 双层视差：pointermove 只写 --px / --py，不 setState ---------- */
 .far {
+  transform: translate3d(calc(var(--px, 0) * 3px), calc(var(--py, 0) * 2px), 0);
+}
+
+.near {
+  transform: translate3d(calc(var(--px, 0) * -6px), calc(var(--py, 0) * -4px), 0);
+}
+
+/* 逐件透明度：hover 揭示需要单独控制每一件器皿 */
+.far .decor,
+.far .vessel {
   opacity: 0.36;
 }
 
-/* 近景：滴定台小景，最清楚 */
-.near {
+.near .decor,
+.near .vessel {
   opacity: 0.62;
 }
 
-.desk {
-  display: block;
+.vessel {
+  transition: opacity 200ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.mobi {
-  display: none;
+/* 背景 hover 揭示：桌面 only，+0.2，200ms，纯 CSS :hover（无 JS 定时器） */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .vessel {
+    pointer-events: visiblePainted;
+  }
+  .far .vessel:hover {
+    opacity: 0.56;
+  }
+  .near .vessel:hover {
+    opacity: 0.82;
+  }
 }
 
-/* 锥形瓶液面：3.5s 轻微起伏 */
-.liquidSway {
+/* ---------- 首屏描绘：只播一次（pathLength=1 + stroke-dashoffset 1→0） ---------- */
+.draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 1.6s cubic-bezier(0.23, 1, 0.32, 1) calc(var(--i, 0) * 120ms) forwards;
+}
+
+/* 玻璃底、细节：等所属器皿画到一半再淡入 */
+.fillIn {
+  opacity: 0;
+  animation: paint 1.4s ease-out calc(var(--i, 0) * 120ms + 0.2s) both;
+}
+
+.sketchIn {
+  opacity: 0;
+  animation: paint 0.5s ease-out calc(var(--i, 0) * 120ms + 1.15s) both;
+}
+
+/* 液面呼吸 / 滴定管液柱：描绘结束后才启动循环 */
+.liquid {
   transform-box: fill-box;
   transform-origin: center bottom;
-  animation: sway 3.5s ease-in-out infinite;
+  opacity: 0;
+  animation:
+    paint 0.6s ease-out calc(var(--i, 0) * 120ms + 1.45s) both,
+    sway 3.5s ease-in-out calc(var(--i, 0) * 120ms + 1.9s) infinite;
 }
 
-/* 滴定管液柱缓慢下降一点点（滴定过程） */
 .buretteLiquid {
   transform-box: fill-box;
   transform-origin: center top;
-  animation: fall 12s ease-in-out infinite;
+  opacity: 0;
+  animation:
+    paint 0.6s ease-out calc(var(--i, 0) * 120ms + 1.45s) both,
+    fall 12s ease-in-out calc(var(--i, 0) * 120ms + 1.9s) infinite;
 }
 
-/* 滴定尖嘴落下的粉色液滴：2.4s 一滴，模拟重力加速 */
-.drop,
-.dropSm {
-  animation: drip 2.4s cubic-bezier(0.45, 0, 0.9, 0.55) infinite;
-}
-
-/* 气泡上浮 */
+/* 气泡：描绘完成后才开始上浮，--phase 错开 */
 .bubble {
-  animation: bubble 8s linear infinite;
+  animation: bubble 8s linear calc(var(--loop-start) + var(--phase, 0s)) infinite;
 }
 
-@keyframes drip {
-  0%,
-  58% {
-    transform: translateY(-6px);
+/* 液滴 + 落点涟漪：同为 1.8s 周期，涟漪相位 = 液滴落回液面那一刻 */
+.drop {
+  animation: drip 1.8s cubic-bezier(0.45, 0, 0.9, 0.55) calc(var(--loop-start) + var(--phase, 0s)) infinite;
+}
+
+.ripple {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ripple 1.8s cubic-bezier(0.23, 1, 0.32, 1) calc(var(--loop-start) + var(--phase, 0s)) infinite;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes paint {
+  from {
     opacity: 0;
   }
-  62% {
+  to {
     opacity: 1;
-  }
-  96% {
-    transform: translateY(168px);
-    opacity: 0.9;
-  }
-  100% {
-    transform: translateY(184px);
-    opacity: 0;
   }
 }
 
@@ -99,6 +157,41 @@
   }
 }
 
+@keyframes drip {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  6% {
+    opacity: 0.92;
+  }
+  84% {
+    transform: translateY(var(--drip-rise, 112px));
+    opacity: 0.92;
+  }
+  96%,
+  100% {
+    transform: translateY(var(--drip-rise, 112px));
+    opacity: 0;
+  }
+}
+
+@keyframes ripple {
+  0%,
+  78% {
+    transform: scale(0.35);
+    opacity: 0;
+  }
+  84% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
 @keyframes bubble {
   0% {
     transform: translateY(0);
@@ -116,20 +209,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .liquidSway,
-  .buretteLiquid,
-  .drop,
-  .dropSm,
-  .bubble {
-    animation: none;
-  }
-  .drop,
-  .dropSm {
-    opacity: 0;
-  }
-}
-
 /* 窄屏：换成专门排的一版 */
 @media (max-width: 720px) {
   .desk {
@@ -138,10 +217,42 @@
   .mobi {
     display: block;
   }
-  .near {
+  .near .decor,
+  .near .vessel {
     opacity: 0.6;
   }
-  .far {
+  .far .decor,
+  .far .vessel {
     opacity: 0.34;
+  }
+}
+
+/* 降级：完全静止，不靠动画也能看懂（液滴/涟漪直接隐藏） */
+@media (prefers-reduced-motion: reduce) {
+  .draw {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .fillIn,
+  .sketchIn,
+  .liquid,
+  .buretteLiquid {
+    animation: none;
+    opacity: 1;
+  }
+  .bubble {
+    animation: none;
+  }
+  .drop,
+  .ripple {
+    animation: none;
+    opacity: 0;
+  }
+  .vessel {
+    transition: none;
+  }
+  .far,
+  .near {
+    transform: none;
   }
 }

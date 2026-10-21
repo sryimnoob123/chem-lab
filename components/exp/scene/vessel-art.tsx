@@ -9,7 +9,7 @@
  */
 
 import type { CSSProperties } from "react";
-import { liquidColorFor } from "@/lib/scene/reagents";
+import { mixLiquids } from "@/lib/scene/liquid-mix";
 import type { SceneOutcome, SceneVessel } from "@/lib/scene/types";
 import styles from "./scene.module.css";
 
@@ -195,8 +195,11 @@ export type VesselArtProps = {
 
 export function VesselArt({ vessel, contents, outcome, fxKey, liquidOverride }: VesselArtProps) {
   const s = scaleOf(vessel.kind);
-  const baseColor = liquidColorFor(contents);
+  const mix = mixLiquids(contents);
+  const baseColor = mix.color;
   const liquid = liquidOverride ?? outcome?.phenomena.colorChange?.toHex ?? baseColor;
+  /** 液体浓度：混色表给的 opacity 夹在 0.45~0.8，太淡看不见、太浓像墨汁。 */
+  const liquidOpacity = Math.min(0.8, Math.max(0.45, mix.opacity));
   const fx = outcome?.fx ?? "none";
   const precip = fx === "precipitate" ? outcome?.phenomena.precipitate ?? null : null;
   /** 纯白沉淀在白玻璃上会"消失"：压成暖灰白，保证肉眼能看出浑浊。 */
@@ -264,7 +267,7 @@ export function VesselArt({ vessel, contents, outcome, fxKey, liquidOverride }: 
           d={liquidPath(vessel.kind)}
           className={styles.liquid}
           style={{ fill: precipFill ?? liquid ?? undefined }}
-          fillOpacity={precip ? 0.62 : 0.55}
+          fillOpacity={precip ? 0.62 : liquidOpacity}
           stroke={precip ? INK : "none"}
           strokeOpacity={precip ? 0.2 : undefined}
           strokeWidth={precip ? 0.9 : undefined}

@@ -6,6 +6,7 @@ import { runs } from "@/db/schema";
 import { getDefinition } from "@/lib/engine";
 import { getStudent } from "@/lib/session";
 import { loadRunBundle, type RunBundle } from "@/lib/persist/report";
+import { buildRunSummary, minutesBetween } from "@/lib/report/summary";
 import { getSceneReagent } from "@/lib/scene/reagents";
 import { BopbpsPostLab } from "@/components/exp/bopbps-postlab";
 import { Reveal } from "@/components/motion/reveal";
@@ -152,6 +153,18 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   const studentName = bundle?.student?.name ?? "";
   const finishedAt = bundle?.run.finishedAt ? new Date(bundle.run.finishedAt) : null;
 
+  // 本次总结：覆盖步数按「走到过的最深一步」算，重做不会把覆盖数刷虚。
+  const coveredSteps = bundle?.timeline?.length
+    ? Math.max(...bundle.timeline.map((row) => row.stepIndex)) + 1
+    : 0;
+  const summary = buildRunSummary({
+    total,
+    incidentCount: incidents.length,
+    coveredSteps,
+    totalSteps: definition.steps.length,
+    minutes: bundle ? minutesBetween(bundle.run.startedAt, bundle.run.finishedAt) : 0,
+  });
+
   return (
     <main className={`${styles.page} ix-page-enter`} data-demo-id="demo-report">
       <header className={styles.topbar}>
@@ -163,16 +176,8 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
       </header>
 
       <div className={styles.sheet}>
-        <Reveal as="div" index={0}>
-          <BopbpsPostLab expId={definition.id} />
-        </Reveal>
-        {demoNotice ? (
-          <div className={styles.demoNotice} data-demo-id="demo-report-notice" role="note">
-            <strong>演示示例 · 非本次 run</strong>
-            <span>这是历史记录，用于说明报告结构。</span>
-          </div>
-        ) : null}
-        <Reveal as="section" className={styles.head} aria-labelledby="report-title" index={1}>
+        {/* 交卷后第一眼：哪个实验、多少分、这次做得怎么样；后测放在后面 */}
+        <Reveal as="section" className={styles.head} aria-labelledby="report-title" index={0}>
           <div className={styles.headText}>
             <p className={styles.eyebrow}>实验 {definition.id.replace(/^exp/, "")} · 报告</p>
             <h1 className={styles.title} id="report-title">
@@ -191,7 +196,35 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           </div>
         </Reveal>
 
-        <Reveal as="section" className={styles.parts} aria-label="三段分" index={2}>
+        <Reveal as="section" className={styles.summary} aria-labelledby="report-summary" index={1} data-tone={summary.tone} data-demo-id="demo-report-summary">
+          <div className={styles.summaryLead}>
+            <span className={styles.summaryKicker}>本次总结</span>
+            <p className={styles.summaryLine} id="report-summary">
+              {summary.headline}
+            </p>
+          </div>
+          <ul className={styles.summaryFacts}>
+            {summary.facts.map((fact) => (
+              <li key={fact.label}>
+                <span className={styles.summaryFactLabel}>{fact.label}</span>
+                <strong className={styles.summaryFactValue} data-tone={fact.tone}>
+                  {fact.value}
+                </strong>
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+        {demoNotice ? (
+          <div className={styles.demoNotice} data-demo-id="demo-report-notice" role="note">
+            <strong>演示示例 · 非本次 run</strong>
+            <span>这是历史记录，用于说明报告结构。</span>
+          </div>
+        ) : null}
+        <Reveal as="div" index={2}>
+          <BopbpsPostLab expId={definition.id} />
+        </Reveal>
+
+        <Reveal as="section" className={styles.parts} aria-label="三段分" index={3}>
           {[
             { label: "预习", value: preview, weight: "10%", note: "前测正确率" },
             { label: "操作", value: operation, weight: "40%", note: "扣违规 / 事故 / 提示" },
@@ -301,9 +334,11 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           <Link className={`${styles.action} ix`} href="/experiments">
             返回实验列表
           </Link>
-          <Link className={`${styles.action} ix`} href="/teacher">
-            查看教师端
-          </Link>
+          {runId ? (
+            <a className={`${styles.action} ix`} href={`/api/runs/${runId}/export`}>
+              下载记录（CSV）
+            </a>
+          ) : null}
           <span className={styles.footerNote}>
             {runId ? `run ${runId.slice(0, 8)} · ${bundle?.run.status ?? "unknown"}` : "空态骨架 · 未读取到已完成记录"}
           </span>

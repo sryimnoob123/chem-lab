@@ -91,7 +91,7 @@
 
 .bottle[data-dragging="true"] {
   transform: scale(1.04);
-  box-shadow: 0 4px 12px rgba(22, 32, 44, 0.16);
+  box-shadow: 0 4px 12px rgba(246, 247, 245, 0.90);
   cursor: grabbing;
 }
 
@@ -575,7 +575,7 @@
   height: 10px;
   border-radius: 50% 50% 60% 60% / 55% 55% 100% 100%;
   background: var(--pour-color, #dce9f2);
-  box-shadow: 0 0 0 1px rgba(22, 32, 44, 0.16);
+  box-shadow: 0 0 0 1px rgba(246, 247, 245, 0.90);
   opacity: 0;
 }
 
