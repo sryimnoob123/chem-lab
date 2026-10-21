@@ -1,0 +1,15 @@
+﻿import { chromium } from "@playwright/test";
+const BASE = "http://127.0.0.1:3001";
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await ctx.newPage();
+await page.request.post(`${BASE}/api/session`, { headers: { "content-type": "application/json" }, data: { studentNo: "20250101", name: "周若曦" } });
+await page.goto(`${BASE}/exp/exp01?force=1`, { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(2500);
+await page.getByRole("button", { name: /跳过/ }).first().click().catch(() => {});
+await page.waitForTimeout(800);
+const ids = await page.evaluate(() => [...document.querySelectorAll("[data-demo-id]")].map((el) => el.getAttribute("data-demo-id")));
+console.log("data-demo-id 列表:", JSON.stringify(ids));
+const text = await page.evaluate(() => document.body.innerText.replace(/\s+/g, " ").slice(0, 400));
+console.log("页面文本:", text);
+await browser.close();
