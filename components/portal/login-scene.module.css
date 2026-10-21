@@ -1,0 +1,147 @@
+/* 登录页背景：与实验操作台同源的器皿（玻璃白 + 墨线 + 高光 + 真实液体色）。
+   动效只动 transform / opacity；prefers-reduced-motion 全部静止。 */
+
+.scene {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 远景：整层压淡，形成纵深 */
+.far {
+  opacity: 0.36;
+}
+
+/* 近景：滴定台小景，最清楚 */
+.near {
+  opacity: 0.62;
+}
+
+.desk {
+  display: block;
+}
+
+.mobi {
+  display: none;
+}
+
+/* 锥形瓶液面：3.5s 轻微起伏 */
+.liquidSway {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: sway 3.5s ease-in-out infinite;
+}
+
+/* 滴定管液柱缓慢下降一点点（滴定过程） */
+.buretteLiquid {
+  transform-box: fill-box;
+  transform-origin: center top;
+  animation: fall 12s ease-in-out infinite;
+}
+
+/* 滴定尖嘴落下的粉色液滴：2.4s 一滴，模拟重力加速 */
+.drop,
+.dropSm {
+  animation: drip 2.4s cubic-bezier(0.45, 0, 0.9, 0.55) infinite;
+}
+
+/* 气泡上浮 */
+.bubble {
+  animation: bubble 8s linear infinite;
+}
+
+@keyframes drip {
+  0%,
+  58% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  62% {
+    opacity: 1;
+  }
+  96% {
+    transform: translateY(168px);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(184px);
+    opacity: 0;
+  }
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: scaleY(0.99);
+  }
+  50% {
+    transform: scaleY(1.012);
+  }
+}
+
+@keyframes fall {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.97);
+  }
+}
+
+@keyframes bubble {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.8;
+  }
+  82% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateY(-62px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquidSway,
+  .buretteLiquid,
+  .drop,
+  .dropSm,
+  .bubble {
+    animation: none;
+  }
+  .drop,
+  .dropSm {
+    opacity: 0;
+  }
+}
+
+/* 窄屏：换成专门排的一版 */
+@media (max-width: 720px) {
+  .desk {
+    display: none;
+  }
+  .mobi {
+    display: block;
+  }
+  .near {
+    opacity: 0.6;
+  }
+  .far {
+    opacity: 0.34;
+  }
+}

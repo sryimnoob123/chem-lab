@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { VesselGlyph } from "@/components/portal/vessel-strip";
+import { LoginScene } from "@/components/portal/login-scene";
 
 type Role = "student" | "teacher";
 
@@ -56,21 +56,8 @@ export default function LoginPage() {
 
   return (
     <div className="login-screen">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="login-bg" src="/brand/campus/campus-02.jpg" alt="" aria-hidden="true" />
       <span className="login-screen__veil" aria-hidden="true" />
-
-      <div className="login-art" aria-hidden="true">
-        <span className="login-art__item" data-pos="left">
-          <VesselGlyph index={3} />
-        </span>
-        <span className="login-art__item" data-pos="top">
-          <VesselGlyph index={4} />
-        </span>
-        <span className="login-art__item" data-pos="right">
-          <VesselGlyph index={1} />
-        </span>
-      </div>
+      <LoginScene />
 
       <div className="login-card">
         <Link className="login__brand" href="/">
@@ -190,63 +177,12 @@ export default function LoginPage() {
             linear-gradient(rgba(35, 48, 127, .05) 1px, transparent 1px) 0 0 / 72px 72px,
             #f3f6fb;
         }
-        .login-bg {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center;
-          opacity: .16;
-          filter: saturate(.88) contrast(1.02);
-          pointer-events: none;
-        }
         .login-screen__veil {
           position: absolute;
           inset: 0;
-          z-index: 1;
+          z-index: 2;
           pointer-events: none;
-          background:
-            linear-gradient(180deg, rgba(246, 248, 252, .72) 0%, rgba(255, 255, 255, .86) 58%, rgba(243, 246, 251, .9) 100%),
-            radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, .5), rgba(243, 246, 251, .9) 78%);
-        }
-        .login-art {
-          position: absolute;
-          inset: 0;
-          z-index: 1;
-          overflow: hidden;
-          pointer-events: none;
-          color: var(--river-700);
-        }
-        .login-art__item {
-          position: absolute;
-          display: block;
-          opacity: .14;
-          animation: login-float 26s ease-in-out infinite alternate;
-          will-change: transform;
-        }
-        .login-art__item svg { width: 100%; height: 100%; }
-        .login-art__item[data-pos="left"] {
-          left: 7%;
-          bottom: 13%;
-          width: 110px;
-          height: 132px;
-        }
-        .login-art__item[data-pos="top"] {
-          left: 19%;
-          top: 16%;
-          width: 72px;
-          height: 86px;
-          animation-duration: 21s;
-          animation-delay: -6s;
-        }
-        .login-art__item[data-pos="right"] {
-          right: 8%;
-          top: 22%;
-          width: 132px;
-          height: 158px;
-          animation-duration: 30s;
-          animation-delay: -12s;
+          background: radial-gradient(ellipse 46% 44% at 50% 48%, rgba(255, 255, 255, .62) 0%, rgba(255, 255, 255, .16) 62%, transparent 100%);
         }
 
         .login-card {
@@ -346,17 +282,11 @@ export default function LoginPage() {
           from { opacity: 0; transform: translateY(12px) scale(.96); }
           to { opacity: 1; transform: none; }
         }
-        @keyframes login-float {
-          from { transform: translateY(0) rotate(-2deg); }
-          to { transform: translateY(-16px) rotate(2deg); }
-        }
         @media (max-width: 420px) {
           .login-card { padding: 24px 20px 20px; border-radius: 16px; }
-          .login-art__item[data-pos="right"] { opacity: .09; }
         }
         @media (prefers-reduced-motion: reduce) {
           .login-card { animation: none; }
-          .login-art__item { animation: none; }
           .login__tab-ink,
           .login-card .login__form input,
           .login-card .login__submit { transition: none; }
