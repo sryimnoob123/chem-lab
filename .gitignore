@@ -29,3 +29,6 @@ e2e-review/
 
 # 运行日志与进程号（start-chem-lab 写这里）
 logs/
+
+# build cache
+tsconfig.tsbuildinfo
