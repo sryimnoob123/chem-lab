@@ -63,6 +63,43 @@ const shotsOf = (id) => {
 
 const cards = rows.map((r) => ({ ...r, stat: statOf(r.id), shots: shotsOf(r.id) }));
 const playable = cards.filter((c) => c.playable);
+
+// ── 平台能力卡（BOPPPS / 方案设计 / 教师端）──
+const extraDefs = [
+  {
+    id: "bopbps",
+    no: "B",
+    title: "BOPPPS 教学六段",
+    desc: "导入 / 目标 / 前测门禁 / 参与式 / 后测 / 总结",
+    kind: "教学",
+    hours: 0,
+    playable: true,
+    link: "http://localhost:3001/exp/exp01",
+    shotsDir: "bopbps",
+  },
+  {
+    id: "plan",
+    no: "P",
+    title: "拼接式方案设计",
+    desc: "31 块素材 · 21 条规则实时校验 · 方案保存",
+    kind: "设计",
+    hours: 0,
+    playable: true,
+    link: "http://localhost:3001/plan",
+    shotsDir: "plan",
+  },
+];
+const extras = extraDefs.map((d) => {
+  const dir = path.join(ROOT, "public", "shots-prod", d.shotsDir);
+  const shots = fs.existsSync(dir)
+    ? fs
+        .readdirSync(dir)
+        .filter((x) => x.endsWith(".png") && !x.includes("exp0"))
+        .sort()
+        .map((x) => ({ rel: `shots-prod/${d.shotsDir}/${x}`, name: x }))
+    : [];
+  return { ...d, stat: null, shots };
+});
 const totalShots = cards.reduce((n, c) => n + c.shots.length, 0);
 const now = new Date().toLocaleString("zh-CN", { hour12: false });
 
@@ -120,12 +157,14 @@ const cardHTML = (c) => `
     ${shotHTML(c)}
     <footer class="card-foot">
       ${
-        c.playable
-          ? `<a class="btn primary" href="http://localhost:3001/exp/${c.id}" target="_blank" rel="noreferrer">打开操作台</a>
-             <a class="btn ghost" href="http://localhost:3001/exp/${c.id}/report" target="_blank" rel="noreferrer">看报告页</a>`
-          : `<span class="btn disabled">暂未开放（友好页）</span>`
+        c.link
+          ? `<a class="btn primary" href="${c.link}" target="_blank" rel="noreferrer">打开</a>`
+          : c.playable
+            ? `<a class="btn primary" href="http://localhost:3001/exp/${c.id}" target="_blank" rel="noreferrer">打开操作台</a>
+               <a class="btn ghost" href="http://localhost:3001/exp/${c.id}/report" target="_blank" rel="noreferrer">看报告页</a>`
+            : `<span class="btn disabled">暂未开放（友好页）</span>`
       }
-      <code>/exp/${c.id}</code>
+      ${c.link ? "" : `<code>/exp/${c.id}</code>`}
     </footer>
   </article>`;
 
@@ -248,6 +287,7 @@ const html = `<!doctype html>
   .btn.disabled{background:#f1f4f8;color:var(--ink-3);cursor:not-allowed}
   .card-foot code{font-size:11.5px;color:var(--ink-3);margin-left:auto}
 
+  .sec-title{font-size:17px;margin:34px 0 0;letter-spacing:-.01em}
   footer.page{margin-top:28px;color:var(--ink-3);font-size:12px;line-height:1.8}
   footer.page code{background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
 </style>
@@ -274,6 +314,11 @@ const html = `<!doctype html>
   <main class="grid">
     ${cards.map(cardHTML).join("\n")}
   </main>
+
+  <h2 class="sec-title">平台能力（不止实验台）</h2>
+  <section class="grid">
+    ${extras.map(cardHTML).join("\n")}
+  </section>
 
   <footer class="page">
     <div>生成时间 ${esc(now)} · 由 <code>node scripts/build-preview.mjs</code> 从 catalog + definition + 截图目录自动生成</div>
