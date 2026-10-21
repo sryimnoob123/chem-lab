@@ -153,6 +153,8 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   const competency = scores.detail?.competency ?? {};
   const codes = definition.competencies.length > 0 ? definition.competencies : Object.keys(competency);
   const timeline = (bundle?.timeline ?? []).slice(-10).reverse();
+  /** 错题解析用完整时间线（最近 10 条可能截掉早期错误） */
+  const wrongRows = (bundle?.timeline ?? []).filter((row) => row.correct === false);
   const incidents = bundle?.incidents ?? [];
   const studentNo = bundle?.student?.studentNo ?? bundle?.run.studentNo ?? "—";
   const studentName = bundle?.student?.name ?? "";
@@ -309,7 +311,35 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           </Reveal>
         </div>
 
-        <Reveal as="section" className={styles.panel} aria-labelledby="timeline-title" index={5}>
+        {/* 错题解析：红队要求报告四要素之一（总分/总结/能力点/错题解析） */}
+        <Reveal as="section" className={styles.panel} aria-labelledby="wrong-title" index={5}>
+          <div className={styles.panelHead}>
+            <h2 id="wrong-title">错题解析</h2>
+            <span>{wrongRows.length} 条 · 含正确做法</span>
+          </div>
+          {wrongRows.length === 0 ? (
+            <p className={styles.empty}>本次没有错误操作，每一步都通过了。</p>
+          ) : (
+            <ul className={styles.wrongList}>
+              {wrongRows.map((row, i) => {
+                const step = definition.steps[row.stepIndex];
+                const chosen = step?.choices.find((item) => item.choiceId === row.choiceId);
+                const right = step?.choices.find((item) => item.role === "correct");
+                return (
+                  <li key={`${row.stepIndex}-${row.seq ?? i}-${row.choiceId}`}>
+                    <span className={styles.wrongStep}>
+                      第 {pad2(row.stepIndex + 1)} 步 · {step?.title ?? "—"}
+                    </span>
+                    <p className={styles.wrongYou}>你的选择：{chosen?.label ?? row.choiceId}</p>
+                    <p className={styles.wrongRight}>正确做法：{right?.label ?? "—"}</p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Reveal>
+
+        <Reveal as="section" className={styles.panel} aria-labelledby="timeline-title" index={6}>
           <div className={styles.panelHead}>
             <h2 id="timeline-title">关键步骤时间线</h2>
             <span>最近 {timeline.length} 条 · 倒序</span>

@@ -631,3 +631,36 @@
     justify-content: space-between;
   }
 }
+
+/* 错题解析 */
+.wrongList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+.wrongList > li {
+  padding: 10px 12px;
+  border: 1px solid var(--bench-line);
+  border-left: 3px solid var(--danger);
+  border-radius: 2px;
+  background: rgba(192, 57, 43, 0.03);
+}
+.wrongStep {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.wrongYou {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--danger);
+}
+.wrongRight {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--jade-600);
+}
+
