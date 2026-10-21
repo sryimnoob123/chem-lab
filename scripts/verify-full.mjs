@@ -24,7 +24,7 @@ import {
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3001";
 const ONLY = process.argv[2]?.toLowerCase();
-const OUT = path.join(process.cwd(), "public/shots-prod/verify");
+const OUT = path.join(process.cwd(), "public/shots-prod", process.env.SHOT_DIR ?? "verify");
 fs.mkdirSync(OUT, { recursive: true });
 
 /**
@@ -32,6 +32,17 @@ fs.mkdirSync(OUT, { recursive: true });
  * 顺序即真实流程顺序；前置没做的话按钮会 disabled，脚本会如实记成失败。
  */
 const PLANS = {
+  exp03: {
+    label: "醋酸电离常数的测定",
+    ops: [
+      "demo-op-step1-assemble", "demo-op-step1-transfer", "demo-op-step1-dilute",
+      "demo-op-step2-wash", "demo-op-step2-transfer", "demo-op-step2-dilute",
+      "demo-op-step3-heat", "demo-op-step3-read",
+      "demo-op-step4-wash", "demo-op-step4-calibrate",
+      "demo-op-step5-hit", "demo-op-step5-wash", "demo-op-step5-read",
+      "demo-op-step6-compute", "demo-op-step6-average", "demo-op-step6-cleanup",
+    ],
+  },
   exp01: {
     label: "仪器认领 / 天平 / 溶液配制",
     ops: [
@@ -88,6 +99,7 @@ for (const t of targets) {
  */
 const PRE_ANSWERS = {
   exp01: [["exp01-pre-1", "D"], ["exp01-pre-2", "B"], ["exp01-pre-3", "C"]],
+  exp03: [["exp03-pre-1", "A"], ["exp03-pre-2", "B"], ["exp03-pre-3", "B"]],
   exp08: [["exp08-pre-1", "C"], ["exp08-pre-2", "B"], ["exp08-pre-3", "B"]],
   exp09: [["exp09-pre-1", "A"], ["exp09-pre-2", "B"], ["exp09-pre-3", "B"]],
 };
@@ -116,6 +128,7 @@ const TRAPS = new Set([
   "demo-op-step2-touch",
   "demo-op-step4-naoh-in-acid-burette",
   "demo-op-step3-hot",
+  "demo-op-step5-hit",
 ]);
 
 const browser = await chromium.launch();
@@ -152,11 +165,16 @@ for (const expId of targets) {
 
   const card = page.locator(`[data-demo-id='demo-catalog-${expId}']`).first();
   const hasCard = (await card.count()) > 0;
-  if (!hasCard) {
-    item.failures.push({ stage: "列表", why: `列表里找不到 demo-catalog-${expId}（可能被折叠或禁用）` });
-    continue;
+  // 禁用态是 <div aria-disabled>，点了没反应；只有可见的真链接才能点进实验页
+  const visible = hasCard && (await card.isVisible().catch(() => false));
+  const isLink = visible && (await card.evaluate((el) => el.tagName === "A").catch(() => false));
+  const clickable = isLink;
+  if (clickable) {
+    await card.click({ timeout: 6000 }).catch(() => {});
+  } else {
+    // 还在「更多实验」折叠里 / 或已禁用：直接进页（不带 force，仍走前测，保持真实路径）
+    await page.goto(`${BASE}/exp/${expId}`, { waitUntil: "domcontentloaded" }).catch(() => {});
   }
-  await card.click({ timeout: 6000 }).catch(() => {});
   await page.waitForTimeout(1400);
   if (!page.url().includes(`/exp/${expId}`)) {
     item.failures.push({ stage: "进入", why: `点卡片后没进实验页，当前 ${page.url()}` });

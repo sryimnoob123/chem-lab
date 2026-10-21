@@ -488,9 +488,40 @@
   width: 100%;
 }
 
+/* 台面场景的投放热区：器皿横排铺开，不再是"底部居中一个锥形瓶"。
+   热区覆盖整条器皿带，虚框只在拖拽/选中时出现，避免画面中间浮一个空方框。 */
+.apparatusWrap[data-bench="true"] .flaskTarget {
+  left: 6%;
+  bottom: 16%;
+  width: 88%;
+  height: 40%;
+  transform: none;
+  border-color: transparent;
+}
+
+.apparatusWrap[data-bench="true"] .flaskTarget.ix:hover,
+.apparatusWrap[data-bench="true"] .flaskTarget.ix:active {
+  transform: scale(var(--scale-down));
+}
+
+.apparatusWrap[data-bench="true"] .flaskTarget[data-active="true"],
+.apparatusWrap[data-bench="true"] .flaskTarget[data-over="true"] {
+  border-color: rgba(74, 87, 104, 0.28);
+}
+
+.apparatusWrap[data-bench="true"] .flaskTarget .dropLabel {
+  opacity: 0;
+}
+
+.apparatusWrap[data-bench="true"] .flaskTarget[data-over="true"] .dropLabel,
+.apparatusWrap[data-bench="true"] .flaskTarget[data-active="true"] .dropLabel {
+  opacity: 0.72;
+}
+
 .benchReuse {
-  width: min(900px, 92%);
-  max-height: 82%;
+  /* 台面要占满工作区主体：之前 900px + 70vh 上限，器皿看着像缩略图 */
+  width: min(1180px, 96%);
+  max-height: 90%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -506,7 +537,7 @@
 .benchReuse :global(svg) {
   width: 100%;
   height: auto;
-  max-height: 70vh;
+  max-height: none;
 }
 
 .benchSurface {

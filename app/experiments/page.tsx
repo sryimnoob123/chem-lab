@@ -13,7 +13,13 @@ export const metadata = { title: "我的实验" };
  * 其余 7 个收进"更多实验"，默认禁用 —— 与其让观众点开一个半成品，
  * 不如明确标"即将开放"（用户 2026-10-21 拍板）。
  */
-const FEATURED_IDS = ["exp01", "exp09", "exp08"] as const;
+const FEATURED_IDS = ["exp01", "exp03", "exp09"] as const;
+
+/**
+ * 「更多实验」里允许点进去的实验：exp08 称量练习已验收过，回退展示但仍可玩。
+ * 其余保持"即将开放"（半成品点开比明确禁用更掉分）。
+ */
+const PLAYABLE_IN_MORE = new Set(["exp08"]);
 
 function StateBadge({ playable }: { playable: boolean }) {
   return playable ? (
@@ -122,7 +128,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           </summary>
           <ol className="cat-list cat-list--more" data-locked="true">
             {rest.map((item) => {
-              const open = debugAll && item.playable;
+              const open = item.playable && (debugAll || PLAYABLE_IN_MORE.has(item.id));
               const body = (
                 <>
                   <span className="cat-row__no mono">{item.no}</span>

@@ -881,19 +881,6 @@ export function Workbench({
           >
             {fx}
           </SceneStage>
-          {!isExp09 && process.env.NODE_ENV !== "production" ? (
-            <p className={styles.sceneTodo} data-demo-id="exp01-scene-todo">
-              {expId === "exp02"
-                ? "场景复用现有分析天平 / 烧杯 / 容量瓶 / Na₂CO₃·水（蒸发皿待替换 · TODO）"
-                : expId === "exp03"
-                  ? "场景复用现有烧杯 / 容量瓶 / 分析天平 / 蒸馏水（pH 计电极待替换 · TODO）"
-                  : expId === "exp04"
-                    ? "场景复用现有烧杯 / 试管 / 容量瓶 / Na₂CO₃·水（离心机待替换 · TODO）"
-                    : expId === "exp08"
-                    ? "场景复用现有分析天平 / 烧杯 / Na₂CO₃ 试剂（称量瓶用烧杯替代 · TODO）"
-                    : "场景复用 exp09 器皿（称量 / 容量瓶 / 通风橱待替换 · TODO）"}
-            </p>
-          ) : null}
         </section>
 
         <aside className={styles.rail} aria-label="操作面板">

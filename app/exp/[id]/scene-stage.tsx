@@ -13,6 +13,15 @@ import { useDropFlow, type DropMode } from "./use-drop-flow";
 import styles from "./workbench.module.css";
 
 /**
+ * 台面器皿白名单（2026-10-21 验收口径）：
+ * - exp01 称量配制：天平（bench-scene 内固定）+ 烧杯 + 容量瓶 + 两支量器位
+ * - exp03 醋酸电离常数：容量瓶 + 烧杯（水浴）+ 锥形瓶 + pH 计（bench-scene 内固定）
+ * 不传 = 全量器皿（exp02/04/08 保持原样，不动它们的既有验收）。
+ */
+const EXP01_BENCH_VESSELS = ["beaker", "volumetric", "tube-a", "tube-b"];
+const EXP03_BENCH_VESSELS = ["beaker", "volumetric", "tube-a", "tube-b", "flask"];
+
+/**
  * 3D 试点（?scene=3d）：three.js 场景只在客户端加载，ssr:false；
  * 加载失败/不支持 WebGL 时组件内部给降级提示，去掉参数即回 2D，2D 路径零改动。
  */
@@ -134,8 +143,17 @@ export function SceneStage({
     },
   });
 
+  /**
+   * 台面场景（analysis 天平 + 玻璃器皿）而非滴定场景。
+   * exp01 是「仪器认领 / 天平使用 / 溶液配制」，之前没列进来 → 落到滴定默认场景，
+   * 打开是滴定管+锥形瓶，跟"称量配制"完全对不上（用户 2026-10-21 报的硬伤①）。
+   */
   const isBenchScene =
-    expId === "exp08" || expId === "exp02" || expId === "exp03" || expId === "exp04";
+    expId === "exp01" ||
+    expId === "exp08" ||
+    expId === "exp02" ||
+    expId === "exp03" ||
+    expId === "exp04";
 
   // 3D 只覆盖 exp09（滴定管 + 锥形瓶）；其它实验继续走 2D，避免"半 3D 半 2D"的夹生场景
   const show3d = use3d && !isBenchScene && (expId === undefined || expId === "exp09");
@@ -242,9 +260,9 @@ export function SceneStage({
           {expId === "exp02"
             ? "台上：分析天平 200 g / 0.1 mg · 烧杯 · 容量瓶 · Na₂CO₃ / 蒸馏水"
             : expId === "exp03"
-              ? "台上：pH 计 · 烧杯 · 容量瓶 · 蒸馏水（电极待替换 · TODO）"
+              ? "台上：pH 计 · 烧杯 · 容量瓶 · 蒸馏水"
               : expId === "exp04"
-                ? "台上：离心管 · 烧杯 · 试管 · 容量瓶 · Na₂CO₃ / 蒸馏水（离心机待替换 · TODO）"
+                ? "台上：离心管 · 烧杯 · 试管 · 容量瓶 · Na₂CO₃ / 蒸馏水"
                 : expId === "exp08"
                   ? "台上：分析天平 200 g / 0.1 mg · 烧杯 · Na₂CO₃ 试样"
                   : "台上：酸式滴定管 50 mL / 锥形瓶 250 mL"}
@@ -298,6 +316,14 @@ export function SceneStage({
           ) : isBenchScene ? (
             <div className={styles.benchReuse} data-demo-id={`${expId}-bench-scene`}>
               <BenchScene
+                vesselIds={
+                  expId === "exp01"
+                    ? EXP01_BENCH_VESSELS
+                    : expId === "exp03"
+                      ? EXP03_BENCH_VESSELS
+                      : undefined
+                }
+                instrument={expId === "exp03" ? "ph" : "balance"}
                 contents={
                   expId === "exp03"
                     ? EXP03_BENCH_CONTENTS
