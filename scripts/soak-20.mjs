@@ -8,6 +8,7 @@
 import { chromium } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { clickOp } from "./lib/click-op.mjs";
 
 const base = process.env.BASE_URL ?? "http://localhost:3000";
 const rounds = Number(process.argv[2] ?? 20);
@@ -58,7 +59,7 @@ for (let i = 1; i <= rounds; i++) {
     const op = page.locator("[data-demo-id='demo-op-step1-weigh']").first();
     if (await op.count()) {
       step = "操作";
-      await op.click();
+      await clickOp(page, op);
       await page.waitForTimeout(500);
     }
     step = "交卷";

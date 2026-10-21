@@ -13,6 +13,7 @@ import { chromium } from "@playwright/test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { clickOp } from "./lib/click-op.mjs";
 
 const base = "http://localhost:3000";
 const dir = path.join(os.tmpdir(), "chemlab-shots", "stability");
@@ -140,7 +141,7 @@ for (let round = 1; round <= ROUNDS; round++) {
     if (route === "/exp/exp09") {
       // 中途操作一下再刷新
       const btn = page.locator("[data-demo-id^='demo-op-step']").first();
-      if (await btn.count()) await btn.click().catch(() => {});
+      if (await btn.count()) await clickOp(page, btn);
     }
     await page.reload({ waitUntil: "domcontentloaded" });
   }
@@ -151,7 +152,7 @@ for (let round = 1; round <= ROUNDS; round++) {
   await page.goto(base + "/exp/exp09", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(400);
   const op = page.locator("[data-demo-id^='demo-op-step']").first();
-  if (await op.count()) await op.click().catch(() => {});
+  if (await op.count()) await clickOp(page, op);
   await page.goBack({ waitUntil: "domcontentloaded" }).catch(() => {});
   await inspect(`round${round}-mid-back`, "midback");
   ok("实验中途后退");

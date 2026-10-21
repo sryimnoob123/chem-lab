@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CampusSlides } from "@/components/portal/campus-slides";
 import { VesselGlyph } from "@/components/portal/vessel-strip";
 import { DemoLaunch } from "@/components/demo/demo-overlay";
+import { CountUp } from "@/components/motion/reveal";
 
 const STATS = [
   { no: "10", label: "个实验" },
@@ -60,7 +61,9 @@ export default function Cover() {
           <ul className="cover-hero__stats">
             {STATS.map((s) => (
               <li key={s.label}>
-                <span className="cover-hero__stat-no">{s.no}</span>
+                <span className="cover-hero__stat-no">
+                  <CountUp to={Number(s.no)} digits={0} ms={260} />
+                </span>
                 <span className="cover-hero__stat-label">{s.label}</span>
               </li>
             ))}
@@ -94,7 +97,7 @@ export default function Cover() {
               ))}
             </ol>
             <Link className="cover-exp__all" href="/experiments">
-              查看全部 10 个 →
+              查看全部 10 个 <span className="cover-exp__arrow" aria-hidden="true">→</span>
             </Link>
           </section>
         </div>
@@ -116,9 +119,7 @@ export default function Cover() {
           inset: 0;
           z-index: 1;
           pointer-events: none;
-          background:
-            linear-gradient(90deg, transparent 46%, rgba(246,247,245,.18) 68%, rgba(246,247,245,.32) 100%),
-            linear-gradient(to top, rgba(246,247,245,.82) 0%, rgba(246,247,245,.2) 12%, transparent 28%);
+          background: linear-gradient(to top, #f6f7f5 0%, rgba(246,247,245,.28) 8%, transparent 26%);
         }
         .cover__tick { border-color: rgba(35, 48, 127, .28); z-index: 3; }
 
@@ -135,11 +136,6 @@ export default function Cover() {
         .cover .demo-launch {
           color: var(--ink);
           border-color: var(--line);
-        }
-        .cover .demo-launch:hover {
-          color: var(--river-700);
-          border-color: var(--river-500);
-          background: rgba(35, 48, 127, .05);
         }
 
         .cover-hero {
@@ -159,14 +155,15 @@ export default function Cover() {
           font-size: clamp(42px, 4.1vw, 58px);
           line-height: 1.22;
           letter-spacing: -.025em;
-          animation: cover-title-in 480ms var(--ease-out) both;
+          animation: cover-title-in 300ms var(--ease-out) both;
         }
         .cover-hero__sub {
           margin: 15px 0 0;
           max-width: 34em;
-          color: var(--ink-2);
+          color: #293542;
           font-size: var(--text-15, 15px);
           line-height: 1.65;
+          font-weight: 500;
         }
         .cover-hero__stats { margin-top: 22px; gap: 28px; }
         .cover-hero__stats li { border-left-color: var(--line); }
@@ -179,7 +176,6 @@ export default function Cover() {
           color: #fff;
           box-shadow: 0 12px 28px rgba(35, 48, 127, .2);
         }
-        .cover .btn--primary:hover { background: var(--river-800, #1b266a); transform: scale(1.02); }
         .cover .btn--primary:active { transform: scale(.97); }
         .cover-hero__cta { height: 50px; padding: 0 28px; }
 
@@ -197,7 +193,10 @@ export default function Cover() {
         .cover-exp .cat-row__no { font-size: 19px; }
         .cover-exp .cat-row__title { font-size: 14px; }
         .cover-exp .cat-row__meta { font-size: 11px; color: var(--ink-2); }
-        .cover-exp .cat-row__link:hover { transform: translateX(2px); }
+        .cover-exp .vessel-glyph__liquid {
+          transform-box: fill-box;
+          transform-origin: center bottom;
+        }
         .cover-exp__all {
           display: inline-block;
           margin-top: 13px;
@@ -205,9 +204,12 @@ export default function Cover() {
           color: var(--ink-2);
           border-bottom: 1px solid var(--line);
           padding-bottom: 2px;
-          transition: color 160ms ease, border-color 160ms ease;
+          transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
         }
-        .cover-exp__all:hover { color: var(--river-700); border-color: var(--river-700); }
+        .cover-exp__arrow {
+          display: inline-block;
+          transition: transform 160ms var(--ease-out);
+        }
 
         .cover-foot {
           z-index: 4;
@@ -225,6 +227,39 @@ export default function Cover() {
         @keyframes cover-title-in {
           from { opacity: 0; transform: translateY(16px); }
           to { opacity: 1; transform: none; }
+        }
+        @keyframes card-liquid {
+          0%, 100% { transform: scaleY(.98); }
+          50% { transform: scaleY(1.02); }
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+          .cover .demo-launch:hover {
+            color: var(--river-700);
+            border-color: var(--river-500);
+            background: rgba(35, 48, 127, .05);
+          }
+          .cover .btn--primary:hover {
+            background: var(--river-800, #1b266a);
+            transform: scale(1.02);
+          }
+          .cover-exp .cat-row__link:hover { transform: translateX(2px); }
+          .cover-exp .cat-row__link:hover .cat-row__icon svg .vessel-glyph__liquid {
+            animation: card-liquid 2.4s ease-in-out infinite !important;
+          }
+          .cover-exp__all:hover { color: var(--river-700); border-color: var(--river-700); }
+          .cover-exp__all:hover .cover-exp__arrow { transform: translateX(2px); }
+        }
+
+        @media (hover: none), (pointer: coarse) {
+          .cover-exp .cat-row__link:hover,
+          .cover .btn--primary:hover { transform: none; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .cover-hero__title { animation: none; }
+          .cover-exp .cat-row__link:hover .vessel-glyph__liquid { animation: none; }
+          .cover-exp__arrow { transition: none; }
         }
 
         @media (max-width: 900px) {

@@ -33,3 +33,26 @@
 - 下一步 / 阻塞：
   - 3005 的 dev 是**隔离副本** `E:\workspace\public\NOBBBB\chem-lab-dev11`（hardlink node_modules，源码 robocopy 同步），因为 3004 已有别人的 dev server、Next 16 同目录拒绝第二个 dev；主仓没留临时脚本，`.pgdata-dev11` 在副本外（PGLITE_DIR 指主仓）。演示 URL：http://localhost:3005/exp/exp09?force=1&scene=3d
   - 推广前建议：真跑一次 `next build` 核对真实 chunk 体积；3D 器皿资产是主要成本（B 级 10~12 件，本次只做 2 件）；`?scene=3d` 首帧是 2D→3D 挂载切换（要更快需服务端传参，得改 workbench.tsx/page.tsx，不在本次写作用域）。
+
+## 2026-10-21 12:15 · 完成：操作台改「引导式」+ 两段反馈 + 短文案
+- 做了什么：
+  - 右栏从"全量罗列选项"改成：`NextActionCard`（进度行「第 1/7 步 · 现在该观察了」+ 7 个进度点 + 一个大卡：动作名 / 一句为什么 / 「按 1」）→ `StepTimeline`（已完成 ✓ + 每步耗时，如「✓ 仪器认领、洗涤与干燥 3s」，当前步「进行中」）→ 参数/提示 →「其他做法」折叠区（默认收起，点开仍可用）。
+  - 两段式反馈：`ResultBar` 先出即时结果（≤18 字、带数字），点击后 600ms 再在下一行滑出「下一步：洗涤 →」并点亮建议按钮。phase 由点击事件驱动（armNextPhase），不阻塞任何其它操作；键盘 1~9 / 拖拽 / 自动模式照旧。
+  - 失败才显示可展开的「看原因」（等级/扣分/为什么/正确做法），成功不再堆长解释；L4 终止提示保留。
+  - 文案压缩工具 `components/exp/guide/copy.ts`：动作词表（17 原语）、首分句裁剪、数字片段（体积/质量/滴数）、`resultText` / `nextLine` / `guideName` / `whyLine`。
+  - 动效：按钮 active scale(.97) 120ms；结果成功青色 ✓ 上浮 240ms、失败红 ✗ 抖动 240ms steps(4)；下一步滑出 220ms ease-out；progress 点/时间线只在 transform/opacity 上做；`prefers-reduced-motion` 下动画全关但文字照常出现（已实测）。
+- 证据：
+  - `npx tsc --noEmit` 0；`npm run lint` 0 error（8 warning 全在别人文件）；我改的文件 eslint 0。
+  - Playwright（Edge，1440×900，登录 20250101/周若曦）`/exp/exp01?force=1`：
+    - 初始：`第 1/7 步 · 现在该观察了`、建议大卡「按清单逐件核对名称/规格/数量并签字 / 内壁形成均匀水膜、无水珠挂壁 / 按 1」、7 个进度点、7 条时间线；`其他做法` open=false 且陷阱按钮 invisible；初始无「下一步」。
+    - 点建议动作后 200ms：结果条 `认领单已核对签字 · 15`，`demo-guide-next-line` 计数 0（两段式成立）。
+    - 1200ms：`下一步：洗涤 →` 出现、`data-phase="next"`。
+    - 展开「其他做法」后陷阱按钮可见（仍可用）；键盘 `2` 也能做（引导不阻塞）。
+    - 走完第 1 步：`第 2/7 步 · 现在该校准了`、时间线 `✓ 仪器认领、洗涤与干燥 3s`、进度点 1 个 done。
+    - console / pageerror 0。
+  - reduced-motion 上下文：结果条与「下一步」仍出现（信息不丢），0 error。
+  - 截图：`%TEMP%\chemlab-shots\guide\{01-initial-guide,02-result-200ms,03-next-guidance-1200ms,04-other-ways-open,05-step-timeline-after-step1}.png`
+- 改了哪些文件：`app/exp/[id]/workbench.tsx`（右栏引导化 + 用 ResultBar/StepTimeline/NextActionCard，删掉旧"可选动作"全量列表与长反馈卡）；新增 `components/exp/guide/{NextActionCard.tsx,StepTimeline.tsx,ResultBar.tsx,copy.ts,guide.module.css}`；`components/exp/scene/**`、`pour.tsx`、`fx/**`、`use-workbench.ts`、`lib/engine*` 一律未动；未动 scene-stage.tsx。
+- 下一步 / 阻塞：
+  - 3008 跑的是隔离副本 `…\chem-lab-dev15`（hardlink node_modules、robocopy 源码），因为 3009 已有别人的 dev server 占用 `.next/dev/lock`；演示 URL：http://localhost:3008/exp/exp01?force=1
+  - **回归提醒**：旧 e2e/演示脚本若直接点 `demo-op-*` 里非"建议动作"的选项，现在它在「其他做法」折叠区里，需要先点 `summary`（`details[data-demo-id="demo-other-ways"] summary`）再点按钮。`demo-op-*` id 全部保留，建议动作仍是可见大卡。

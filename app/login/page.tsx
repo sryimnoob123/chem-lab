@@ -178,6 +178,7 @@ export default function LoginPage() {
           width: 116%;
           height: 116%;
           z-index: 0;
+          filter: brightness(1.32) saturate(1.08) contrast(1.04);
         }
         .login-screen__scrim {
           position: absolute;
@@ -185,8 +186,8 @@ export default function LoginPage() {
           z-index: 1;
           pointer-events: none;
           background:
-            radial-gradient(ellipse at 50% 45%, rgba(3, 8, 13, .06) 0%, rgba(3, 8, 13, .32) 68%, rgba(3, 8, 13, .55) 100%),
-            linear-gradient(180deg, rgba(3, 8, 13, .28) 0%, rgba(3, 8, 13, .08) 46%, rgba(3, 8, 13, .4) 100%);
+            radial-gradient(ellipse at 50% 45%, rgba(3, 8, 13, .02) 0%, rgba(3, 8, 13, .14) 68%, rgba(3, 8, 13, .32) 100%),
+            linear-gradient(180deg, rgba(3, 8, 13, .18) 0%, rgba(3, 8, 13, .02) 46%, rgba(3, 8, 13, .24) 100%);
         }
         .login-card {
           position: relative;
@@ -240,19 +241,21 @@ export default function LoginPage() {
           border-radius: 8px;
           font-size: 15px;
         }
-        .login-card .login__submit:hover {
-          background: #2d3d9e;
-          transform: scale(1.01);
-        }
         .login-card .login__submit:active {
           transform: scale(.97);
+        }
+        @media (hover: hover) and (pointer: fine) {
+          .login-card .login__submit:hover {
+            background: #2d3d9e;
+            transform: scale(1.01);
+          }
         }
         .login-card .login__foot {
           margin-top: 24px;
           font-size: 12px;
         }
         @keyframes login-in {
-          from { opacity: 0; transform: translateY(14px) scale(.99); }
+          from { opacity: 0; transform: translateY(14px) scale(.96); }
           to { opacity: 1; transform: none; }
         }
         @media (max-width: 420px) {

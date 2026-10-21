@@ -6,6 +6,7 @@ import { chromium } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { countVisibleOps } from "./lib/click-op.mjs";
 
 const base = process.env.BASE_URL ?? "http://localhost:3001";
 const outDir = path.join(os.tmpdir(), "chemlab-shots", "bopbps-all");
@@ -46,18 +47,18 @@ for (let i = 1; i <= 10; i++) {
     }
     await preBtn.click();
     await page.waitForTimeout(1500);
-    const ops = await page.locator("[data-demo-id^='demo-op-']").count();
+    const ops = await countVisibleOps(page);
     entered = ops > 0;
-    note = `前测后选项 ${ops}`;
+    note = `前测后可见动作 ${ops}`;
     if (!entered) {
       const txt = (await page.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 100);
       note += ` | 页面: ${txt}`;
       await page.screenshot({ path: path.join(outDir, `${id}-stuck.png`), fullPage: true });
     }
   } else {
-    const ops = await page.locator("[data-demo-id^='demo-op-']").count();
+    const ops = await countVisibleOps(page);
     entered = ops > 0;
-    note = hasPre ? "" : `未出现前测（直接进台）· 选项 ${ops}`;
+    note = hasPre ? "" : `未出现前测（直接进台）· 可见动作 ${ops}`;
   }
 
   rows.push({ id, hasPre, entered, note });

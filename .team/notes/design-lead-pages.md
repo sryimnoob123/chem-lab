@@ -19,3 +19,11 @@
 - 登录输入 48px、tab 46px、按钮 50px；卡片 430/358，居中。
 - tsc 0；`npm run lint` 0 error（8 个既有 warning）。
 - 截图：`%TEMP%\chemlab-shots\design-lead\home-1440.png`、`home-390.png`、`login-1440.png`、`login-390.png`。
+
+## 第二轮反馈修正（2026-10-21 12:18）
+- 轮播：5000ms 停留、700ms 交叉淡入；CSS class + --slide-fade 变量，旧图/新图同时 opacity 过渡，切换中 2px blur。
+- 首页：contrast(1.08) saturate(1.15)；遮罩左 0.58 / 右 0.15；不再用整层 wash 压灰。
+- 登录：lab-scene 提亮 brightness(1.32)，scrim 降到约 0.32 边缘；卡片居中。
+- SVG 微动效：卡内器皿 hover 液面 0.98↔1.02 / 2.4s；查看全部箭头 hover +2px；stats CountUp 260ms。
+- 截图：home-1440/390、login-1440/390、carousel-1/2（间隔 5s）、home-crossfade（opacity 0.537/0.463，blur 2px）。
+- tsc 0 / lint 0 error（8 个既有 warning）。

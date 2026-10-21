@@ -110,7 +110,7 @@ export function CompetencyRadar({
           })}
         </g>
 
-        <polygon className={styles.area} points={valuePoints(series.dims.map((dim) => dim.value), total)} />
+        <polygon className={`${styles.area} svgm-radar-area`} points={valuePoints(series.dims.map((dim) => dim.value), total)} />
 
         {series.dims.map((dim, index) => {
           const point = polar(index, total, (CHART.radius * dim.value) / 100);

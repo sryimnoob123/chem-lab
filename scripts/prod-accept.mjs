@@ -8,6 +8,7 @@
 import { chromium } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { clickOp, clickRetry } from "./lib/click-op.mjs";
 
 const base = "http://localhost:3001";
 const dir = path.join("public", "shots-prod");
@@ -93,7 +94,7 @@ try {
 try {
   await page.goto(base + "/exp/exp09", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(700);
-  await page.locator("[data-demo-id='demo-op-step1-weigh']").first().click();
+  await clickOp(page, page.locator("[data-demo-id='demo-op-step1-weigh']").first());
   await page.waitForTimeout(700);
   await shot("成功分支", "success");
   rec("成功分支", true, "已出反馈");
@@ -105,10 +106,10 @@ try {
 try {
   await page.goto(base + "/exp/exp09", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(700);
-  await page.locator("[data-demo-id='demo-op-step1-bare-hands']").first().click();
+  await clickOp(page, page.locator("[data-demo-id='demo-op-step1-bare-hands']").first());
   await page.waitForSelector("[data-demo-id='demo-feedback-fail-1']", { timeout: 6000 });
   await shot("失败分支", "failure");
-  await page.locator("[data-demo-id^='demo-retry-']").first().click();
+  await clickRetry(page);
   await page.waitForTimeout(600);
   await shot("重做本步", "retry");
   rec("失败分支 + 重做", true, "两行解释 + 回到本步");

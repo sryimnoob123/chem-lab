@@ -14,6 +14,7 @@
 import { chromium } from "@playwright/test";
 import path from "node:path";
 import os from "node:os";
+import { clickOp, clickRetry, passPreTest } from "./lib/click-op.mjs";
 
 const base = process.env.BASE_URL ?? "http://localhost:3000";
 const target = (process.argv[2] ?? "exp09").toLowerCase();
@@ -128,6 +129,14 @@ await step(`选择${config.label}`, async () => {
   await page.waitForTimeout(500);
 });
 
+// 4.5 前测门禁（BOPPPS 的 P 段）：全对才解锁操作台
+await step("过前测门禁", async () => {
+  const curriculum = (await import(`../lib/pedagogy/curriculum/${target}.ts`))[`${target}Curriculum`];
+  const pre = await passPreTest(page, curriculum);
+  if (pre.appeared && !pre.passed) throw new Error("前测提交后操作台未解锁");
+  return pre.appeared ? "已全对解锁" : "无需前测";
+});
+
 // 5 正确操作
 await step("第 1 步正确操作 → 成功分支", async () => {
   // exp01：先做一次场景投放，让报告时间线有“投放”条目（复用 exp09 器皿，场景 TODO）。
@@ -141,7 +150,8 @@ await step("第 1 步正确操作 → 成功分支", async () => {
     if (!/逐滴加入锥形瓶/.test(text)) throw new Error("投放后事件条未更新");
   }
   const ok = page.locator(`[data-demo-id='${config.ok}']`).first();
-  await ok.click();
+  // 引导式：若该动作不是「建议动作」，clickOp 会先展开「其他做法」
+  if (!(await clickOp(page, ok))) throw new Error("正确操作按钮点不下去");
   await page.waitForSelector("[data-demo-id='demo-feedback-ok-1']", { timeout: 5000 });
 });
 
@@ -149,7 +159,7 @@ await step("第 1 步正确操作 → 成功分支", async () => {
 await step("错误操作 → 失败分支", async () => {
   const trap = page.locator(`[data-demo-id='${config.trap}']`).first();
   if (!(await trap.count())) throw new Error("没有找到第 1 步的错误选项");
-  await trap.click();
+  if (!(await clickOp(page, trap))) throw new Error("错误选项点不下去（折叠区未展开或前置未满足）");
   await page.waitForSelector("[data-demo-id='demo-feedback-fail-1']", { timeout: 5000 });
 });
 
@@ -157,7 +167,7 @@ await step("错误操作 → 失败分支", async () => {
 await step("重做本步", async () => {
   const retry = page.locator("[data-demo-id^='demo-retry-']").first();
   if (!(await retry.count())) throw new Error("没有「重做本步」按钮");
-  await retry.click();
+  await clickRetry(page);
   await page.waitForTimeout(400);
 });
 

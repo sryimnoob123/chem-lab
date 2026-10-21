@@ -7,6 +7,7 @@
 import { chromium } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { clickOp, clickRetry, loginStudent, passPreTest, waitForFeedback } from "./lib/click-op.mjs";
 
 const base = process.env.BASE_URL ?? "http://localhost:3001";
 const expId = "exp03";
@@ -55,16 +56,17 @@ try {
   await page.goto(base + "/", { waitUntil: "domcontentloaded" });
   await shot("门户", "portal");
 
-  await page.goto(base + "/login", { waitUntil: "domcontentloaded" });
-  await page.locator("[data-demo-id='demo-login-student-no']").fill("20250101");
-  await page.locator("[data-demo-id='demo-login-student-name']").fill("周若曦");
-  await page.locator("[data-demo-id='demo-login-submit']").click();
-  await page.waitForURL(/\/experiments/, { timeout: 15000 });
+  await loginStudent(page, { base });
   await shot("实验选择", "catalog");
 
   const resp = await openExp();
   await shot("实验页初始", `${expId}-initial`);
   ok(`进入 ${expId}`, `HTTP ${resp?.status() ?? 200}`);
+
+  // 前测门禁：首次进入要全对才解锁操作台
+  const curriculum = (await import(`../lib/pedagogy/curriculum/${expId}.ts`))[`${expId}Curriculum`];
+  const pre = await passPreTest(page, curriculum);
+  if (pre.appeared && !pre.passed) bad("前测门禁", "提交后操作台未解锁");
 
   const cnt = await page.locator(optsSel).count();
   ok("动作选项可见", `${cnt} 个`);
@@ -73,7 +75,9 @@ try {
   // ---- 找可恢复 trap ----
   let recoveryId = "";
   const candidates = trapId ? [trapId] : [];
-  for (let i = cnt - 2; i >= 0; i--) candidates.push(`__index__${i}`);
+  // 引导式：nth(0) 是「建议动作」（正确动作），陷阱都在「其他做法」里；
+  // 定义文件通常把「可恢复 trap」放在最后一项，所以从 cnt-1 往回试（0 跳过，点了只会推进步骤）
+  for (let i = cnt - 1; i >= 1; i--) candidates.push(`__index__${i}`);
 
   for (const cand of candidates) {
     if (!recoveryId) {
@@ -82,8 +86,10 @@ try {
         ? page.locator(optsSel).nth(Number(cand.replace("__index__", "")))
         : page.locator(`[data-demo-id='${cand}']`).first();
       if (!(await loc.count())) continue;
-      await loc.click().catch(() => {});
-      await page.waitForTimeout(900);
+      // 引导式操作台：非建议动作收在「其他做法」折叠区，clickOp 会先展开再点
+      const clicked = await clickOp(page, loc);
+      if (!clicked) continue;
+      await waitForFeedback(page, undefined, { timeout: 2500 });
       const hasRetry = await page.locator("[data-demo-id^='demo-retry-']").count();
       if (hasRetry) recoveryId = cand;
     }
@@ -96,13 +102,13 @@ try {
   if (hasExplain) ok("失败分支有两行教学解释", recoveryId.startsWith("__") ? `索引 ${recoveryId}` : recoveryId);
   else bad("失败教学解释", "未找到「为什么/正确做法」");
 
-  await page.locator("[data-demo-id^='demo-retry-']").first().click();
+  await clickRetry(page);
   await page.waitForTimeout(700);
   await shot("重试", "retry");
   ok("重试", "回到本步");
 
-  await page.locator(optsSel).first().click();
-  await page.waitForTimeout(900);
+  await clickOp(page, page.locator(optsSel).first());
+  await waitForFeedback(page, "ok", { timeout: 3000 });
   await shot("成功", "success");
   ok("成功分支", "已出反馈");
 

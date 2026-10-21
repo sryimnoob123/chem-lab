@@ -8,8 +8,9 @@ import { chromium } from "@playwright/test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { clickOp } from "./lib/click-op.mjs";
 
-const base = "http://localhost:3000";
+const base = process.env.BASE_URL ?? "http://localhost:3000";
 const b = await chromium.launch();
 const page = await (await b.newContext({ viewport: { width: 1440, height: 950 } })).newPage();
 const errors = [];
@@ -25,9 +26,13 @@ await page.goto(base + "/exp/exp09", { waitUntil: "networkidle" });
 await page.waitForTimeout(800);
 
 const stepOf = async () => {
-  const t = await page.locator("text=/第 \\d\\d 步/").first().innerText().catch(() => "第 01 步");
-  const m = t.match(/第\s*(\d+)\s*步/);
-  return m ? Number(m[1]) : 0;
+  // 引导式操作台：进度在 demo-guide-progress（"第 2/7 步 · 现在该称量了"），旧 UI 是 "第 02 步"
+  const guided = await page.locator("[data-demo-id='demo-guide-progress']").first().innerText().catch(() => "");
+  const m = guided.match(/第\s*(\d+)\s*\//);
+  if (m) return Number(m[1]);
+  const t = await page.locator("text=/第 \\d+ 步/").first().innerText().catch(() => "");
+  const legacy = t.match(/第\s*(\d+)\s*步/);
+  return legacy ? Number(legacy[1]) : 0;
 };
 
 const seq = [];
@@ -47,8 +52,9 @@ for (let guard = 0; guard < 40; guard++) {
   let advanced = false;
   for (const id of ids) {
     const el = page.locator(`[data-demo-id='${id}']`).first();
-    await el.scrollIntoViewIfNeeded();
-    await el.click();
+    await el.scrollIntoViewIfNeeded().catch(() => {});
+    const clicked = await clickOp(page, el);
+    if (!clicked) continue; // 折叠区展开失败 / 前置未满足 / 已完成
     await page.waitForTimeout(700);
     if ((await stepOf()) > cur) {
       seq.push({ step: cur, id });

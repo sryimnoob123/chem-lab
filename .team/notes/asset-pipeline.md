@@ -94,3 +94,11 @@
 - P1 强负反馈：`fx/index.tsx` 新增冲击壳层（body 震动类 L1~L4 160/220/320/460ms、暗场 0→0.28→0、L3/L4 红色 vignette）；`fx/fx-particles.tsx` 一次性 Canvas（72 片、900ms、rAF，`document.hidden` 暂停，卸载销毁，仅 L4 explosion/glassBreak，reduced-motion 不渲染）；`workbench.tsx` 把 `ui.event.level` 传给 `FxByKey`；motion.css 只追加 `--fx-shake-* / --fx-dark / --fx-vignette`。
 - 证据：`%TEMP%\reagent-fx-check.mjs` → 帧 10/350/600/800ms：drops 3 个、350ms drop translate(502,447) scale .67、ripple scale .55/op .58、液面 rect scaleY .31；800ms 全部卸载；L3 dark .28/vignette .94 + body `fx-impact-3`；L4 dark .22/vignette .84；particles canvas=1；pageerror=0；reduced：canvas=0 / fx=1 / body 无震动类；连续两次加入 pour key 变化（可打断）。截图 `%TEMP%\chemlab-shots\reagent-fx\`。
 - 坑：Next dev 只允许一个实例（.next/dev/lock），多次撞到别人 3001/3002/3004；最终自起 3006 + PGLITE_DIR=.pgdata-dev12。3001 是 standalone 生产服务（`.next/standalone/server.js`），不会热更我的改动，别拿它验新代码。
+## 2026-10-21 12:15 · 全站 SVG 微动效包（16 处）
+- 新文件 `app/styles/svg-motion.css`（唯一 keyframes/类集中处），`app/layout.tsx` 加一行 import；`components/teacher/radar-chart.tsx` 的 area polygon 加 `svgm-radar-area` 类。其余全部通过既有全局类 / data 属性选择，零结构改动。
+- 16 处：首页 校徽入场 480ms / 标题短线 260ms / 三个数字 pop 220ms（stagger 70ms）；登录 校徽环描边 460ms / 主按钮 hover 高光 420ms；实验列表 标题短线 240ms / 分组下划线 240ms / 「可进入」勾 draw 320ms / 锁定徽标 hover 摇 200ms；操作台 引导卡步点 pulse 220ms / 结果条滑入 220ms / 提示刻度 tick 200ms；报告 三段条 scaleX 260ms（stagger 60ms）/ 总分 pop 300ms / 时间线 stagger 220ms（40ms 间隔）；教师端 雷达图展开 420ms。
+- 硬约束：全部包在 `@media (prefers-reduced-motion: no-preference)`，hover 类再包 `(hover:hover) and (pointer:fine)`，一次性动画 fill both，只动 transform/opacity/stroke-dashoffset。
+- 没重复做：首页器皿 hover 液面（cover.css 已有 card-liquid）、「查看全部」箭头 2px（cover.css 已有）、ix-page-enter / ix-reveal（pedagogy）、pour/fx。
+- 证据：Playwright 读 computed animationName：home emblem svgm-emblem-in / rule svgm-rule-in / login ring svgm-brand-ring 0.46s / list rule svgm-rule-in / check svgm-draw / workbench dot svgm-step-pulse / result svgm-slide-in / report score svgm-score-pop / bar svgm-bar-in / timeline svgm-timeline-in；reduced 下均 none；pageerror=0。截图 `%TEMP%\chemlab-shots\svg-motion\{home-cover,experiments-list,workbench,report}.png`。
+- 环境：3009 的 .pgdata-dev16 初始为空库，需先 `PGLITE_DIR=.pgdata-dev16 node db/init.mjs && node db/seed-demo.mjs` 再重启 dev，登录才可用。
+- 已知偏差：首页校徽是 PNG，无法真 stroke 描边 → 用 scale/rotate 入场 + 登录页 SVG 环描边；报告页当前无「分数环」DOM（总分是数字框），做了总分 pop + 三段条 + 时间线，未改结构。

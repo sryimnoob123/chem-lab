@@ -7,6 +7,7 @@ import { chromium } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { countVisibleOps } from "./lib/click-op.mjs";
 
 const base = process.env.BASE_URL ?? "http://localhost:3001";
 const expId = process.argv[2] ?? "exp01";
@@ -90,7 +91,7 @@ if (c) {
   }
   await page.locator("[data-demo-id='bopbps-pre-submit']").click();
   await page.waitForTimeout(1500);
-  const unlocked = await page.locator("[data-demo-id^='demo-op-']").count();
+  const unlocked = await countVisibleOps(page);
   if (unlocked > 0) ok("全对后解锁操作台", `${unlocked} 个动作`);
   else bad("解锁", "操作台没出来");
   await shot("unlocked-workbench");

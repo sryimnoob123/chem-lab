@@ -6,6 +6,7 @@ import { chromium } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { countVisibleOps } from "./lib/click-op.mjs";
 
 const base = process.env.BASE_URL ?? "http://localhost:3001";
 const expId = process.argv[2] ?? "exp01";
@@ -68,7 +69,7 @@ for (const q of c.pre) {
 await page.locator("[data-demo-id='bopbps-pre-submit']").click();
 await page.waitForTimeout(1600);
 
-const ops = await page.locator("[data-demo-id^='demo-op-']").count();
+const ops = await countVisibleOps(page);
 if (ops > 0) ok("解锁后进入操作台", `${ops} 个动作`);
 else bad("进入操作台", "没有动作按钮");
 const urlAfter = page.url();

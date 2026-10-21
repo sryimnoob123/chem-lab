@@ -6,6 +6,7 @@
 import { chromium } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { clickOp, clickRetry } from "./lib/click-op.mjs";
 
 const base = "http://localhost:3000";
 const dir = path.join("evidence", "regress");
@@ -87,7 +88,7 @@ try {
 // 成功分支
 try {
   const t0 = Date.now();
-  await page.locator("[data-demo-id='demo-op-step1-weigh']").first().click();
+  await clickOp(page, page.locator("[data-demo-id='demo-op-step1-weigh']").first());
   await page.waitForTimeout(700);
   await snap("成功分支", "success");
   mark("成功分支", true, `${Date.now() - t0}ms`);
@@ -100,7 +101,7 @@ await page.goto(base + "/exp/exp09", { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(800);
 try {
   const t0 = Date.now();
-  await page.locator("[data-demo-id='demo-op-step1-bare-hands']").first().click();
+  await clickOp(page, page.locator("[data-demo-id='demo-op-step1-bare-hands']").first());
   await page.waitForSelector("[data-demo-id='demo-feedback-fail-1']", { timeout: 6000 });
   await snap("失败分支", "failure");
   mark("失败分支", true, `${Date.now() - t0}ms`);
@@ -110,8 +111,7 @@ try {
 
 // 重做
 try {
-  const retry = page.locator("[data-demo-id^='demo-retry-']").first();
-  await retry.click();
+  await clickRetry(page);
   await page.waitForTimeout(600);
   await snap("重做本步", "retry");
   mark("重做", true, "回到本步");

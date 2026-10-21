@@ -1,0 +1,694 @@
+/* 引导式操作台：建议卡 / 步骤时间线 / 两段式结果条。
+   动效铁律：实时 ≤160ms、结果 ≤300ms、引导滑出 220ms ease-out；只动 transform/opacity。 */
+
+/* ---------------- 建议动作卡 ---------------- */
+
+.railLead {
+  flex: 0 0 auto;
+}
+
+.card {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 11px 11px;
+  border: 1px solid var(--bench-line);
+  border-left: 3px solid var(--river-100);
+  background: rgba(26, 37, 49, 0.62);
+}
+
+.progress {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--bench-text);
+  opacity: 0.78;
+}
+
+.dots {
+  display: flex;
+  gap: 4px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: var(--bench-line);
+  opacity: 0.5;
+}
+
+.dot[data-state="done"] {
+  background: var(--jade-600);
+  opacity: 0.9;
+}
+
+.dot[data-state="current"] {
+  background: var(--river-100);
+  opacity: 1;
+  outline: 1px solid rgba(230, 233, 247, 0.5);
+  outline-offset: 1px;
+}
+
+.stepTitle {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--bench-text);
+  opacity: 0.62;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.next {
+  position: relative;
+  width: 100%;
+  min-height: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  padding: 9px 11px;
+  border: 1px solid var(--river-100);
+  background: linear-gradient(180deg, rgba(47, 66, 86, 0.85), rgba(30, 43, 58, 0.85));
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 120ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.next:hover:not(:disabled) {
+  border-color: var(--river-100);
+  background-color: rgba(47, 66, 86, 0.95);
+}
+
+.next:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.next:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.next:focus-visible {
+  outline: 2px solid var(--river-100);
+  outline-offset: 2px;
+}
+
+/* 继续引导阶段：按钮外圈闪一下（只动 transform/opacity，用伪元素） */
+.card[data-phase="next"] .next::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--jade-600);
+  opacity: 0;
+  pointer-events: none;
+  animation: guide-ring 220ms ease-out;
+}
+
+@keyframes guide-ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.985);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+.nextName {
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 500;
+}
+
+.nextWhy {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--bench-text);
+  opacity: 0.7;
+}
+
+.key {
+  position: absolute;
+  right: 9px;
+  top: 9px;
+  padding: 1px 5px;
+  border: 1px solid var(--bench-line);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.5;
+  color: var(--bench-text);
+  opacity: 0.72;
+}
+
+/* ---------------- 步骤时间线 ---------------- */
+
+.timeline {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 2px 0 2px 2px;
+  list-style: none;
+  border-top: 1px solid var(--bench-line);
+  border-bottom: 1px solid var(--bench-line);
+}
+
+.timelineItem {
+  position: relative;
+  padding-left: 12px;
+}
+
+/* 左侧竖线：走过的步骤是青色，未到的是灰线 */
+.timelineItem::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--bench-line);
+}
+
+.timelineItem::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  top: 13px;
+  width: 5px;
+  height: 5px;
+  background: var(--bench-line);
+}
+
+.timelineItem[data-state="done"]::after {
+  background: var(--jade-600);
+}
+
+.timelineItem[data-state="current"]::after {
+  background: var(--river-100);
+}
+
+.timelineItem[data-state="done"]::before {
+  background: rgba(15, 123, 108, 0.5);
+}
+
+.timelineButton {
+  width: 100%;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--bench-text);
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  opacity: 0.5;
+  transition:
+    opacity 140ms ease,
+    transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.timelineButton:hover {
+  opacity: 0.9;
+}
+
+.timelineButton:active {
+  transform: scale(0.98);
+}
+
+.timelineButton:focus-visible {
+  outline: 2px solid var(--river-100);
+  outline-offset: 1px;
+}
+
+.timelineItem[data-state="done"] .timelineButton {
+  opacity: 0.72;
+}
+
+.timelineItem[data-state="current"] .timelineButton {
+  opacity: 1;
+  color: #fff;
+}
+
+.timelineCheck {
+  flex: 0 0 20px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: center;
+}
+
+.timelineItem[data-state="done"] .timelineCheck {
+  color: var(--jade-600);
+}
+
+.timelineName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timelineTime {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  opacity: 0.6;
+}
+
+.timelineNow {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--river-100);
+}
+
+/* ---------------- 两段式结果条 ---------------- */
+
+.resultBar {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 56px;
+  z-index: 26;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 132px 0 16px;
+  border-top: 1px solid var(--bench-line);
+  background: rgba(10, 16, 24, 0.96);
+  overflow: hidden;
+}
+
+.resultMark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--river-100);
+}
+
+.resultBar[data-state="success"] .resultMark {
+  background: var(--jade-600);
+}
+
+.resultBar[data-state="warn"] .resultMark {
+  background: var(--warn);
+}
+
+.resultBar[data-state="danger"] .resultMark {
+  background: var(--danger);
+}
+
+.resultIcon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: var(--river-100);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.resultBar[data-state="success"] .resultIcon {
+  color: var(--jade-600);
+}
+
+.resultBar[data-state="warn"] .resultIcon {
+  color: var(--warn);
+}
+
+.resultBar[data-state="danger"] .resultIcon {
+  color: var(--danger);
+}
+
+.resultText {
+  margin: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.resultLine,
+.resultSub,
+.resultNext {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resultLine {
+  color: var(--bench-text);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* 成功：青色 ✓ 配一次 240ms 的轻微上浮，只动 opacity/transform */
+.resultBar[data-state="success"] .resultLine {
+  animation: guide-ok 240ms ease-out;
+}
+
+/* 失败：红 ✗ + 抖动 240ms（4 帧阶梯位移），只动 transform */
+.resultBar[data-state="danger"] .resultIcon,
+.resultBar[data-state="warn"] .resultIcon {
+  animation: guide-shake 240ms steps(4, end);
+}
+
+@keyframes guide-ok {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes guide-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+  75% {
+    transform: translateX(-1px);
+  }
+}
+
+.resultLine[data-tone="success"] {
+  color: #b7e3d6;
+}
+
+.resultLine[data-tone="warn"] {
+  color: var(--warn);
+}
+
+.resultLine[data-tone="danger"] {
+  color: var(--danger);
+}
+
+.resultSub {
+  color: var(--bench-text);
+  font-size: 10px;
+  line-height: 1.3;
+  opacity: 0.62;
+}
+
+/* 600ms 后滑出：信息出现，动画只做位移+透明度 */
+.resultNext {
+  color: var(--river-100);
+  font-size: 11px;
+  line-height: 1.35;
+  animation: guide-next 220ms ease-out;
+}
+
+@keyframes guide-next {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.resultBadge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 2px 6px;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.retry {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 140ms ease;
+}
+
+.retry:hover {
+  background: rgba(192, 57, 43, 0.16);
+  color: #fff;
+}
+
+.retry:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
+.resultHint {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  opacity: 0.45;
+  white-space: nowrap;
+}
+
+/* ---------------- 其他做法（折叠区） ---------------- */
+
+.other {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--bench-line);
+  padding-top: 6px;
+}
+
+.other[open] {
+  padding-bottom: 2px;
+}
+
+.otherSummary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  font-size: 11px;
+  color: var(--bench-text);
+  cursor: pointer;
+  list-style: none;
+  opacity: 0.72;
+  transition: opacity 140ms ease;
+}
+
+.otherSummary::-webkit-details-marker {
+  display: none;
+}
+
+.otherSummary:hover {
+  opacity: 1;
+}
+
+.otherSummary:focus-visible {
+  outline: 2px solid var(--river-100);
+  outline-offset: 2px;
+}
+
+.otherCount {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  opacity: 0.6;
+}
+
+.otherList {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 2px 0 4px;
+}
+
+.otherButton {
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 1px solid var(--bench-line);
+  background: rgba(26, 37, 49, 0.5);
+  color: var(--bench-text);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 120ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.otherButton:hover:not(:disabled) {
+  border-color: var(--river-100);
+  color: #fff;
+}
+
+.otherButton:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.otherButton:disabled {
+  cursor: default;
+  opacity: 0.34;
+}
+
+.otherButton:focus-visible {
+  outline: 2px solid var(--river-100);
+  outline-offset: 2px;
+}
+
+.otherMeta {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+/* ---------------- 失败原因（折叠，默认收起） ---------------- */
+
+.why {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--bench-line);
+  padding-top: 6px;
+}
+
+.why[open] {
+  padding-bottom: 6px;
+}
+
+.whySummary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  color: var(--bench-text);
+  font-size: 11px;
+  cursor: pointer;
+  list-style: none;
+  opacity: 0.72;
+  transition: opacity 140ms ease;
+}
+
+.whySummary::-webkit-details-marker {
+  display: none;
+}
+
+.whySummary:hover {
+  opacity: 1;
+}
+
+.whySummary:focus-visible {
+  outline: 2px solid var(--river-100);
+  outline-offset: 2px;
+}
+
+.whyLevel {
+  padding: 1px 4px;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  opacity: 1;
+}
+
+.whyTitle {
+  margin: 4px 0 2px;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.whyText {
+  margin: 2px 0;
+  color: var(--bench-text);
+  font-size: 10px;
+  line-height: 1.6;
+  opacity: 0.72;
+}
+
+.whyText span {
+  opacity: 0.9;
+}
+
+.whyWarn {
+  margin: 4px 0 0;
+  color: var(--danger);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+/* ---------------- 降级：减少动态偏好 ---------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .next,
+  .timelineButton,
+  .otherButton,
+  .retry,
+  .otherSummary {
+    transition: none;
+  }
+
+  .next:active:not(:disabled),
+  .timelineButton:active,
+  .otherButton:active:not(:disabled) {
+    transform: none;
+  }
+
+  .card[data-phase="next"] .next::after {
+    animation: none;
+  }
+
+  .resultNext {
+    animation: none;
+  }
+
+  .resultBar[data-state="success"] .resultLine,
+  .resultBar[data-state="danger"] .resultIcon,
+  .resultBar[data-state="warn"] .resultIcon {
+    animation: none;
+  }
+}
+
+/* 窄屏：浮动「预习」入口仍在右下，留出更小的避让位 */
+@media (max-width: 640px) {
+  .resultBar {
+    padding: 0 96px 0 12px;
+  }
+}

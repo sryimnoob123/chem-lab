@@ -6,6 +6,17 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { getDefinition } from "@/lib/engine";
 import type { Action, FxKey as EngineFxKey } from "@/lib/engine.types";
 import { FxByKey } from "@/components/exp/scene/fx";
+import { NextActionCard } from "@/components/exp/guide/NextActionCard";
+import { ResultBar } from "@/components/exp/guide/ResultBar";
+import { StepTimeline } from "@/components/exp/guide/StepTimeline";
+import {
+  guideName,
+  nextLine,
+  resultText,
+  whyLine,
+  type StepDotState,
+} from "@/components/exp/guide/copy";
+import guide from "@/components/exp/guide/guide.module.css";
 import type { FxKey as SceneFxKey } from "@/lib/scene/fx";
 import { ExperimentDock } from "./experiment-dock";
 import { SceneStage } from "./scene-stage";
@@ -402,6 +413,88 @@ export function Workbench({
     [ui.exp.stepLog, ui.exp.stepIndex],
   );
 
+  // 引导：建议动作 = 第一个没做过、前置已满足的正确动作；其余收进「其他做法」
+  const availableChoice = step.choices.find(
+    (item) =>
+      item.role === "correct" &&
+      !performed.has(item.choiceId) &&
+      !(item.requires ?? []).some((id) => !performed.has(id)),
+  );
+  const suggested =
+    availableChoice ??
+    step.choices.find((item) => item.role === "correct") ??
+    step.choices[0];
+  const suggestedKey = suggested ? step.choices.indexOf(suggested) + 1 : undefined;
+  const otherChoices = step.choices.filter((item) => item.choiceId !== suggested?.choiceId);
+
+  // 每步用时：时间线显示 "✓ 第 1 步 · 洗涤 12s"。时间只在 effect/事件里读，渲染期不调 Date.now()
+  const stepClockRef = useRef<{ index: number; start: number } | null>(null);
+  const [stepSeconds, setStepSeconds] = useState<Record<number, number>>({});
+  useEffect(() => {
+    const index = ui.exp.stepIndex;
+    const clock = stepClockRef.current;
+    if (!clock) {
+      stepClockRef.current = { index, start: Date.now() };
+      return;
+    }
+    if (clock.index === index) return;
+    const finished = clock.index;
+    const spent = Math.max(1, Math.round((Date.now() - clock.start) / 1000));
+    stepClockRef.current = { index, start: Date.now() };
+    const timer = window.setTimeout(() => {
+      setStepSeconds((previous) => ({ ...previous, [finished]: spent }));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [ui.exp.stepIndex]);
+
+  // 两段式反馈：先出结果（0~600ms），再把「下一步」滑出来；phase 由点击事件驱动
+  const [guidePhase, setGuidePhase] = useState<"result" | "next">("next");
+  const nextPhaseTimerRef = useRef<number | null>(null);
+  const armNextPhase = useCallback(() => {
+    if (nextPhaseTimerRef.current !== null) window.clearTimeout(nextPhaseTimerRef.current);
+    setGuidePhase("result");
+    nextPhaseTimerRef.current = window.setTimeout(() => {
+      nextPhaseTimerRef.current = null;
+      setGuidePhase("next");
+    }, 600);
+  }, []);
+  useEffect(
+    () => () => {
+      if (nextPhaseTimerRef.current !== null) window.clearTimeout(nextPhaseTimerRef.current);
+    },
+    [],
+  );
+
+  const lastChoice = (() => {
+    if (!ui.lastChoiceId) return undefined;
+    for (const item of definition.steps) {
+      const found = item.choices.find((choice) => choice.choiceId === ui.lastChoiceId);
+      if (found) return found;
+    }
+    return undefined;
+  })();
+
+  const resultCopy = resultText({
+    outcome: ui.event?.outcome ?? "success",
+    type: lastChoice?.type,
+    params: lastChoice?.params,
+    observationText: lastChoice?.observation?.text,
+    observationValue: lastChoice?.observation?.value,
+    shortTitle: ui.event?.shortTitle ?? "",
+    correct: ui.event?.correct,
+    deduction: ui.event?.deduction ?? 0,
+  });
+  const resultLine =
+    notice ?? sceneCaption ?? (ui.event ? resultCopy.line : "点建议动作或拖试剂");
+  const resultLine2 = ui.event ? resultCopy.line2 : undefined;
+  const dots: StepDotState[] = stepStates.map((state) =>
+    state === "done" ? "done" : state === "current" ? "current" : "todo",
+  );
+  const nextText =
+    ui.event && !ui.exp.done && guidePhase === "next" && suggested
+      ? nextLine(suggested.type, suggested.label)
+      : null;
+
   const burette = ui.exp.entities["burette-base"];
   const reading = typeof burette?.reading === "number" ? burette.reading : 0;
   const flask = ui.exp.entities["flask-1"];
@@ -425,23 +518,6 @@ export function Workbench({
           ? "success"
           : ui.event.severity
         : "info";
-  const eventLine1 =
-    notice ??
-    sceneCaption ??
-    (ui.event
-      ? ui.event.outcome === "success"
-        ? "操作正确"
-        : ui.event.shortTitle
-      : `第 ${pad2(stepNo)} 步 · ${step.title}`);
-  const eventLine2 = ui.event
-    ? ui.event.outcome === "success"
-      ? `为什么对：${ui.event.why ?? step.judge.criterion}`
-      : `为什么：${ui.event.why ?? "看右侧事故卡与规范条目。"}`
-    : notice
-      ? "点已开放实验切换"
-      : sceneCaption
-        ? "拖拽/点选试剂"
-        : "从右侧可选动作开始，或把试剂拖到锥形瓶。";
   const showRetry =
     Boolean(ui.event) &&
     ui.event?.outcome === "failure" &&
@@ -484,14 +560,18 @@ export function Workbench({
       setSceneCaption(null);
       setNotice(null);
       dispatch({ type: "choose", choiceId, label: "" });
+      armNextPhase();
     },
-    [mode, sendAction],
+    [armNextPhase, mode, sendAction],
   );
 
   const retry = useCallback(() => {
     setSceneCaption(null);
     setNotice(null);
     dispatch({ type: "retry" });
+    if (nextPhaseTimerRef.current !== null) window.clearTimeout(nextPhaseTimerRef.current);
+    nextPhaseTimerRef.current = null;
+    setGuidePhase("next");
   }, []);
 
   const switchMode = (next: InputMode) => {
@@ -682,7 +762,7 @@ export function Workbench({
           >
             {fx}
           </SceneStage>
-          {!isExp09 ? (
+          {!isExp09 && process.env.NODE_ENV !== "production" ? (
             <p className={styles.sceneTodo} data-demo-id="exp01-scene-todo">
               {expId === "exp02"
                 ? "场景复用现有分析天平 / 烧杯 / 容量瓶 / Na₂CO₃·水（蒸发皿待替换 · TODO）"
@@ -710,40 +790,31 @@ export function Workbench({
         </section>
 
         <aside className={styles.rail} aria-label="操作面板">
-          <div className={`${styles.railHead} ix-enter`} key={`head-${step.index}`}>
-            <span className={styles.railKicker}>当前步骤</span>
-            <h2 className={styles.railTitle}>{step.title}</h2>
-            <p className={styles.railJudge}>
-              <span>本步判据</span>
-              {step.judge.criterion}
-            </p>
-          </div>
+          <section ref={actionsRef} className={guide.railLead} tabIndex={-1} aria-label="建议动作">
+            <NextActionCard
+              stepNo={stepNo}
+              total={total}
+              stepTitle={step.title}
+              type={suggested.type}
+              name={guideName(suggested.label)}
+              why={whyLine(step.judge.criterion)}
+              dots={dots}
+              keyHint={suggestedKey ? String(suggestedKey) : undefined}
+              demoId={suggested.demoId}
+              disabled={ui.exp.done}
+              phase={guidePhase}
+              onChoose={() => choose(suggested.choiceId)}
+            />
+          </section>
 
-          <ol className={styles.ledger} aria-label="步骤台账">
-            {definition.steps.map((item, index) => (
-              <li
-                key={item.demoId}
-                className="ix ix-step"
-                data-state={stepStates[index]}
-                data-current={index === ui.exp.stepIndex ? "true" : "false"}
-                title={item.title}
-                role="button"
-                tabIndex={0}
-                aria-label={`第 ${index + 1} 步 ${item.title}`}
-                onClick={() => setSceneCaption(`第 ${index + 1} 步：${item.title}`)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    setSceneCaption(`第 ${index + 1} 步：${item.title}`);
-                  }
-                }}
-              >
-                <span className={styles.ledgerNo}>{pad2(index + 1)}</span>
-                <span className={styles.ledgerName}>{item.title}</span>
-                <span className={styles.ledgerDot} aria-hidden="true" />
-              </li>
-            ))}
-          </ol>
+          <StepTimeline
+            steps={definition.steps.map((item) => ({ index: item.index, title: item.title }))}
+            states={dots}
+            seconds={stepSeconds}
+            onPeek={(index) =>
+              setSceneCaption(`第 ${index + 1} 步：${definition.steps[index]?.title ?? ""}`)
+            }
+          />
 
           {isExp09 ? (
           <div className={styles.params} aria-label="实时参数">
@@ -929,83 +1000,64 @@ export function Workbench({
             ) : null}
           </div>
 
-          {ui.event ? (
-            <aside
-              className={styles.feedback}
+          {ui.event && ui.event.outcome === "failure" ? (
+            <details
+              className={guide.why}
+              data-demo-id="demo-feedback-detail"
               data-severity={ui.event.severity}
-              role="status"
-              aria-live="polite"
             >
-              <div className={styles.feedbackHead}>
-                <span className={styles.feedbackLevel}>
-                  {ui.event.incident
-                    ? (ui.event.level ?? "事故")
-                    : ui.event.severity === "info"
-                      ? "记录"
-                      : "违规"}
-                </span>
-                <strong className={styles.feedbackTitle}>{ui.event.title}</strong>
-                {ui.event.deduction > 0 ? (
-                  <span className={styles.deduct}>−{ui.event.deduction} 分</span>
-                ) : null}
-              </div>
-              {ui.event.why ? (
-                <p className={styles.feedbackText}>
-                  <span>为什么：</span>
-                  {ui.event.why}
-                </p>
-              ) : null}
+              <summary className={guide.whySummary}>
+                <span className={guide.whyLevel}>{ui.event.level ?? "违规"}</span>
+                看原因 · {ui.event.deduction > 0 ? `−${ui.event.deduction} 分` : "未扣分"}
+              </summary>
+              <p className={guide.whyTitle}>{ui.event.title}</p>
+              {ui.event.why ? <p className={guide.whyText}>{ui.event.why}</p> : null}
               {ui.event.correct ? (
-                <p className={styles.feedbackText}>
-                  <span>正确做法：</span>
+                <p className={guide.whyText}>
+                  <span>正确：</span>
                   {ui.event.correct}
                 </p>
               ) : null}
               {ui.event.terminate ? (
-                <p className={styles.terminate}>L4 危险事故：本次实验已终止，操作分记 0 分。</p>
+                <p className={guide.whyWarn}>L4 危险事故：本次实验已终止，操作分记 0 分。</p>
               ) : null}
-            </aside>
+            </details>
           ) : null}
 
           {!ui.exp.done ? (
-            <section
-              ref={actionsRef}
-              className={styles.actions}
-              aria-labelledby="actions-title"
-              tabIndex={-1}
-            >
-            <div className={styles.actionsHead}>
-              <h3 id="actions-title">可选动作</h3>
-              <span>每步只记一次</span>
-            </div>
-            <div className={styles.actionList}>
-              {step.choices.map((choice) => {
-                const needs = (choice.requires ?? []).some((id) => !performed.has(id));
-                const done = performed.has(choice.choiceId);
-                const isLast = ui.lastChoiceId === choice.choiceId;
-                const feedbackClass =
-                  isLast && ui.event
-                    ? ui.event.outcome === "success"
-                      ? `ix-pulse-ok ${styles.actionOk}`
-                      : `ix-shake ix-pulse-fail ${styles.actionFail}`
-                    : "";
-                return (
-                  <button
-                    key={choice.choiceId}
-                    type="button"
-                    className={`${styles.action} ix ${feedbackClass}`}
-                    data-feedback={isLast ? ui.event?.outcome : undefined}
-                    data-demo-id={choice.demoId}
-                    disabled={ui.exp.done || needs || done}
-                    onClick={() => choose(choice.choiceId)}
-                  >
-                    <span className={styles.actionText}>{choice.label}</span>
-                    {needs ? <span className={styles.actionMeta}>需先完成前置动作</span> : null}
-                  </button>
-                );
-              })}
-            </div>
-            </section>
+            <details className={guide.other} data-demo-id="demo-other-ways">
+              <summary className={guide.otherSummary}>
+                其他做法
+                <span className={guide.otherCount}>{otherChoices.length} 项</span>
+              </summary>
+              <div className={guide.otherList}>
+                {otherChoices.map((choice) => {
+                  const needs = (choice.requires ?? []).some((id) => !performed.has(id));
+                  const done = performed.has(choice.choiceId);
+                  const isLast = ui.lastChoiceId === choice.choiceId;
+                  const feedbackClass =
+                    isLast && ui.event
+                      ? ui.event.outcome === "success"
+                        ? `ix-pulse-ok ${styles.actionOk}`
+                        : `ix-shake ix-pulse-fail ${styles.actionFail}`
+                      : "";
+                  return (
+                    <button
+                      key={choice.choiceId}
+                      type="button"
+                      className={`${guide.otherButton} ix ${feedbackClass}`}
+                      data-feedback={isLast ? ui.event?.outcome : undefined}
+                      data-demo-id={choice.demoId}
+                      disabled={ui.exp.done || needs || done}
+                      onClick={() => choose(choice.choiceId)}
+                    >
+                      {choice.label}
+                      {needs ? <span className={guide.otherMeta}>需先完成前置动作</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
           ) : null}
 
           {ui.exp.done ? (
@@ -1052,41 +1104,28 @@ export function Workbench({
         </aside>
       </div>
 
-      <div
-        className={styles.eventBar}
-        data-state={eventState}
-        data-demo-id={feedbackDemoId}
-        role="status"
-        aria-live="polite"
-      >
-        <span className={styles.eventMark} aria-hidden="true" />
-        <span className={styles.eventIcon} aria-hidden="true">
-          {eventState === "success" ? "✓" : eventState === "danger" || eventState === "warn" ? "!" : "i"}
-        </span>
-        <p className={styles.eventText} data-demo-id="demo-scene-event">
-          <span className={styles.eventLine1}>{eventLine1}</span>
-          <span className={styles.eventLine2}>{eventLine2}</span>
-        </p>
-        {ui.event && (ui.event.level || ui.event.deduction > 0) ? (
-          <span className={styles.eventBadge}>
-            {ui.event.level ? `${ui.event.level} · ` : ""}−{ui.event.deduction} 分
-          </span>
-        ) : null}
-        {showRetry ? (
-          <button
-            type="button"
-            className={`${styles.retryButton} ix ix-shake`}
-            data-demo-id={`demo-retry-${ui.event?.stepNumber ?? stepNo}`}
-            onClick={retry}
-          >
-            重做本步
-          </button>
-        ) : (
-          <span className={styles.eventHint}>
-            {ui.event?.terminate ? "实验已终止" : "每步只记一次"}
-          </span>
-        )}
-      </div>
+      <ResultBar
+        key={ui.feedbackSeq}
+        tone={eventState}
+        line={resultLine}
+        line2={resultLine2}
+        badge={
+          ui.event && (ui.event.level || ui.event.deduction > 0)
+            ? `${ui.event.level ? `${ui.event.level} · ` : ""}−${ui.event.deduction} 分`
+            : undefined
+        }
+        next={nextText}
+        demoId={feedbackDemoId}
+        retry={
+          showRetry
+            ? {
+                demoId: `demo-retry-${ui.event?.stepNumber ?? stepNo}`,
+                onClick: retry,
+              }
+            : undefined
+        }
+        hint={ui.event?.terminate ? "实验已终止" : "每步只记一次"}
+      />
 
       <p className={styles.keyFooter} data-demo-id="demo-key-hint">
         按 1~9 选择动作 · H 提示 · R 重做 · Enter 交卷

@@ -6,6 +6,7 @@ import { chromium } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { clickOp, clickRetry, loginStudent, passPreTest } from "./lib/click-op.mjs";
 
 const base = process.env.BASE_URL ?? "http://localhost:3001";
 const outDir = path.join(os.tmpdir(), "chemlab-shots", "l4");
@@ -38,36 +39,30 @@ const shot = async (slug) => {
   await page.screenshot({ path: path.join(outDir, name), fullPage: false });
 };
 
-await page.goto(base + "/login", { waitUntil: "domcontentloaded" });
-await page.locator("[data-demo-id='demo-login-student-no']").fill("20250101");
-await page.locator("[data-demo-id='demo-login-student-name']").fill("周若曦");
-await page.locator("[data-demo-id='demo-login-submit']").click();
-await page.waitForURL(/\/experiments/, { timeout: 15000 });
-
+await loginStudent(page, { base });
 await page.evaluate(() => window.localStorage.clear());
 await page.goto(`${base}/exp/${expId}`, { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(900);
 
-// 过前测（门禁）
-for (const q of c.pre) {
-  await page.locator(`[data-demo-id='bopbps-op-${q.id}-${q.answer}']`).click().catch(() => {});
-}
-await page.locator("[data-demo-id='bopbps-pre-submit']").click();
-await page.waitForTimeout(1600);
+// 过前测（门禁）：全对后操作台在同页解锁
+const pre = await passPreTest(page, c);
+if (pre.appeared && !pre.passed) bad("前测门禁", "提交后操作台未解锁");
+await page.waitForSelector("[data-demo-id^='demo-op-step1-']", { state: "visible", timeout: 15000 }).catch(() => {});
 
-// 走到第 2 步：逐个尝试第 1 步的动作，直到出现第 2 步选项（点错 trap 就重做再试）
-for (let attempt = 0; attempt < 8; attempt++) {
+// 走到第 2 步：点「建议动作」把第 1 步的前置动作依次做完（引导式下正确动作不是 demo-op-*，
+// 只有陷阱才是 demo-op-*，所以不能再按 demo-op 遍历；建议动作按钮带 data-guide="next"）
+for (let attempt = 0; attempt < 10; attempt++) {
   if (await page.locator("[data-demo-id^='demo-op-step2-']").count()) break;
-  const ids = await page
-    .locator("[data-demo-id^='demo-op-step1-']")
-    .evaluateAll((els) => els.map((e) => e.getAttribute("data-demo-id")));
-  const next = ids[attempt % Math.max(1, ids.length)];
-  if (!next) break;
-  await page.locator(`[data-demo-id='${next}']`).click().catch(() => {});
-  await page.waitForTimeout(1100);
+  const next = page.locator("button[data-guide='next']").first();
+  if ((await next.count()) === 0) {
+    await page.waitForTimeout(800); // dev 首帧还在编译/挂载
+    continue;
+  }
+  await next.click({ timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(900);
   const retry = page.locator("[data-demo-id^='demo-retry-']").first();
   if (await retry.count()) {
-    await retry.click().catch(() => {});
+    await clickRetry(page);
     await page.waitForTimeout(700);
   }
 }
@@ -75,7 +70,8 @@ const l4 = page.locator(`[data-demo-id='${l4Id}']`);
 if (!(await l4.count())) {
   bad("L4 选项可见", "第 2 步没找到 " + l4Id);
 } else {
-  await l4.click();
+  const l4Clicked = await clickOp(page, l4);
+  if (!l4Clicked) bad("L4 选项可点", "第 2 步的 L4 动作点不下去（折叠区未展开或前置未满足）");
   await page.waitForTimeout(1600);
   const txt = (await page.locator("body").innerText()).replace(/\s+/g, " ");
   const terminated = /终止|事故|无法继续|实验结束/.test(txt);

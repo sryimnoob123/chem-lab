@@ -55,7 +55,7 @@ export function VesselGlyph({ index, className }: { index: number; className?: s
   const vessel = VESSELS[index % VESSELS.length];
   return (
     <svg
-      className={className}
+      className={`vessel-glyph ${className ?? ""}`}
       viewBox="0 0 40 48"
       width={24}
       height={29}
@@ -72,7 +72,13 @@ export function VesselGlyph({ index, className }: { index: number; className?: s
         strokeLinejoin="round"
       />
       {vessel.liquid ? (
-        <path d={vessel.liquid} fill="currentColor" stroke="none" opacity={0.34} />
+        <path
+          className="vessel-glyph__liquid"
+          d={vessel.liquid}
+          fill="currentColor"
+          stroke="none"
+          opacity={0.34}
+        />
       ) : null}
     </svg>
   );

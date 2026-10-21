@@ -5,7 +5,7 @@
  */
 import { chromium } from "@playwright/test";
 import fs from "node:fs";
-import path from "node:path";
+import { clickOp, clickRetry, loginStudent, passPreTest } from "./lib/click-op.mjs";
 
 const base = process.env.BASE_URL ?? "http://localhost:3001";
 const expId = process.env.EXP_ID ?? "exp08";
@@ -47,11 +47,7 @@ try {
   await page.goto(base + "/", { waitUntil: "domcontentloaded" });
   await shot("门户", "portal");
 
-  await page.goto(base + "/login", { waitUntil: "domcontentloaded" });
-  await page.locator("[data-demo-id='demo-login-student-no']").fill("20250101");
-  await page.locator("[data-demo-id='demo-login-student-name']").fill("周若曦");
-  await page.locator("[data-demo-id='demo-login-submit']").click();
-  await page.waitForURL(/\/experiments/, { timeout: 15000 });
+  await loginStudent(page, { base });
   await shot("实验选择", "catalog");
 
   const resp = await page.goto(`${base}/exp/${expId}`, { waitUntil: "domcontentloaded" });
@@ -59,13 +55,18 @@ try {
   await shot("实验页初始", `${expId}-initial`);
   ok(`进入 ${expId}`, `HTTP ${resp?.status() ?? 0}`);
 
+  // 前测门禁：首次进入要全对才解锁操作台
+  const curriculum = (await import(`../lib/pedagogy/curriculum/${expId}.ts`))[`${expId}Curriculum`];
+  const pre = await passPreTest(page, curriculum);
+  if (pre.appeared && !pre.passed) bad("前测门禁", "提交后操作台未解锁");
+
   const opts = page.locator("[data-demo-id^='demo-op-']");
   const cnt = await opts.count();
   ok("动作选项可见", `${cnt} 个`);
   if (cnt < 2) throw new Error(`选项不足：${cnt}`);
 
   // 做错
-  await opts.nth(cnt - 1).click();
+  await clickOp(page, opts.nth(cnt - 1));
   await page.waitForTimeout(900);
   await shot("故意做错", "failure");
   const failText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
@@ -76,14 +77,14 @@ try {
   // 重试
   const retry = page.locator("[data-demo-id^='demo-retry-']").first();
   if (await retry.count()) {
-    await retry.click();
+    await clickRetry(page);
     await page.waitForTimeout(700);
     await shot("重试", "retry");
     ok("重试", "回到本步");
   } else bad("重试", "没有重做按钮");
 
   // 做对
-  await opts.first().click();
+  await clickOp(page, opts.first());
   await page.waitForTimeout(900);
   await shot("成功", "success");
   ok("成功分支", "已出反馈");

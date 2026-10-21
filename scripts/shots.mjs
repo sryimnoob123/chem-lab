@@ -11,6 +11,7 @@
 import { chromium } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { clickOp, clickRetry } from "./lib/click-op.mjs";
 
 const base = "http://localhost:3000";
 const outDir = path.join("public", "shots");
@@ -121,7 +122,7 @@ try {
 // ---- 7 成功分支 ----
 await go("/exp/exp09");
 try {
-  await page.locator("[data-demo-id='demo-op-step1-weigh']").first().click();
+  await clickOp(page, page.locator("[data-demo-id='demo-op-step1-weigh']").first());
   await page.waitForTimeout(700);
   await shot("成功分支 · 为什么对", "success");
 } catch (e) {
@@ -131,7 +132,7 @@ try {
 // ---- 8 失败分支 ----
 await go("/exp/exp09");
 try {
-  await page.locator("[data-demo-id='demo-op-step1-bare-hands']").first().click();
+  await clickOp(page, page.locator("[data-demo-id='demo-op-step1-bare-hands']").first());
   await page.waitForTimeout(800);
   await shot("失败分支 · 错在哪/为什么", "failure");
 } catch (e) {
@@ -142,7 +143,7 @@ try {
 try {
   const retry = page.locator("[data-demo-id^='demo-retry-']").first();
   if (await retry.count()) {
-    await retry.click();
+    await clickRetry(page);
     await page.waitForTimeout(700);
     await shot("重做本步 · 回到开头", "retry");
   } else {

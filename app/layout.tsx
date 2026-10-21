@@ -5,6 +5,7 @@ import "./styles/cover.css";
 import "./styles/cover-light.css";
 import "./styles/app.css";
 import "./styles/motion.css";
+import "./styles/svg-motion.css";
 import "./styles/demo.css";
 
 export const metadata: Metadata = {

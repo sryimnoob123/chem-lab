@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 type Slide = {
   src: string;
@@ -20,15 +20,15 @@ const SLIDES: readonly Slide[] = [
   { src: "/brand/campus/campus-08.jpg", position: "50% 50%" },
 ];
 
-const CROSS_FADE_MS = 1200;
-const FADE_DELAY_MS = 220;
-const INTERVAL_MS = 8200;
+const CROSS_FADE_MS = 700;
+const INTERVAL_MS = 5000;
 
 type Tone = "paper" | "dark";
 
 /**
- * 校园图轮播：8 张叠放，active 图淡入，旧图延迟 220ms 后淡出。
- * - object-fit: cover + center，不做 scale 推近，避免比例改变。
+ * 校园图轮播：8 张叠放，data-active 切图，CSS class + 变量控制 700ms 过渡。
+ * - 新旧两张同时可见，opacity 各走 1→0 / 0→1；切换中加 2px blur 掩盖叠图割裂。
+ * - object-fit: cover + center，不做 scale 推近。
  * - 首两张 preload + eager；prefers-reduced-motion 停在第一张。
  */
 export function CampusSlides({
@@ -45,6 +45,7 @@ export function CampusSlides({
   still?: boolean;
 }) {
   const [current, setCurrent] = useState(0);
+  const [switching, setSwitching] = useState(false);
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
@@ -57,12 +58,21 @@ export function CampusSlides({
 
   useEffect(() => {
     if (still || reduced) return;
-    const timer = window.setTimeout(
-      () => setCurrent((value) => (value + 1) % SLIDES.length),
-      Math.min(9000, Math.max(7000, interval)),
-    );
+    const timer = window.setTimeout(() => {
+      setSwitching(true);
+      setCurrent((value) => (value + 1) % SLIDES.length);
+    }, Math.min(9000, Math.max(3000, interval)));
     return () => window.clearTimeout(timer);
   }, [current, interval, reduced, still]);
+
+  useEffect(() => {
+    if (!switching) return;
+    const timer = window.setTimeout(
+      () => setSwitching(false),
+      CROSS_FADE_MS + 60,
+    );
+    return () => window.clearTimeout(timer);
+  }, [switching]);
 
   const darkBackground = `radial-gradient(120% 95% at 50% 38%, rgba(3,8,13,${(
     dim * 0.58
@@ -82,22 +92,25 @@ export function CampusSlides({
       <div
         className={`campus-slides campus-slides--${tone} ${
           still ? "campus-slides--still" : ""
-        } ${className ?? ""}`}
+        } ${switching ? "campus-slides--switching" : ""} ${className ?? ""}`}
         aria-hidden="true"
         data-slide-count={SLIDES.length}
         data-crossfade-ms={CROSS_FADE_MS}
         data-interval-ms={INTERVAL_MS}
-        style={{
-          position: "absolute",
-          inset: 0,
-          overflow: "hidden",
-          background: tone === "paper" ? "#f6f7f5" : "#081018",
-          filter: "none",
-          opacity: tone === "dark" ? 1 : undefined,
-          animation: "none",
-          isolation: "isolate",
-          pointerEvents: "none",
-        }}
+        style={
+          {
+            position: "absolute",
+            inset: 0,
+            overflow: "hidden",
+            background: tone === "paper" ? "#f6f7f5" : "#081018",
+            filter: "none",
+            opacity: tone === "dark" ? 1 : undefined,
+            animation: "none",
+            isolation: "isolate",
+            pointerEvents: "none",
+            "--slide-fade": `${CROSS_FADE_MS}ms`,
+          } as CSSProperties
+        }
       >
         {SLIDES.map((slide, i) => (
           // eslint-disable-next-line @next/next/no-img-element
@@ -137,26 +150,32 @@ export function CampusSlides({
           .campus-slides__img {
             display: block;
             opacity: 0;
-            transition: opacity ${CROSS_FADE_MS}ms ease ${FADE_DELAY_MS}ms;
+            filter: contrast(1.08) saturate(1.15);
+            transition: opacity var(--slide-fade) cubic-bezier(.23, 1, .32, 1);
           }
           .campus-slides__img[data-active="true"] {
             opacity: 1;
-            transition-delay: 0ms;
+          }
+          .campus-slides--switching .campus-slides__img {
+            filter: contrast(1.08) saturate(1.15) blur(2px);
           }
           .campus-slides__shade--paper {
             background:
-              linear-gradient(100deg, #f6f7f5 0%, #f6f7f5 22%, rgba(246,247,245,.96) 36%, rgba(246,247,245,.7) 52%, rgba(246,247,245,.24) 74%, rgba(246,247,245,.06) 100%),
-              linear-gradient(to top, #f6f7f5 0%, rgba(246,247,245,.55) 8%, transparent 22%);
+              linear-gradient(100deg, rgba(246,247,245,.58) 0%, rgba(246,247,245,.55) 30%, rgba(246,247,245,.42) 52%, rgba(246,247,245,.2) 76%, rgba(246,247,245,.15) 100%),
+              linear-gradient(to top, #f6f7f5 0%, rgba(246,247,245,.5) 8%, transparent 22%);
           }
           @media (max-width: 900px) {
             .campus-slides--paper { opacity: .98; }
             .campus-slides__shade--paper {
-              background: linear-gradient(180deg, rgba(246,247,245,.76) 0%, rgba(246,247,245,.68) 46%, rgba(246,247,245,.88) 100%);
+              background: linear-gradient(180deg, rgba(246,247,245,.6) 0%, rgba(246,247,245,.55) 46%, rgba(246,247,245,.76) 100%);
             }
           }
           @media (prefers-reduced-motion: reduce) {
             .campus-slides__img {
               transition: none !important;
+            }
+            .campus-slides--switching .campus-slides__img {
+              filter: contrast(1.08) saturate(1.15);
             }
           }
         `}</style>
