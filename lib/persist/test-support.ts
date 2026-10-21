@@ -24,6 +24,8 @@ export async function setupTestDb(): Promise<TestDbHandle> {
   }
 
   const { client } = await import("@/lib/db");
+  // 测试环境一定跑 PGlite（没有 DATABASE_URL），否则这个 helper 不适用
+  if (!client) throw new Error("test-support 只能在 PGlite 模式下使用");
   const ddlPath = path.resolve(process.cwd(), "db/migrations/0001_init.sql");
   await client.exec(fs.readFileSync(ddlPath, "utf8"));
 

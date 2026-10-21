@@ -15,29 +15,17 @@
 - 迁移：`db/migrations/*.sql`（幂等，可重复执行，已用真 PG 17 验证）
 - 环境变量样例：`.env.local.example`
 
-## 1. 接入数据库（platform 内置 PG）——**本地唯一的代码缺口**
+## 1. 接入数据库（platform 内置 PG）——**已完成，无需再改代码**
 
-- **是什么**：把 `lib/db/index.ts` 从 PGlite 切成平台托管的 PostgreSQL。
-- **现状（诚实说明）**：`lib/db/index.ts` 目前**只有 PGlite 一个分支**，没有写 PG 分支。需要在扣子上补：
-
-  ```ts
-  // 目标形态（postgres.js 或 pg，二选一，别混用）
-  if (process.env.DATABASE_URL) {
-    const sql = postgres(process.env.DATABASE_URL, { max: 10 });
-    db = drizzle(sql, { schema });      // drizzle-orm/postgres-js
-  } else {
-    const client = new PGlite(dir);      // 现有分支保持不动
-    db = drizzle(client, { schema });    // drizzle-orm/pglite
-  }
-  ```
-
-  - 注意 `globalForDb.__pg` 的类型标注要放宽成联合类型或 `unknown` + 收窄
-  - `next.config.ts` 的 `serverExternalPackages: ["@electric-sql/pglite"]` 可保留
-  - `db/schema.ts` **不要改**，SQL 与类型是共用的
-- **在哪改**：`lib/db/index.ts`（约 23 行，改完必须跑 `npm run typecheck`）
-- **怎么验**：`DATABASE_URL=... npm run db:init && DATABASE_URL=... npm run db:demo`，再启动，`/login` 用 `20250101 / 周若曦` 登进去能看到 10 个实验
-- **失败会怎样**：首页显示"读取失败：…"，日志里是连接串错误
-- **注意**：首次部署勾选同步表结构；之后每次部署只同步 schema、不同步数据
+- **状态（2026-10-21）**：`lib/db/index.ts` 已是双模入口：
+  - 命中 `DATABASE_URL` / `COZE_DATABASE_URL` / `COZE_PG_URL` / `COZE_POSTGRES_URL` / `COZE_DB_URL` / `POSTGRES_URL` → `postgres.js` + Drizzle，走真 PostgreSQL
+  - 命中拆开的 `COZE_PG_HOST/USER/PASSWORD/DATABASE` 或 `PGHOST/PGUSER/PGPASSWORD/PGDATABASE` → 拼连接串，同上
+  - 都不命中 → PGlite（仅本地开发）
+  - 依赖已加 `postgres`（`prepare: false`，兼容托管连接池）；`next.config.ts` 已把它列入 `serverExternalPackages`
+- **已验证**：`node scripts/pg-mode-check.mjs` → 临时 PG 17 上 `db/init.mjs` 建表播种 + `DATABASE_URL` 起 standalone + `/api/experiments` 返回 **10 条**。
+- **你只需要**：在扣子项目里开通数据库能力，让平台注入凭据。若部署后 `dbMode === "pglite"`（变量名一个都没命中），去「数据库 > 设置」看实际变量名，加进 `lib/db/index.ts` 的 `candidates`（一行），重新部署。
+- **建表/种子**：开发库执行 `db/migrations/0001_init.sql`，或 `node db/init.mjs`（现已支持真 PG）；**首次部署勾选「同步数据」**，之后只同步 Schema。
+- 详见 `docs/扣子部署适配.md`。
 
 ## 2. 环境变量两套
 

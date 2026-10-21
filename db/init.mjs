@@ -1,15 +1,15 @@
 /**
- * 本地开发库初始化：建表 + 播种实验元数据（幂等，可反复跑）。
+ * 数据库初始化：建表 + 播种实验元数据（幂等，可反复跑）。
  *
- * - DDL 唯一来源：db/migrations/0001_init.sql（扣子部署时同步的就是它）
- * - 生产用扣子的 PostgreSQL，不跑这个脚本
- * - PGlite 对数据目录是独占的 —— 跑之前先停掉 dev server
+ * 两种宿主都能跑：
+ * - 本地：PGlite（PGLITE_DIR，数据目录独占，跑之前先停掉 dev server）
+ * - 扣子 / 任意真 PostgreSQL：设 DATABASE_URL（或 COZE_* 连接串）即走 postgres.js
+ *
+ * DDL 唯一来源：db/migrations/0001_init.sql（扣子部署同步的就是它）
  */
 import fs from "node:fs";
 import path from "node:path";
-import { PGlite } from "@electric-sql/pglite";
 
-const DIR = path.resolve(process.env.PGLITE_DIR ?? "./.pgdata");
 const DDL_PATH = path.resolve("db/migrations/0001_init.sql");
 const DDL = fs.readFileSync(DDL_PATH, "utf8");
 
@@ -27,11 +27,44 @@ const SEED = [
   { id: "exp10", no: 10, title: "盐酸标准溶液的标定与工业纯碱总碱度的测定", summary: "基准物质标定、双指示剂法测总碱度", hours: 3, kind: "设计", steps: 8, playable: false },
 ];
 
-const client = new PGlite(DIR);
-await client.exec(DDL);
+const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  process.env.COZE_DATABASE_URL ||
+  process.env.COZE_PG_URL ||
+  process.env.COZE_POSTGRES_URL ||
+  "";
+const usePg = /^postgres(ql)?:\/\//i.test(DATABASE_URL.trim());
+
+let exec;
+let query;
+let close;
+
+if (usePg) {
+  const { default: postgres } = await import("postgres");
+  const sql = postgres(DATABASE_URL, { max: 4, prepare: false, connect_timeout: 10 });
+  exec = async (text) => {
+    await sql.unsafe(text);
+  };
+  query = async (text, params) => {
+    const rows = await sql.unsafe(text, params);
+    return { rows };
+  };
+  close = () => sql.end({ timeout: 5 });
+  console.log(`[db:init] 目标 PostgreSQL（${DATABASE_URL.replace(/:\/\/[^@]*@/, "://***@")}）`);
+} else {
+  const { PGlite } = await import("@electric-sql/pglite");
+  const dir = path.resolve(process.env.PGLITE_DIR ?? "./.pgdata");
+  const client = new PGlite(dir);
+  exec = (text) => client.exec(text);
+  query = (text, params) => client.query(text, params);
+  close = () => client.close();
+  console.log(`[db:init] 目标 PGlite（${dir}）`);
+}
+
+await exec(DDL);
 
 for (const s of SEED) {
-  await client.query(
+  await query(
     `INSERT INTO experiments (id, title, summary, steps, hours, kind, playable, sort_order)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (id) DO UPDATE SET
@@ -46,11 +79,11 @@ for (const s of SEED) {
   );
 }
 
-const { rows } = await client.query(
+const { rows } = await query(
   `SELECT id, title, hours, kind, playable, steps FROM experiments ORDER BY sort_order`,
 );
 console.log(`已建表并播种 ${rows.length} 条实验（DDL 来自 ${path.relative(process.cwd(), DDL_PATH)}）：`);
 for (const r of rows) {
   console.log(` - ${r.id} ${r.title} · ${r.hours} 学时 · ${r.kind} · ${r.steps} 步${r.playable ? " · 可玩" : ""}`);
 }
-await client.close();
+await close();
