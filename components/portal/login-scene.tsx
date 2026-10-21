@@ -74,7 +74,7 @@ export function LoginScene() {
             <line x1="4" y1="10" x2="4" y2="212" stroke="#fff" strokeOpacity="0.35" strokeWidth="2" strokeLinecap="round" />
           </g>
 
-          <g transform="translate(1240 557) scale(0.72)">
+          <g transform="translate(1214 568) scale(0.72)">
             <path d={BEAKER_BODY} {...GLASS} />
             <path d={BEAKER_BODY} fill="none" stroke={INK} strokeOpacity={S} strokeWidth={W} />
             <ellipse cx="80" cy="41" rx="54" ry="7.5" fill="none" stroke={INK} strokeOpacity={S} strokeWidth={W} />
@@ -83,7 +83,7 @@ export function LoginScene() {
           </g>
 
           {/* 漏斗 + 滤纸锥，立在台面上 */}
-          <g transform="translate(1348 618) scale(0.82)">
+          <g transform="translate(1352 633) scale(0.82)">
             <path d="M-42 -46 H42 L6 6 H-6 Z" {...GLASS} />
             <path d="M-42 -46 H42 L6 6 H-6 Z" fill="none" stroke={INK} strokeOpacity={S} strokeWidth={W} />
             <path d="M-32 -46 L-3 6 M32 -46 L3 6" fill="none" stroke={INK} strokeOpacity="0.45" strokeWidth="0.9" />
