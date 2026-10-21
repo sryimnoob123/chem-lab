@@ -2782,7 +2782,9 @@ button {
 }
 
 .demo-bar__select {
-  height: 30px;
+  /* 触控热区 ≥32px（用户 2026-10-22 复核：原来是 30px，差 2px） */
+  height: 36px;
+  min-height: 32px;
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 2px;

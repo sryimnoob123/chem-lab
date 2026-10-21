@@ -24,6 +24,12 @@ const HOVER_MIN_MS = 200;
 const HOVER_MAX_MS = 400;
 /** 点击/拖拽后等结果条渲染出来的观察窗；够 React 一帧 + 结果条入场 260ms */
 const FEEDBACK_WINDOW_MS = 380;
+/**
+ * 每步点完之后的停顿（用户 2026-10-22：0.8~1.2s，让观众看清结果条再走下一步）。
+ * 注意这个值会直接拉长整场时长：21 步的实验大约 +9s，仍落在 40~90s 的目标区间里。
+ */
+const PAUSE_MIN_MS = 800;
+const PAUSE_MAX_MS = 1200;
 /** 动作解说播出后按住不动，别让下一条 caption 立刻把它顶掉（字幕要能读完） */
 const CAPTION_HOLD_MS = 900;
 
@@ -172,10 +178,12 @@ export class DemoDirector {
       await cursor.outline(el, "river", 180); // 目标高亮：按下之前先亮一圈
       await cursor.press(); // 按下反馈：光标缩放 + ripple
       realClick(el);
-      await wait(FEEDBACK_WINDOW_MS); // 等结果条出现，再按结果给目标反馈环
+      // 每步停顿 0.8~1.2s（用户 2026-10-22 口径）：先等结果条渲染，再给目标反馈环
+      const pause = rand(PAUSE_MIN_MS, PAUSE_MAX_MS);
+      await wait(pause);
       const rect = el.getBoundingClientRect();
       cursor.ringAt(rect.left + rect.width / 2, rect.top + rect.height / 2, feedbackTone(doc));
-      const rest = (step.ms ?? DEFAULT_MS.click) - FEEDBACK_WINDOW_MS;
+      const rest = (step.ms ?? DEFAULT_MS.click) - pause;
       if (rest > 0) await wait(rest);
     }
   }
