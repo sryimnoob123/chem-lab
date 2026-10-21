@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState, type ElementType, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ElementType,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
 
-type RevealProps = {
+type RevealProps = Omit<HTMLAttributes<HTMLElement>, "children" | "className" | "style"> & {
   children: ReactNode;
   /** 入场延迟序号，0 起；CSS 用它算 transition-delay */
   index?: number;
   as?: ElementType;
   className?: string;
-  /** 其余属性（data-*、id、aria-* 等）原样透传 */
+  style?: CSSProperties;
+  /** data-* 原样透传 */
   [key: `data-${string}`]: string | undefined;
 };
 
@@ -16,7 +25,7 @@ type RevealProps = {
  * 滚动入场：元素进入视口一次后保持可见。
  * 只改 opacity / transform，符合契约 §6；prefers-reduced-motion 时直接显示。
  */
-export function Reveal({ children, index = 0, as, className, ...rest }: RevealProps) {
+export function Reveal({ children, index = 0, as, className, style, ...rest }: RevealProps) {
   const Tag = (as ?? "div") as ElementType;
   const ref = useRef<HTMLElement | null>(null);
   const [shown, setShown] = useState(false);
@@ -48,9 +57,9 @@ export function Reveal({ children, index = 0, as, className, ...rest }: RevealPr
     <Tag
       {...rest}
       ref={ref}
-      className={className}
+      className={["ix-reveal", className].filter(Boolean).join(" ")}
       data-reveal={shown ? "in" : "out"}
-      style={{ "--reveal-i": index } as React.CSSProperties}
+      style={{ ...style, "--reveal-i": index } as CSSProperties}
     >
       {children}
     </Tag>

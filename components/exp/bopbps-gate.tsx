@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getCurriculum } from "@/lib/pedagogy/curriculum";
 import { scoreStage, type CurriculumQuestion } from "@/lib/pedagogy/curriculum/types";
 import { PreLabDrawer } from "./prelab-drawer";
 
 const STORE_KEY = (id: string) => `bopbps:v1:${id}:pre`;
+
+/** 前测卡退场时长：与 globals.css 的 .ix-leave（--snap 160ms）对齐，≤300ms */
+const GATE_LEAVE_MS = 180;
 
 function loadPassed(id: string): boolean {
   try {
@@ -184,9 +187,17 @@ export function BopbpsGate({
 }) {
   const c = useMemo(() => getCurriculum(expId), [expId]);
   const [stage, setStage] = useState<"loading" | "pre" | "lab">("loading");
+  const [leaving, setLeaving] = useState(false);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [revealed, setRevealed] = useState(false);
   const [hint, setHint] = useState("");
+
+  useEffect(() => {
+    return () => {
+      if (leaveTimer.current !== null) clearTimeout(leaveTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     // ?fresh=1 / ?reset=1：清掉本地预习记录，强制回到问卷（排查"看不到最新界面"用）
@@ -205,7 +216,7 @@ export function BopbpsGate({
   }, [expId, c]);
 
   const submit = useCallback(() => {
-    if (!c) return;
+    if (!c || leaving) return;
     const missing = c.pre.filter((q) => !picked[q.id]).length;
     if (missing) {
       setHint(`还有 ${missing} 题没选`);
@@ -215,15 +226,24 @@ export function BopbpsGate({
     setRevealed(true);
     if (scoreStage(c.pre, picked) >= 100) {
       markPassed(expId);
-      setStage("lab");
+      // 减动效：直接切换；否则先让前测卡 180ms 退场，再淡入操作台，避免硬替换
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setStage("lab");
+        return;
+      }
+      setLeaving(true);
+      leaveTimer.current = setTimeout(() => {
+        setLeaving(false);
+        setStage("lab");
+      }, GATE_LEAVE_MS);
     }
-  }, [c, picked, expId]);
+  }, [c, picked, expId, leaving]);
 
   if (bypass || !c) return <>{children}</>;
 
   if (stage === "loading") {
     return (
-      <div style={{ maxWidth: 980, margin: "0 auto", padding: "28px clamp(16px,4vw,28px)" }} aria-busy="true">
+      <div className="ix-page-enter" style={{ maxWidth: 980, margin: "0 auto", padding: "28px clamp(16px,4vw,28px)" }} aria-busy="true">
         <div style={{ ...S.card, height: 160, opacity: 0.6 }} />
         <LabPlaceholder />
       </div>
@@ -251,7 +271,7 @@ export function BopbpsGate({
   const passed = scoreStage(c.pre, picked) >= 100;
 
   return (
-    <div style={{ maxWidth: 980, margin: "0 auto", padding: "24px clamp(16px,4vw,28px) 40px" }}>
+    <div className={leaving ? "ix-leave" : "ix-page-enter"} style={{ maxWidth: 980, margin: "0 auto", padding: "24px clamp(16px,4vw,28px) 40px" }}>
       <div style={S.label}>BOPPPS · 预习段 · {expId.toUpperCase()}</div>
       <h1 style={{ fontSize: 24, margin: "8px 0 16px", letterSpacing: "-.01em", color: "#12233b" }}>
         先过前测，再进操作台

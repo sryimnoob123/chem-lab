@@ -4,9 +4,12 @@ import { PageHead } from "@/components/teacher/page-head";
 import { TeacherExportButton } from "@/components/teacher/export-button";
 import { StatCards } from "@/components/teacher/stat-cards";
 import { IncidentBar } from "@/components/teacher/incident-bar";
+import { CompetencyRadar } from "@/components/teacher/radar-chart";
+import { loadClassRadarSeries } from "@/components/teacher/radar-query";
 import { TeacherToolbar, type StatusFilter } from "@/components/teacher/toolbar";
 import { StudentTable } from "@/components/teacher/student-table";
 import { formatClock } from "@/components/teacher/format";
+import type { RadarSeries } from "@/components/teacher/radar-data";
 import type {
   IncidentStat,
   OverviewStat,
@@ -28,6 +31,7 @@ type OverviewData = {
   overview: OverviewStat;
   incidents: IncidentStat[];
   students: StudentListResult;
+  radar: RadarSeries;
 };
 
 async function load(
@@ -35,12 +39,13 @@ async function load(
   status: StatusFilter,
 ): Promise<{ data: OverviewData | null; error: string | null }> {
   try {
-    const [overview, incidents, students] = await Promise.all([
+    const [overview, incidents, students, radar] = await Promise.all([
       getOverview(),
       getIncidentSummary(),
       listStudents({ q: q || undefined, status: status === "all" ? undefined : status, limit: 200 }),
+      loadClassRadarSeries(),
     ]);
-    return { data: { overview, incidents, students }, error: null };
+    return { data: { overview, incidents, students, radar }, error: null };
   } catch (err) {
     return { data: null, error: err instanceof Error ? err.message : "未知错误" };
   }
@@ -77,6 +82,18 @@ export default async function TeacherOverviewPage({ searchParams }: { searchPara
         <>
           <StatCards stat={data.overview} />
           <IncidentBar stats={data.incidents} />
+
+          <section className="tch-ledger-section" aria-labelledby="tch-radar-title">
+            <div className="tch-subhead tch-subhead--ledger">
+              <h2 id="tch-radar-title">能力点雷达</h2>
+              <span className="tch-subhead__meta">五维均分 0~100</span>
+            </div>
+            <CompetencyRadar
+              series={data.radar}
+              scope="class"
+              title="班级能力点雷达"
+            />
+          </section>
 
           <section className="tch-ledger-section" aria-labelledby="tch-students-title">
             <div className="tch-subhead tch-subhead--ledger">

@@ -459,6 +459,7 @@ export function Workbench({
       <FxByKey
         key={`${ui.event.fxSeq ?? 0}-${ui.event.fx}`}
         fx={FX_MAP[ui.event.fx]}
+        level={ui.event.level}
         active
         scale="inline"
       />
@@ -601,7 +602,7 @@ export function Workbench({
   }, [autoTick, choose, mode, performed, step, ui.exp.done, ui.exp.stepIndex]);
 
   return (
-    <div className={styles.app} data-input-mode={lastInputMode ?? undefined}>
+    <div className={`${styles.app} ix-fade-in`} data-input-mode={lastInputMode ?? undefined}>
       <header className={styles.topbar}>
         <Link className={`${styles.back} ix`} href="/experiments">
           <span aria-hidden="true">←</span> 返回

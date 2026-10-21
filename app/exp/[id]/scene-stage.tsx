@@ -1,10 +1,46 @@
 "use client";
 
-import { useEffect, useState, type DragEvent, type ReactNode } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { getSceneReagent } from "@/lib/scene/reagents";
 import { BenchScene } from "@/components/exp/scene/bench-scene";
+import { PourFX, tiltBottle, type PourState } from "@/components/exp/scene/pour";
 import { LabApparatus } from "./lab-apparatus";
 import styles from "./workbench.module.css";
+
+/**
+ * 3D 试点（?scene=3d）：three.js 场景只在客户端加载，ssr:false；
+ * 加载失败/不支持 WebGL 时组件内部给降级提示，去掉参数即回 2D，2D 路径零改动。
+ */
+const TitrationScene = dynamic(
+  () => import("@/components/scene3d/titration-scene").then((mod) => mod.TitrationScene),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        style={{ display: "grid", placeItems: "center", width: "100%", height: "100%", color: "#c9d6e4", fontSize: 12 }}
+        data-demo-id="demo-scene-3d-loading"
+      >
+        3D 场景加载中…
+      </div>
+    ),
+  },
+);
+
+/** 读地址栏 `?scene=3d`；只在挂载后读，避免 SSR/水合不一致，也不改 2D 首屏。 */
+function useScene3d(): boolean {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    const read = () => {
+      const value = new URLSearchParams(window.location.search).get("scene");
+      setEnabled(value === "3d" || value === "3D");
+    };
+    read();
+    window.addEventListener("popstate", read);
+    return () => window.removeEventListener("popstate", read);
+  }, []);
+  return enabled;
+}
 
 const RACK_IDS = ["naoh", "hcl", "phenolphthalein", "methylOrange"] as const;
 const EXP02_RACK_IDS = ["na2co3-solid", "water"] as const;
@@ -69,9 +105,19 @@ export function SceneStage({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overFlask, setOverFlask] = useState(false);
+  const [pour, setPour] = useState<PourState | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const use3d = useScene3d();
 
   const isBenchScene =
     expId === "exp08" || expId === "exp02" || expId === "exp03" || expId === "exp04";
+
+  // 3D 只覆盖 exp09（滴定管 + 锥形瓶）；其它实验继续走 2D，避免"半 3D 半 2D"的夹生场景
+  const show3d = use3d && !isBenchScene && (expId === undefined || expId === "exp09");
+  // 试点参数：随操作进度（feedbackSeq）推进——滴定管液面下降、锥形瓶液面上升
+  const sceneProgress = Math.min(1, feedbackSeq / 9);
+  const sceneBuretteLevel = 1 - 0.52 * sceneProgress;
+  const sceneFlaskLevel = 0.1 + 0.42 * sceneProgress;
   const rackIds: readonly string[] =
     expId === "exp02"
       ? EXP02_RACK_IDS
@@ -86,8 +132,30 @@ export function SceneStage({
     (item): item is NonNullable<typeof item> => Boolean(item),
   );
 
+  /** 加入动画：量出瓶口 → 器皿口在舞台内的坐标，并让瓶子倾一下。 */
+  const playPour = (id: string, mode: "drag" | "click" | "event") => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const reagent = getSceneReagent(id);
+    const bottle = stage.querySelector(`[data-demo-id="demo-scene-reagent-${id}"]`);
+    const target = stage.querySelector(`[data-demo-id="demo-scene-drop-flask"]`);
+    if (!reagent || !bottle || !target) return;
+    const s = stage.getBoundingClientRect();
+    const b = bottle.getBoundingClientRect();
+    const t = target.getBoundingClientRect();
+    tiltBottle(bottle);
+    setPour({
+      key: Date.now(),
+      color: reagent.colorHex,
+      mode,
+      from: { x: b.left + b.width / 2 - s.left, y: b.top + 8 - s.top },
+      to: { x: t.left + t.width / 2 - s.left, y: t.top + t.height * 0.18 - s.top },
+    });
+  };
+
   const applyReagent = (id: string, mode: "drag" | "click" | "event") => {
     const copy = DROP_COPY[id];
+    playPour(id, mode);
     setSelectedId(null);
     setDraggingId(null);
     setOverFlask(false);
@@ -119,7 +187,9 @@ export function SceneStage({
 
   return (
     <div
+      ref={stageRef}
       className={styles.sceneStage}
+      data-scene={show3d ? "3d" : "2d"}
       onClick={(event) => {
         // 点空白取消选中；按钮自己的 click 不在这里处理
         if ((event.target as Element).closest("button")) return;
@@ -215,7 +285,19 @@ export function SceneStage({
           data-bench={isBenchScene ? "true" : undefined}
           data-feedback={feedbackTone ?? undefined}
         >
-          {isBenchScene ? (
+          {show3d ? (
+            <div
+              className={styles.apparatus}
+              style={{ position: "relative", width: "100%", height: "100%" }}
+              data-demo-id="demo-scene-3d-wrap"
+            >
+              <TitrationScene
+                buretteLevel={sceneBuretteLevel}
+                flaskLevel={sceneFlaskLevel}
+                label="三维滴定场景：滴定管内液面下降，锥形瓶内液面上升；拖动或用方向键旋转视角"
+              />
+            </div>
+          ) : isBenchScene ? (
             <div className={styles.benchReuse} data-demo-id={`${expId}-bench-scene`}>
               <BenchScene
                 contents={
@@ -276,12 +358,16 @@ export function SceneStage({
               ? "图 04 · 离心管 / 烧杯 / 试管 / 容量瓶 · 正视无透视"
               : expId === "exp08"
                 ? "图 08 · 分析天平 200 g / 0.1 mg · 称量瓶（烧杯占位）· 正视无透视"
-                : "图 09 · 酸式滴定管 50 mL / 锥形瓶 250 mL · 正视无透视"}
+                : show3d
+                  ? "图 09 · 酸式滴定管 50 mL / 锥形瓶 250 mL · 3D 试点（拖拽旋转）"
+                  : "图 09 · 酸式滴定管 50 mL / 锥形瓶 250 mL · 正视无透视"}
       </div>
 
       <div className={styles.fxSlot} data-feedback={feedbackTone ?? undefined}>
         {children}
       </div>
+
+      <PourFX pour={pour} onDone={() => setPour(null)} />
     </div>
   );
 }

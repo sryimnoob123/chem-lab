@@ -13,7 +13,7 @@ type ExperimentPageProps = {
 /** 暂未开放 / 不存在的实验：给一页能看懂、能回去的说明，而不是 404 空壳 */
 function LockedOrMissing({ id, title, playable }: { id: string; title?: string; playable: boolean }) {
   return (
-    <div className="page" style={{ maxWidth: 720, margin: "0 auto", padding: "clamp(48px,10vh,120px) 24px" }}>
+    <div className="ix-page-enter page" style={{ maxWidth: 720, margin: "0 auto", padding: "clamp(48px,10vh,120px) 24px" }}>
       <div className="mono" style={{ fontSize: 12, letterSpacing: ".12em", opacity: 0.55 }}>
         {id.toUpperCase()}
       </div>

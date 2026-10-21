@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
+import { LabScene } from "@/components/portal/lab-scene";
 
 type Role = "student" | "teacher";
 
@@ -54,8 +55,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login">
-      <div className="login__panel">
+    <div className="login-screen">
+      <LabScene className="login-scene" />
+      <span className="login-screen__scrim" aria-hidden="true" />
+
+      <div className="login-card">
         <Link className="login__brand" href="/">
           <span className="brand__mark">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -114,12 +118,10 @@ export default function LoginPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoComplete="name"
-                  placeholder="与教务名单一致"
                   required
                   data-demo-id="demo-login-student-name"
                 />
               </label>
-              <p className="login__hint">学号即账号，无需密码。仅名单内学生可登录。</p>
             </>
           ) : (
             <>
@@ -130,12 +132,10 @@ export default function LoginPage() {
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   autoComplete="current-password"
-                  placeholder="课程负责人发放"
                   required
                   data-demo-id="demo-login-teacher-passcode"
                 />
               </label>
-              <p className="login__hint">教师登录后进入班级学情后台。</p>
             </>
           )}
 
@@ -156,19 +156,112 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div className="login__aside" aria-hidden="true">
-        <p className="login__aside-kicker mono">LABORATORY NOTEBOOK</p>
-        <p className="login__aside-title">
-          先登录，
-          <br />
-          再动手。
-        </p>
-        <ul className="login__aside-list">
-          <li>10 个实验 · 36 学时</li>
-          <li>过程性评价：预习 10% · 操作 40% · 报告 50%</li>
-          <li>操作留痕，事故复盘可查</li>
-        </ul>
-      </div>
+      <style>{`
+        body:has(.login-screen) {
+          padding-left: 0;
+          background: #081018;
+        }
+        .login-screen {
+          position: fixed;
+          inset: 0;
+          display: grid;
+          place-items: center;
+          overflow-y: auto;
+          padding: clamp(18px, 4vh, 34px) 16px;
+          background: #081018;
+          box-sizing: border-box;
+        }
+        .login-scene {
+          position: absolute;
+          left: 0;
+          top: -8%;
+          width: 116%;
+          height: 116%;
+          z-index: 0;
+        }
+        .login-screen__scrim {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          pointer-events: none;
+          background:
+            radial-gradient(ellipse at 50% 45%, rgba(3, 8, 13, .06) 0%, rgba(3, 8, 13, .32) 68%, rgba(3, 8, 13, .55) 100%),
+            linear-gradient(180deg, rgba(3, 8, 13, .28) 0%, rgba(3, 8, 13, .08) 46%, rgba(3, 8, 13, .4) 100%);
+        }
+        .login-card {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          flex-direction: column;
+          width: min(430px, 100%);
+          box-sizing: border-box;
+          padding: 28px 28px 22px;
+          border-radius: 20px;
+          border: 1px solid rgba(255, 255, 255, .55);
+          background: rgba(255, 255, 255, .97);
+          box-shadow: 0 28px 90px rgba(2, 7, 12, .52);
+          backdrop-filter: blur(16px);
+          animation: login-in 280ms cubic-bezier(.22, .61, .36, 1) both;
+        }
+        .login-card .login__brand {
+          font-size: 13px;
+          gap: 9px;
+        }
+        .login-card .login__tabs {
+          margin-top: 28px;
+        }
+        .login-card .login__tabs button {
+          min-height: 46px;
+          padding: 0;
+        }
+        .login-card .login__form {
+          margin-top: 20px;
+          gap: 15px;
+        }
+        .login-card .login__form label span {
+          font-size: 12px;
+          letter-spacing: .02em;
+        }
+        .login-card .login__form input {
+          height: 48px;
+          padding: 0 14px;
+          border-radius: 8px;
+          font-size: 15px;
+          background: #fbfcfd;
+        }
+        .login-card .login__form input:focus {
+          outline: 2px solid var(--river-500);
+          outline-offset: 1px;
+          border-color: transparent;
+        }
+        .login-card .login__submit {
+          height: 50px;
+          margin-top: 6px;
+          border-radius: 8px;
+          font-size: 15px;
+        }
+        .login-card .login__submit:hover {
+          background: #2d3d9e;
+          transform: scale(1.01);
+        }
+        .login-card .login__submit:active {
+          transform: scale(.97);
+        }
+        .login-card .login__foot {
+          margin-top: 24px;
+          font-size: 12px;
+        }
+        @keyframes login-in {
+          from { opacity: 0; transform: translateY(14px) scale(.99); }
+          to { opacity: 1; transform: none; }
+        }
+        @media (max-width: 420px) {
+          .login-card { padding: 24px 20px 20px; border-radius: 16px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .login-card { animation: none; }
+        }
+      `}</style>
     </div>
   );
 }

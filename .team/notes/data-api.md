@@ -54,3 +54,10 @@
 - 全队红线：**dev 在跑时不许跑 `db/init.mjs` / `seed-demo.mjs` / 直连 `.pgdata` 的脚本 / e2e 另起 dev**；要独立库就把 `PGLITE_DIR` 指到临时目录（`lib/persist/events.test.ts` 就是这么做的）。
 - 改了哪些文件：无源码改动；`.pgdata` 已重建，`db/**` 未改。
 
+## 2026-10-21 11:30 · 完成：开发者调试面板 `/dev`（新任务，不参与上线验收）
+- 做了什么：`app/dev/page.tsx`（服务端门禁 + 实验/事故数据装配）+ `app/dev/debug-data.ts`（从引擎定义抽 hazard、算「自动推进到事故步」的动作序列）+ `components/devtools/{dev-panel,dev-session,dev-run-inspector,dev-hazard-list,types}` + CSS module。功能：10 实验总览（步数/可玩/进行中 run）、跳过前测进操作台/报告页/自动演示、清前测缓存（单个/全部）、登录态一键登录学生 `20250101/周若曦` 与教师 `2026`、runId 时间线查看、事故一键注入（走现有 `/api/runs` + `/api/runs/:id/events`，不新增 API）。
+- 开关：`DEVTOOLS=1/true/on` 强制开；`DEVTOOLS=0/false/off` 强制关；未设置时 `NODE_ENV !== "production"` 才开；关闭时 `notFound()` 整页 404，页面 `robots: noindex`，全站无入口。`TODO.md` 新增 §10 部署说明。
+- 证据：Playwright（`%TEMP%\devtools-check.mjs`，隔离 dev :3007）→ 面板 10 卡 / 29 个 hazard 按钮；点「跳过前测进操作台」到 `/exp/exp01?force=1` 且 `[data-demo-id="demo-finish"]` 渲染；一键登录后 cookie `chem_sid` 存在且页面显示「20250101 · 周若曦 · 化工 25-1 班」；教师解锁 `chem_teacher` 存在；清缓存提示「已清 exp01 前测缓存」；注入成功「已触发 exp02-H1」并在 run 查看器看到 `exp02 · in_progress · timeline 1 条`。截图 `%TEMP%\chemlab-shots\devtools\{01-dev-overview,02-exp01-workbench,03-hazard-injected,04-run-inspector}.png`。`npx tsc --noEmit` 0 错误；`npm run lint` 0 error（8 warning 全在别人文件）；`DEVTOOLS=0` 实测 `/dev` = 404。
+- 环境坑（重要，供后续 Playwright 用）：① 同一 checkout 只能跑一个 `next dev`（dev server 单实例锁），自起第二例会提示复用已有端口；我用「源码完整副本（含 node_modules）+ 独立 `.pgdata-dev13`」跑 :3007，跑完已删副本；② 用 `127.0.0.1` 访问 Next dev 时 HMR websocket 被拒、**React 不 hydrate、点击无反应**，Playwright 必须用 `http://localhost:<port>`；③ 仍然**不能 `taskkill /F` 正在跑 dev 的 PGlite**——11:22 复现了一次 `RuntimeError: Aborted()`（删 postmaster.pid 也救不回），只能用 Ctrl+C/优雅退出，或干脆用一次性 PGLITE_DIR。
+- 改了哪些文件：新增 `app/dev/**`、`components/devtools/**`；修改 `TODO.md`（追加 §10）。未动任何正式页面/`lib/**`/`db/**`/配置。
+

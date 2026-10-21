@@ -88,3 +88,9 @@
 - 3 个货架条目（保留旧 id）：`demo-scene-reagent-na2co3-solid` / `-h2so4-conc` / `-water`，新分组“实验 01（配制）”。
 - 证据：`scripts/exp01-assets-check.mjs` 7/7（容量瓶渲染、点选后 5 个 data-drop-target 含容量瓶、天平存在且 0 环、3 条目+旧 id、拖水有事件条、pageerror=0）；`scene-interaction-check.mjs` 30/30；`ix-audit /scene-preview` 33/33（新增 4 元素都带 ix）；`vitest run lib/scene` 43 passed（新增 assets.test.ts 5 条）；tsc 0。截图 `%TEMP%\chemlab-shots\exp01-assets.png`。
 - 已知缺口：蒸馏水→容量瓶/烧杯目前落在“没有明显现象”通用提示（现象表没有水的条目）；等 exp01 definition/文案定了再接，不自己编化学解释。
+## 2026-10-21 11:40 · 试剂加入动画 + 强负反馈（P0/P1/P2）
+- P0 加入动画（新 `components/exp/scene/pour.tsx` + `scene.module.css` 类）：瓶身倾转 300ms → 3 滴沿二次贝塞尔飞入 300ms（错开 70ms）→ 落点涟漪 380ms（延迟 250ms）→ 液面抬升 260ms（延迟 270ms，直接抬 SVG 里锥形瓶真实液面 rect + 液面线）；总 700ms。WAAPI `el.animate()`，`cancel()` 上一次 + timer ref，不锁交互；reduced-motion 直接 1 帧切换。
+- 挂载点：SceneStage（Lead 已划给 engine-core，改动保留、不再动）；`playPour` 只量坐标，动画本体在 pour.tsx；落点用实验台 SVG viewBox 360×640 的锥形瓶真实瓶口校正（投放热区是旧布局，偏上 ~150px）。
+- P1 强负反馈：`fx/index.tsx` 新增冲击壳层（body 震动类 L1~L4 160/220/320/460ms、暗场 0→0.28→0、L3/L4 红色 vignette）；`fx/fx-particles.tsx` 一次性 Canvas（72 片、900ms、rAF，`document.hidden` 暂停，卸载销毁，仅 L4 explosion/glassBreak，reduced-motion 不渲染）；`workbench.tsx` 把 `ui.event.level` 传给 `FxByKey`；motion.css 只追加 `--fx-shake-* / --fx-dark / --fx-vignette`。
+- 证据：`%TEMP%\reagent-fx-check.mjs` → 帧 10/350/600/800ms：drops 3 个、350ms drop translate(502,447) scale .67、ripple scale .55/op .58、液面 rect scaleY .31；800ms 全部卸载；L3 dark .28/vignette .94 + body `fx-impact-3`；L4 dark .22/vignette .84；particles canvas=1；pageerror=0；reduced：canvas=0 / fx=1 / body 无震动类；连续两次加入 pour key 变化（可打断）。截图 `%TEMP%\chemlab-shots\reagent-fx\`。
+- 坑：Next dev 只允许一个实例（.next/dev/lock），多次撞到别人 3001/3002/3004；最终自起 3006 + PGLITE_DIR=.pgdata-dev12。3001 是 standalone 生产服务（`.next/standalone/server.js`），不会热更我的改动，别拿它验新代码。

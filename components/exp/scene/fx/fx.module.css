@@ -418,3 +418,103 @@
     transition: none !important;
   }
 }
+
+/* ===================================================================
+   强负反馈冲击层（L1~L4 分级）
+   屏幕震动：给 body 加临时的 fx-impact-L* 类，整页位移（pointer-events 不受影响）。
+   暗场 + 红色 vignette：fixed 覆盖层，只在 L3/L4 出现。
+   Canvas 粒子：L4 爆炸/碎裂，一次性 900ms，组件卸载即销毁。
+   =================================================================== */
+:global(body.fx-impact-1) {
+  animation: fx-screen-1 var(--fx-shake-1) linear 1 both;
+}
+:global(body.fx-impact-2) {
+  animation: fx-screen-2 var(--fx-shake-2) linear 1 both;
+}
+:global(body.fx-impact-3) {
+  animation: fx-screen-3 var(--fx-shake-3) linear 1 both;
+}
+:global(body.fx-impact-4) {
+  animation: fx-screen-4 var(--fx-shake-4) linear 1 both;
+}
+
+@keyframes fx-screen-1 {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-1px, 0); }
+  55% { transform: translate(1px, 0); }
+}
+@keyframes fx-screen-2 {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-2px, 1px); }
+  45% { transform: translate(2px, -1px); }
+  70% { transform: translate(-1px, 1px); }
+}
+@keyframes fx-screen-3 {
+  0%, 100% { transform: translate(0, 0); }
+  12% { transform: translate(-4px, 2px); }
+  30% { transform: translate(4px, -2px); }
+  48% { transform: translate(-3px, 1px); }
+  66% { transform: translate(2px, -1px); }
+  84% { transform: translate(-1px, 1px); }
+}
+@keyframes fx-screen-4 {
+  0%, 100% { transform: translate(0, 0); }
+  8% { transform: translate(-7px, 3px) rotate(-0.25deg); }
+  22% { transform: translate(7px, -3px) rotate(0.25deg); }
+  36% { transform: translate(-5px, 2px); }
+  52% { transform: translate(4px, -2px); }
+  68% { transform: translate(-3px, 1px); }
+  84% { transform: translate(2px, -1px); }
+}
+
+.impactDark {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #050b12;
+  pointer-events: none;
+  animation: fx-dark var(--fx-dark) var(--ease-snap) 1 both;
+}
+
+@keyframes fx-dark {
+  0% { opacity: 0; }
+  22% { opacity: 0.28; }
+  100% { opacity: 0; }
+}
+
+.impactVignette {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(192, 57, 43, 0.55) 100%);
+  animation: fx-vignette var(--fx-vignette) ease-out 1 both;
+}
+
+@keyframes fx-vignette {
+  0% { opacity: 0; }
+  18% { opacity: 0.95; }
+  62% { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+
+.particles {
+  position: fixed;
+  inset: 0;
+  z-index: 42;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(body).fx-impact-1,
+  :global(body).fx-impact-2,
+  :global(body).fx-impact-3,
+  :global(body.fx-impact-4) {
+    animation: none;
+  }
+  .impactDark,
+  .impactVignette {
+    animation: none;
+    opacity: 0;
+  }
+}

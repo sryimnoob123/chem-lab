@@ -8,6 +8,7 @@ import { getStudent } from "@/lib/session";
 import { loadRunBundle, type RunBundle } from "@/lib/persist/report";
 import { getSceneReagent } from "@/lib/scene/reagents";
 import { BopbpsPostLab } from "@/components/exp/bopbps-postlab";
+import { Reveal } from "@/components/motion/reveal";
 import styles from "./report.module.css";
 
 export const runtime = "nodejs";
@@ -152,7 +153,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   const finishedAt = bundle?.run.finishedAt ? new Date(bundle.run.finishedAt) : null;
 
   return (
-    <main className={styles.page} data-demo-id="demo-report">
+    <main className={`${styles.page} ix-page-enter`} data-demo-id="demo-report">
       <header className={styles.topbar}>
         <Link className={`${styles.back} ix`} href="/experiments">
           <span aria-hidden="true">←</span> 实验列表
@@ -162,14 +163,16 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
       </header>
 
       <div className={styles.sheet}>
-        <BopbpsPostLab expId={definition.id} />
+        <Reveal as="div" index={0}>
+          <BopbpsPostLab expId={definition.id} />
+        </Reveal>
         {demoNotice ? (
           <div className={styles.demoNotice} data-demo-id="demo-report-notice" role="note">
             <strong>演示示例 · 非本次 run</strong>
             <span>这是历史记录，用于说明报告结构。</span>
           </div>
         ) : null}
-        <section className={styles.head} aria-labelledby="report-title">
+        <Reveal as="section" className={styles.head} aria-labelledby="report-title" index={1}>
           <div className={styles.headText}>
             <p className={styles.eyebrow}>实验 {definition.id.replace(/^exp/, "")} · 报告</p>
             <h1 className={styles.title} id="report-title">
@@ -186,9 +189,9 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
             <span className={styles.totalValue}>{total}</span>
             <span className={styles.totalUnit}>/ 100</span>
           </div>
-        </section>
+        </Reveal>
 
-        <section className={styles.parts} aria-label="三段分">
+        <Reveal as="section" className={styles.parts} aria-label="三段分" index={2}>
           {[
             { label: "预习", value: preview, weight: "10%", note: "前测正确率" },
             { label: "操作", value: operation, weight: "40%", note: "扣违规 / 事故 / 提示" },
@@ -206,10 +209,10 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
               <p className={styles.partNote}>{part.note}</p>
             </div>
           ))}
-        </section>
+        </Reveal>
 
         <div className={styles.columns}>
-          <section className={styles.panel} aria-labelledby="competency-title">
+          <Reveal as="section" className={styles.panel} aria-labelledby="competency-title" index={3}>
             <div className={styles.panelHead}>
               <h2 id="competency-title">能力点掌握度</h2>
               <span>0–100</span>
@@ -236,9 +239,9 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
                 })}
               </ul>
             )}
-          </section>
+          </Reveal>
 
-          <section className={styles.panel} aria-labelledby="incident-title">
+          <Reveal as="section" className={styles.panel} aria-labelledby="incident-title" index={4}>
             <div className={styles.panelHead}>
               <h2 id="incident-title">事故清单</h2>
               <span>{incidents.length} 条</span>
@@ -259,10 +262,10 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
                 ))}
               </ul>
             )}
-          </section>
+          </Reveal>
         </div>
 
-        <section className={styles.panel} aria-labelledby="timeline-title">
+        <Reveal as="section" className={styles.panel} aria-labelledby="timeline-title" index={5}>
           <div className={styles.panelHead}>
             <h2 id="timeline-title">关键步骤时间线</h2>
             <span>最近 {timeline.length} 条 · 倒序</span>
@@ -292,7 +295,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
               })}
             </ol>
           )}
-        </section>
+        </Reveal>
 
         <footer className={styles.footer}>
           <Link className={`${styles.action} ix`} href="/experiments">

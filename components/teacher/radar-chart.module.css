@@ -1,0 +1,136 @@
+/* 能力点雷达：SVG 语言与全站台账一致（1px 线、2px 圆角、无阴影、无渐变） */
+
+.figure {
+  margin: 14px 0 0;
+  max-width: 420px;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  overflow: visible;
+}
+
+.grid {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.axis {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.area {
+  fill: var(--river-700);
+  fill-opacity: 0.14;
+  stroke: var(--river-700);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.vertex {
+  fill: var(--river-700);
+  stroke: var(--paper);
+  stroke-width: 1.5;
+}
+
+.code {
+  fill: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.value {
+  fill: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  align-items: baseline;
+  margin: 4px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: var(--text-12);
+  color: var(--ink-2);
+}
+
+.captionTitle {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.captionMeta {
+  color: var(--ink-2);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-12);
+  color: var(--ink-2);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.legendCode {
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+.legendValue {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.legendMissing {
+  color: var(--ink-2);
+}
+
+.note {
+  max-width: 34em;
+  margin: 8px 0 0;
+  font-size: var(--text-12);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.empty {
+  max-width: 420px;
+  margin: 14px 0 0;
+  padding: 16px 18px;
+  background: var(--paper-2);
+  border-left: 2px solid var(--line);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: var(--text-14);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.emptyBody {
+  margin: 6px 0 0;
+  font-size: var(--text-12);
+  line-height: 1.65;
+  color: var(--ink-2);
+}

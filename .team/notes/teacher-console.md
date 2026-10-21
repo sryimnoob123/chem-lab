@@ -43,3 +43,16 @@
 - 下一步 / 给 Lead：
   - `scripts/shots.mjs` PAGES 建议补 `/teacher/roster`、`/teacher/student/20250101`、`/teacher?q=zzzz`（无该文件写权限）。
   - 官方 shots 不带教师 cookie，顶栏会显示「教师解锁」；要登录态基线用 `.team/teacher-shots.mjs`，或给 shots 加 unlock 步骤。
+
+## 2026-10-21 11:30 · 完成：能力点雷达（班级 + 单学生，纯 SVG + 单测）
+- 做了什么：
+  1. `components/teacher/radar-data.ts`：5 维常量（K1/K2/A1/S1/S2，顺序固定）、`clampPercent`、`radarSeriesFromCompetency`、`averageRadarSeries`（每维分母只算有该码的样本；缺维 value=0 + hasData=false）、`restrictRadarToRecordedCodes`（把 data-api 定义占位 0 标成「暂无数据」）。
+  2. `components/teacher/radar-query.ts`（Server）：`loadClassRadarSeries()` 取非演示 run 的 timeline 对错 + incidents→能力码，按 run 用 `computeMastery` 折算 0~100 后逐维平均；`loadStudentRecordedCodes(no)` 取真实有记录的能力码。
+  3. `components/teacher/radar-chart.tsx` + `radar-chart.module.css`：纯 SVG（5 轴 / 3 环 / 数据多边形 / 顶点 `<title>` hover / 轴标签+数值 / 图例 / 空态），viewBox 420×300，容器最宽 420，`scope: "class" | "student"` 只换文案；390 宽缩到 332 无溢出。
+  4. `app/teacher/page.tsx`：雷达区插在事故分布与「学生台账」之间；`app/teacher/student/[no]`：雷达在最上方，复用同一组件，并把无记录学生的横条也一并空态化。
+- 证据：
+  - `npx tsc --noEmit` 0 错误；`npm run lint` 0 error（8 条警告均在别的角色脚本里）；`node scripts/check-encoding.mjs` 通过。
+  - `npx vitest run components/teacher` → **13 passed**（原 10 + 记录集合修正 3）；未加任何 vitest 配置（走根 `vitest.config.ts` 的 `components/**/*.test.ts`）。
+  - `.team/radar-shot.mjs` / `.team/radar-check.mjs`（Playwright，先 unlock）→ `%TEMP%\chemlab-shots\teacher-chart\`：teacher-1440、teacher-full-1440、teacher-390（全页）、student-1440、student-done-1440、student-empty-1440、student-empty-390；三视口 `scrollWidth == clientWidth`，无 404 / 无 console error。
+  - 实测占位 0 修正生效：学生 20250101 图例显示「K2 0 暂无数据 / S1 0 暂无数据」+ 脚注「K2 S1 暂无记录，按 0 画；不代表学生掌握度为 0。」；无记录学生 20250136 整块「暂无能力点数据」空态。
+- 小坑：顶点 `<title>` 里写多个 JSX 子节点触发 React 警告（children 是数组）→ 改成模板字符串。另：3004 dev 的 `.pgdata-dev10` 被并发进程抢锁导致 PGlite init 失败，改 `.pgdata-dev14` 重建后恢复（未动 3001）。

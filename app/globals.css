@@ -2824,3 +2824,103 @@ button {
     gap: 4px;
   }
 }
+
+/* ===================================================================
+   页面 / 区块入场动效（2026-10-21 动效专项）
+   规则：时长令牌取自 app/styles/motion.css（--enter=260ms / --hover=80ms /
+   --press-in=30ms），只动 opacity 与 transform，单个过渡 ≤300ms；
+   prefers-reduced-motion 时全部瞬时（见文件末尾降级块）。
+   =================================================================== */
+
+/* 页面级进入：整页 6px 上浮 + 淡入，260ms */
+@keyframes ix-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ix-page-enter {
+  animation: ix-page-in var(--enter) var(--ease-out) both;
+}
+
+/* 仅淡入：给内部含 position:fixed 的页面用，避免 transform 改 fixed 定位 */
+@keyframes ix-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ix-fade-in {
+  animation: ix-fade-in var(--enter) var(--ease-out) both;
+}
+
+/* 离场：前测卡切到操作台前的 160ms 收起 */
+@keyframes ix-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.ix-leave {
+  animation: ix-leave var(--snap) var(--ease-out) both;
+  pointer-events: none;
+}
+
+/* 滚动入场（components/motion/reveal.tsx 的 .ix-reveal）：
+   覆盖 portal.css 的 640ms 旧版，统一到 260ms；错峰步长 40ms，最多 5 级 */
+.ix-reveal[data-reveal="out"] {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.ix-reveal[data-reveal="in"] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--enter) var(--ease-out),
+    transform var(--enter) var(--ease-out);
+  transition-delay: calc(min(var(--reveal-i, 0), 5) * 40ms);
+}
+
+/* 可点卡片：按下 30ms 内缩到 0.97；transition 只保留 transform / opacity。
+   .cat-row__link 的原 transition 含 border-color（portal.css 旧版），
+   这里用更高优先级把它收敛到 transform / opacity；按下态提升优先级，
+   避免被 :hover 的 translateX 盖掉。 */
+.cat-row__link.ix-lift {
+  transition:
+    transform var(--hover) var(--ease-press),
+    opacity var(--hover) var(--ease-press);
+}
+
+.cat-row__link.ix-lift:active {
+  transform: scale(var(--scale-down)) !important;
+  transition-duration: var(--press-in);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ix-page-enter,
+  .ix-fade-in,
+  .ix-leave,
+  .ix-reveal {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .cat-row__link.ix-lift,
+  .cat-row__link.ix-lift:hover,
+  .cat-row__link.ix-lift:active {
+    transform: none !important;
+    transition: none !important;
+  }
+}

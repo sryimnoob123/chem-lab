@@ -22,7 +22,17 @@
 3. 学生不存在用壳内 `MissingStudent` 错误态（HTTP 200）而不是 `notFound()`：实测 `loading.tsx` + `notFound()` 在 dev 会卡在骨架不 swap（`app/teacher/loading.tsx` 与 404 的互斥问题），已写进 notes。
 4. 教师端同屏字号只有 12/14/25/32 四档；13px 已从教师段全部移除。
 
+## 2026-10-21 能力点雷达（追加交付）
+- 组件：`components/teacher/radar-chart.tsx`（纯 SVG，5 轴 / 3 环 / 多边形 / 顶点 `<title>` hover / 轴标签+数值 / 图例 / 空态，容器最宽 420，宽 390 时随容器缩到 332），样式在同目录 `radar-chart.module.css`（**没动 globals.css**）。
+- 口径：`components/teacher/radar-data.ts` 纯函数 + `radar-query.ts` 取数（Server）。
+  - 班级：非演示 run → 每次 run 按 `computeMastery` 算 5 个能力码 0~100（timeline 对错 + incidents 按 registry 归属）→ 每维只对**有该码记录**的 run 求平均；没记录的维画 0，图例写「暂无数据」。
+  - 单学生：`detail.competency`（与左侧横条同口径）+ `loadStudentRecordedCodes()` 修 `hasData`，把 data-api 的「定义占位 0」标成暂无数据；页面与班级共用同一个 `CompetencyRadar`，只有 `scope` 文案不同。
+- 测试：`components/teacher/radar-data.test.ts`，`npx vitest run components/teacher` = **13 passed**（无数据 / 单条 / 多条每维不同分母 / 缺维补 0 / 脏样本 / 记录集合修正）。未新增任何 vitest 配置（用根 `vitest.config.ts` 的 `components/**/*.test.ts`）。
+- 证据：`%TEMP%\chemlab-shots\teacher-chart\`（teacher-1440 / teacher-full-1440 / teacher-390 / student-1440 / student-done-1440 / student-empty-1440 / student-empty-390）；三视口 `scrollWidth == clientWidth`。
+- 注意：我本地 3004 dev 用 `.pgdata-dev14`（`.pgdata-dev10` 被并发进程搞到 PGlite init 失败后重建）。
+
 ## 证据
 - `%TEMP%\chemlab-shots\20261020-2012\teacher-{desktop,tablet,mobile}.png`（官方 shots）
 - `%TEMP%\chemlab-shots\teacher-extra\*.png`（15 张：三页 + 空态 + 404 × 三视口）
+- `%TEMP%\chemlab-shots\teacher-chart\*.png`（雷达，见上）
 - 明细：`.team/notes/teacher-console.md`

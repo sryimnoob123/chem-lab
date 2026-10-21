@@ -15,3 +15,12 @@
 - 改了哪些文件：`lib/pedagogy/scoring.ts`、本 notes。
 - 下一步 / 阻塞：无；Lead 汇合时若看到 `phenomena-table.ts` 报错，责任在 chem 轨。
 
+## 2026-10-21 11:25 · 完成：Slides/Motion 过渡专项（除首页/登录外的页面）
+- 做了什么：`app/globals.css` 新增页面/区块入场层（`.ix-page-enter` 260ms、`.ix-fade-in` 仅透明度给含 fixed 的操作台、`.ix-leave` 160ms 退场、`.ix-reveal` 覆盖 portal.css 的 640ms 旧版为 260ms/40ms 错峰，`.cat-row__link.ix-lift` 按下 30ms 到 0.97）；`components/motion/reveal.tsx` 加 `ix-reveal` 类并放宽 props（支持 aria-*/style）；`/experiments` 整页进入 + 标题/分组头 Reveal；`/exp/[id]` 前测卡 180ms 退场后操作台 `ix-fade-in`，`LockedOrMissing` 页进入；`/exp/[id]/report` 页面进入 + 后测卡/总分/三段分/双面板/时间线 6 段 0~200ms 错峰 Reveal；`workbench.tsx` 根节点加 `ix-fade-in`（仅加 class）。
+- 证据（Playwright，1440×900 + 390×844）：截图 6 张 + 报告全页 2 张在 `%TEMP%\chemlab-shots\pedagogy-motion\`；三页 overflow 检查 `scrollWidth === clientWidth`（1440/390）；`getComputedStyle`：`.ix-reveal[data-reveal=in]` transitionProperty=`opacity, transform` 0.26s，`.cat-row__link.ix-lift`=`transform, opacity` 0.08s，`.ix-page-enter` animationName=ix-page-in 0.26s，操作台=ix-fade-in 0.26s；前测提交后 60ms 内 `.ix-leave` 在播（0.16s），约 180ms 后操作台挂载；`prefers-reduced-motion: reduce` 下 reveal/page/card 全部 `animation:none / transition:none`、opacity 1；report 6 段 Reveal 全 in，delay 0/40/80/120/160/200ms。
+- 环境备注：3001 全程未动；3004/3005 由其他队友起停多次且有 `campus-slides.tsx` 在写，最终在**当前工作区自起的 3003**（`PGLITE_DIR=.pgdata-dev9`、`localhost` + Chromium `--no-proxy-server`）完成全部截图与计算样式检查，验收后已停 3003 释放 dev lock。（本机 IE 代理 127.0.0.1:7897 会让 `127.0.0.1` 的 HMR/水合失败，用 `localhost` 绕过。）
+- 改了哪些文件：`app/globals.css`、`components/motion/reveal.tsx`、`app/experiments/page.tsx`、`app/exp/[id]/page.tsx`、`app/exp/[id]/workbench.tsx`、`app/exp/[id]/report/page.tsx`、`components/exp/bopbps-gate.tsx`、本 notes、`.team/tasks/pedagogy-motion.md`。
+- 验收：`npx tsc --noEmit` 0 输出；`npm run lint` 0 error（8 个历史 warning）；`npx vitest run lib/pedagogy` 仍 52 passed（未回退教学层）。
+- 下一步 / 阻塞：无。Lead 若要复验：`PGLITE_DIR=.pgdata-dev9 npx next dev -p 3003`，截图脚本在 `%TEMP%\chemlab-shots\pedagogy-motion\audit.mjs`。
+
+

@@ -3,6 +3,9 @@ import { getStudentDetail } from "@/components/teacher/queries";
 import { MissingStudent } from "@/components/teacher/missing-student";
 import { ScoreRulers, CompetencyBars } from "@/components/teacher/detail-scores";
 import { IncidentLog, TimelineLog } from "@/components/teacher/detail-records";
+import { CompetencyRadar } from "@/components/teacher/radar-chart";
+import { radarSeriesFromCompetency, restrictRadarToRecordedCodes } from "@/components/teacher/radar-data";
+import { loadStudentRecordedCodes } from "@/components/teacher/radar-query";
 import { formatDateTime, formatScore } from "@/components/teacher/format";
 import type { DetailRun } from "@/components/teacher/types";
 
@@ -24,10 +27,20 @@ function runStatusText(run: DetailRun | null): string {
 
 export default async function StudentDetailPage({ params }: PageProps) {
   const { no } = await params;
-  const detail = await getStudentDetail(no).catch(() => null);
+  const [detail, recordedCodes] = await Promise.all([
+    getStudentDetail(no).catch(() => null),
+    loadStudentRecordedCodes(no).catch(() => new Set<string>()),
+  ]);
   if (!detail) return <MissingStudent studentNo={no} />;
 
   const run = latestRun(detail.runs);
+  // data-api 在「完全没有记录」时会把全部能力码补成 0，那是占位不是 0 分；
+  // 用 timeline / incidents 里真实出现过的码修正 hasData，图例才能标「暂无数据」。
+  const radar = restrictRadarToRecordedCodes(
+    radarSeriesFromCompetency(detail.competency, detail.runs.length),
+    recordedCodes,
+  );
+  const hasCompetencyRecords = radar.hasData;
   const lastActive = detail.timeline.length > 0
     ? detail.timeline.reduce((latest, entry) => (entry.at > latest ? entry.at : latest), detail.timeline[0].at)
     : null;
@@ -63,6 +76,14 @@ export default async function StudentDetailPage({ params }: PageProps) {
         </p>
       ) : null}
 
+      <section className="tch-block" aria-labelledby="tch-radar-title">
+        <div className="tch-subhead tch-subhead--ledger">
+          <h2 id="tch-radar-title">能力点雷达</h2>
+          <span className="tch-subhead__meta">五维均分 0~100</span>
+        </div>
+        <CompetencyRadar series={radar} scope="student" title="本生能力点雷达" />
+      </section>
+
       <div className="tch-detail-grid">
         <div className="tch-detail-col">
           <section className="tch-block" aria-labelledby="tch-score-title">
@@ -78,9 +99,11 @@ export default async function StudentDetailPage({ params }: PageProps) {
           <section className="tch-block" aria-labelledby="tch-comp-title">
             <div className="tch-subhead tch-subhead--ledger">
               <h2 id="tch-comp-title">能力点掌握度</h2>
-              <span className="tch-subhead__meta">{Object.keys(detail.competency).length} 项</span>
+              <span className="tch-subhead__meta">
+                {hasCompetencyRecords ? Object.keys(detail.competency).length : 0} 项
+              </span>
             </div>
-            <CompetencyBars competency={detail.competency} />
+            <CompetencyBars competency={hasCompetencyRecords ? detail.competency : {}} />
           </section>
         </div>
 

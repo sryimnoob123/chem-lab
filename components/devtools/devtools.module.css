@@ -1,0 +1,244 @@
+/* 开发者调试面板样式（只被 /dev 与 components/devtools 引用） */
+
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px clamp(16px, 4vw, 28px) 72px;
+  color: #1b2430;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.header {
+  margin-bottom: 16px;
+}
+
+.kicker {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: #64748b;
+}
+
+.title {
+  margin: 6px 0 4px;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+}
+
+.card {
+  margin-top: 14px;
+  border: 1px solid #dbe3ec;
+  border-radius: 12px;
+  background: #fff;
+  padding: 16px 18px;
+  box-shadow: 0 1px 2px rgba(16, 32, 54, 0.04);
+}
+
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 4px 12px;
+  margin: 0 0 12px;
+}
+
+.kv dt {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.kv dd {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.link {
+  color: #1f5fa8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 13px;
+}
+
+.link:hover {
+  color: #174a82;
+}
+
+.message {
+  font-size: 12px;
+  color: #a3560f;
+  background: #fdf3e4;
+  border: 1px solid #f2d6ac;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.input {
+  min-width: 340px;
+  flex: 1 1 340px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid #cfdaea;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  background: #fbfdff;
+}
+
+.table {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 5px 8px;
+  border-top: 1px solid #e5ebf3;
+}
+
+.table th {
+  color: #64748b;
+  font-weight: 600;
+  border-top: none;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: #475569;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.exp {
+  border: 1px solid #e2e9f2;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fbfdff;
+}
+
+.expHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.expId {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: #fff;
+  background: #334155;
+  border-radius: 5px;
+  padding: 1px 7px;
+}
+
+.expTitle {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.badge,
+.badgeOk,
+.badgeOff {
+  font-size: 11.5px;
+  border-radius: 999px;
+  padding: 1px 8px;
+  border: 1px solid #dbe3ec;
+  color: #52637a;
+  background: #fff;
+}
+
+.badgeOk {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.badgeOff {
+  color: #9a3412;
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.hazards {
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.hazard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  padding-top: 6px;
+  border-top: 1px dashed #e2e9f2;
+}
+
+.hazardTitle {
+  color: #334155;
+}
+
+.level {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 0 5px;
+  color: #fff;
+  background: #64748b;
+}
+
+.levelL1 {
+  background: #64748b;
+}
+
+.levelL2 {
+  background: #b45309;
+}
+
+.levelL3 {
+  background: #b91c1c;
+}
+
+.levelL4 {
+  background: #7f1d1d;
+}

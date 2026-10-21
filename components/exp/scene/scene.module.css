@@ -559,3 +559,42 @@
     opacity: 0.85;
   }
 }
+/* ---------------- 试剂加入动画（pour.tsx） ----------------
+   4 段：瓶身倾转 300ms / 液滴飞行 420ms（错开 90ms）/ 涟漪 420ms（延迟 360ms）/ 液面抬升 260ms（延迟 400ms）。
+   全部走 WAAPI，这里只提供几何与初始态；不动元素本体 transform。 */
+.pourLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+}
+
+.pourDrop {
+  position: absolute;
+  width: 7px;
+  height: 10px;
+  border-radius: 50% 50% 60% 60% / 55% 55% 100% 100%;
+  background: var(--pour-color, #dce9f2);
+  box-shadow: 0 0 0 1px rgba(22, 32, 44, 0.16);
+  opacity: 0;
+}
+
+.pourRipple {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  border: 3px solid #dce9f2;
+  border-radius: 50%;
+  box-shadow: 0 0 14px rgba(220, 233, 242, 0.4);
+  opacity: 0;
+}
+
+.pourLiquid {
+  position: absolute;
+  width: 44px;
+  height: 40px;
+  border-radius: 2px;
+  background: var(--pour-color, #dce9f2);
+  transform-origin: center bottom;
+  opacity: 0;
+}

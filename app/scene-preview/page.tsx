@@ -67,7 +67,14 @@ export default function ScenePreviewPage() {
 
           <div className={styles.showStage} data-fx-active={current?.key ?? "summary"}>
             {current ? (
-              <FxByKey key={`${showRun}-${showIndex}`} fx={current.key} active scale="full" onDone={() => undefined} />
+              <FxByKey
+                key={`${showRun}-${showIndex}`}
+                fx={current.key}
+                level={current.key === "explosion" || current.key === "glassBreak" ? "L4" : "L3"}
+                active
+                scale="full"
+                onDone={() => undefined}
+              />
             ) : (
               <div className={styles.summary} data-demo-id="demo-fx-summary">
                 <ul className={styles.summaryList}>
@@ -165,7 +172,14 @@ export default function ScenePreviewPage() {
 
           <div className={`ix ${styles.fxStage}`} data-demo-id="demo-fx-stage" data-fx-active={active?.key ?? "none"}>
             {active ? (
-              <FxByKey key={active.seq} fx={active.key} active onDone={handleDone} scale="full" />
+              <FxByKey
+                key={active.seq}
+                fx={active.key}
+                level={active.key === "explosion" || active.key === "glassBreak" ? "L4" : "L3"}
+                active
+                onDone={handleDone}
+                scale="full"
+              />
             ) : (
               <p className={styles.fxEmpty}>选一种事故，看它发生。</p>
             )}

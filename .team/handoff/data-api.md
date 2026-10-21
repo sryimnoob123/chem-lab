@@ -20,4 +20,10 @@
 
 ## 已知注意
 - `npx tsc --noEmit` 偶报 `.next/dev/types/validator.ts` 关于别人新页面的错：curl 一下该页面让 dev 重生成类型再跑。
-- 本地演示库：`npm run db:demo` 重播前要先停 dev（PGlite 独占）。
+- 本地演示库：`npm run db:demo` 重播前要先停 dev（PGlite 独占）；**不要 `taskkill /F` dev**，会留下打不开的 PGlite（`Aborted()`，删 postmaster.pid 也救不回）。
+- Next dev Playwright：用 `http://localhost:<port>`，别用 `127.0.0.1`（HMR 被拒导致 React 不 hydrate、点击无效）。
+
+## 附加交付（2026-10-21）：开发者调试面板 `/dev`
+- 文件：`app/dev/{page,debug-data}.ts(x)`、`components/devtools/{dev-panel,dev-session,dev-run-inspector,dev-hazard-list,types}.tsx`、`devtools.module.css`；`TODO.md` 追加 §10。
+- 开关：`DEVTOOLS=1` 强开 / `DEVTOOLS=0` 强关 / 未设置时仅非 production 开启；关闭时整页 404，全站无入口，不参与上线验收。删 `app/dev/**` + `components/devtools/**` 即整体移除。
+- 本地入口：当前主 dev（3003）`http://localhost:3003/dev`；隔离验证截图见 `%TEMP%\chemlab-shots\devtools\`。
