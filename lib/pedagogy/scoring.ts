@@ -28,7 +28,7 @@
  */
 
 import type { CompetencyCode } from "./competency";
-import { INDEPENDENT_DEDUCT_MIN_LEVEL, type HintLevel, type HintUsage } from "./hints";
+import { hintDeductForLevel, type HintLevel, type HintUsage } from "./hints";
 
 export type IncidentLevel = "L1" | "L2" | "L3" | "L4";
 
@@ -166,12 +166,12 @@ export function sumDeductions(records: readonly { deduct: number }[]): number {
   return records.reduce((sum, record) => sum + sanitizeNumber(record.deduct), 0);
 }
 
-/** 用到 H2 及以上的提示条数（每条折 1 分）。 */
+/**
+ * 提示扣分：按级别 1 / 3 / 5 累加（用户 2026-10-22 口径）。
+ * 口径表在 `lib/pedagogy/hints.ts` 的 `HINT_DEDUCT_BY_LEVEL`，与 UI 层 hint-ladder 同源，不要另写阈值。
+ */
 export function computeIndependentDeduct(hints: readonly { level: HintLevel }[]): number {
-  return (
-    hints.filter((hint) => hint.level >= INDEPENDENT_DEDUCT_MIN_LEVEL).length *
-    INDEPENDENT_DEDUCT_PER_HINT
-  );
+  return hints.reduce((sum, hint) => sum + hintDeductForLevel(hint.level), 0);
 }
 
 /** 统计 L2 及以上事故次数（事故率分子）。 */

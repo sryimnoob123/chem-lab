@@ -16,8 +16,8 @@ export const exp01Script: DemoScript = {
     { kind: "click", target: "demo-op-step1-dry" },
     { kind: "caption", text: "第 2 步 · 分析天平调水平与内校。", ms: 1500 },
     { kind: "click", target: "demo-op-step2-level" },
-    { kind: "click", target: "demo-op-step2-calibrate" },
     { kind: "click", target: "demo-op-step2-brush" },
+    { kind: "click", target: "demo-op-step2-calibrate" },
     { kind: "caption", text: "第 3 步 · 差减法称 Na₂CO₃。", ms: 1500 },
     // 负反馈分支：事故/拒收 → 结果条三行 → 重做本步
     { kind: "caption", text: "这一步先演示一次错误操作：把刚烘过的热称量瓶直接放上秤盘。", ms: 2000 },
@@ -30,7 +30,14 @@ export const exp01Script: DemoScript = {
     { kind: "click", target: "demo-op-step3-transfer" },
     { kind: "click", target: "demo-op-step3-compute" },
     { kind: "caption", text: "第 4 步 · 溶解、冷却与定量转移。", ms: 1500 },
-    { kind: "click", target: "demo-op-step4-dissolve" },
+    // 真拖拽：把蒸馏水从试剂架拖进烧杯/容量瓶，松手后先播吸附 + 倒入动画，再推进本步
+    {
+      kind: "drag",
+      target: "demo-scene-reagent-water",
+      to: "demo-scene-drop-flask",
+      text: "真拖拽：抓住蒸馏水瓶沿贝塞尔轨迹送进器皿，松手先播倒入动画（700ms），动画播完才记这一步。",
+      ms: 1400,
+    },
     { kind: "click", target: "demo-op-step4-cool" },
     { kind: "click", target: "demo-op-step4-rinse" },
     { kind: "caption", text: "第 5 步 · 容量瓶定容与摇匀。", ms: 1500 },

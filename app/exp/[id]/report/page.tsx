@@ -142,14 +142,17 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
 
   const scores = bundle?.scores ?? { preview: null, operation: null, report: null, total: null, detail: null };
   /**
-   * 一键演示（?auto=1）：演示路径不走前测，预习 10% 天然是 0，总分被压到 80。
-   * 演示态把预习按满分展示并把 10 分并入总分，真实学生的报告不受影响。
+   * 一键演示（?auto=1）的预习满分已在交卷时按 ?auto=1 落库（lib/persist/report.ts 的 finishRun override），
+   * 这里一律读库，保证教师端 / 报告页 / 导出三个口径一致，不再在展示层加 10 分。
    */
-  const autoDemo = query.auto === "1";
-  const preview = autoDemo ? 100 : (scores.preview ?? 0);
+  const preview = scores.preview ?? 0;
   const operation = scores.operation ?? 0;
   const report = scores.report ?? 0;
-  const total = autoDemo ? Math.min(100, (scores.total ?? 0) + 10) : (scores.total ?? 0);
+  const total = scores.total ?? 0;
+  /** 提示使用情况（用户 2026-10-22：报告要记次数）：按 1/3/5 扣分，见 lib/pedagogy/hints.ts */
+  const hints = scores.detail?.hints ?? [];
+  const hintCount = hints.length;
+  const hintDeduct = hints.reduce((sum, item) => sum + item.deduct, 0);
   const competency = scores.detail?.competency ?? {};
   const codes = definition.competencies.length > 0 ? definition.competencies : Object.keys(competency);
   const timeline = (bundle?.timeline ?? []).slice(-10).reverse();
@@ -240,7 +243,15 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         <Reveal as="section" className={styles.parts} aria-label="三段分" index={3}>
           {[
             { label: "预习", value: preview, weight: "10%", note: "前测正确率" },
-            { label: "操作", value: operation, weight: "40%", note: "扣违规 / 事故 / 提示" },
+            {
+              label: "操作",
+              value: operation,
+              weight: "40%",
+              note:
+                hintCount > 0
+                  ? `扣违规 / 事故 / 提示 ${hintCount} 次（−${hintDeduct} 分）`
+                  : "扣违规 / 事故 / 提示",
+            },
             { label: "报告", value: report, weight: "50%", note: "数据与安全复盘" },
           ].map((part) => (
             <div className={styles.part} key={part.label}>

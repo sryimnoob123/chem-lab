@@ -1,24 +1,30 @@
-# handoff · demo-flow（演示编排）
+# handoff · demo-flow（演示编排 · 2026-10-22 04:40）
 
 ## 状态
-- task-6 完成：10/10 实验有一键演示脚本；覆盖表 + 钩子文档落 `docs/演示钩子.md`。
-- 验收：`npx tsc --noEmit`=0；我的文件 `npm run lint` 0 error；`npx vitest run` 444 passed（未退化）。
-- 遗留：`app/exp/[id]/use-drop-flow.ts:67` 有 1 个 lint error（workbench-ux 作用域，非本轨道）。
+- task-6 已交付；本轮追加「真拖拽」：exp01/exp09 成功拖拽、exp03 拒收拖拽。
+- 验收：`npx tsc --noEmit`=0；`npm run lint`=0 error（15 warning 均在既有 scripts/*.mjs）；`npx vitest run`=36 files / 519 passed。
+- :3001 已 rebuild + restart（含 workbench 修复、CSS `:global(.ix)`、本轨道改动）。
 
-## 交付物
-- `lib/demo/scripts/exp01.ts ~ exp10.ts`（exp09 重写）：正确路径 → 中途 1 次 L3 事故 → `demo-retry-N` 重做 → 走完 → `demo-finish` 交卷看报告。
-- `lib/demo/director.ts`：跨 realm 修复（旧版在 iframe 里 `instanceof HTMLElement` 恒 false，等于找不到任何目标）；自动展开「其他做法」details；点击 = 位移 320ms + 目标高亮 180ms + 按下 ripple + 结果条 380ms 后按 ok/fail 给反馈环；新增 `waitFor` step kind。
-- `lib/demo/cursor.ts`：`ringAt`/`outline`，destroy 按 `data-demo-fx` 全清（退出不留脏 DOM）。
-- `lib/demo/types.ts`：`waitFor` + `timeout` 字段。
-- `lib/demo/scripts/index.ts`：`DEMO_SCRIPTS`（17 场）+ `DEMO_ORDER`（由 DEMO_SCRIPTS 派生，单一来源）。
-- 越界改动（Lead 授权 B）：`components/demo/demo-overlay.tsx` 仅 import + `ORDER`→`DEMO_ORDER` 两处。
-- 文档：`docs/演示钩子.md`（覆盖表 §2、动效清单 §3、时序规则 §4、钩子清单 §5）。
+## 实测（Playwright 无头，`/demo?autoplay=1`，04:36 构建）
+| 实验 | 秒数 | 报告页 | console errors |
+|---|---|---|---|
+| exp01 | 67s | ✅ /exp/exp01/report?demo=1 | 4（全 `/api/session` 401，匿名预期） |
+| exp09 | 72s | ✅ /exp/exp09/report?demo=1 | 4（同上） |
+| exp03 | 58s | ✅ /exp/exp03/report?demo=1 | 4（同上） |
 
-## 规则 / 顺序
-- DEMO_ORDER：home, login, catalog, exp09, report, fx, teacher, exp01…exp08, exp10（原 7 个在前、home 仍开场）。
-- 字幕时序：先操作、后字幕；caption/wait 是段导语（立即播）；拖拽路径必须 `waitFor` 结果条或等 ≥800ms 再继续。
-- 失败分支：L3 事故 → 结果条三行 + 特效 → `demo-retry-N`，重做回该步开头；L4 终止类不入脚本。
-- 需要 Lead 接线的新钩子（可选、不阻塞）：`demo-other-ways-toggle`、`demo-step-dot-N`、`demo-scene-stage`（详见 docs/演示钩子.md §5.2）。
+## 真拖拽 / 点击
+- exp01 真拖：第 4 步溶解（水 → 器皿）；其余 click。
+- exp09 真拖：第 2 步酸入水（浓盐酸 → 烧杯）、第 5 步加酚酞（酚酞 → 锥形瓶）；其余 click。
+- exp03 真拖：第 1 步拖水 → **被拒收**（回弹+抖动+三行），其余 click（本实验无可成功拖拽，见 docs §9.2）。
+- exp02/04/05/06/07/08/10：全部 click。
 
-## 待办
-- 浏览器点测（需起 dev）：每场演示应看到 光标位移 / 目标高亮 / 按下 ripple / 结果条 / 事故特效；建议先看 exp09 与 exp08。
+## 文件
+- `lib/demo/scripts/exp01.ts`、`exp03.ts`、`exp09.ts`（drag 步骤 + 文案）
+- `lib/demo/director.ts`（175 行；字幕 hold 900ms；拖拽后 380+340ms 再读结果条）
+- `lib/demo/dom.ts`（新增，79 行）、`lib/demo/drag.ts`（新增，87 行）
+- `docs/演示钩子.md` §9（拖拽规则 + 实测表 + 真拖/点击分配）
+
+## 待办 / 已知
+- 可选：`/api/session` 在 demoReadonly 下仍请求，匿名 401 → 每次演示 4 条 console error；清零需 workbench 跳过该 fetch（workbench-ux 作用域）。
+- exp03 若要做“成功拖拽”，需改 `rack-ids.ts` 或定义文案（不在 lib/demo 写作用域，等 Lead 拍板）。
+- 演示测试入口：`/demo?autoplay=1`；`autodemo=1` 参数不存在，别再用。

@@ -90,21 +90,37 @@ export function MissionBoardDetails({
 
       {hint ? (
         <div className={styles.hintBox}>
-          <span className={styles.hintLevel}>{hint.active ? `H${hint.level}` : "H0–H3"}</span>
+          <span className={styles.hintLevel}>{hint.active ? `H${hint.level}` : "L1–L3"}</span>
           <span className={styles.hintMeter} aria-hidden="true">
-            {[0, 1, 2, 3].map((level) => (
+            {[0, 1, 2].map((index) => (
               <span
-                key={level}
+                key={index}
                 className={styles.hintTick}
-                data-active={hint.active && hint.level >= level ? "true" : "false"}
-                data-warn={level >= 2 ? "true" : "false"}
+                data-active={hint.used > index ? "true" : "false"}
+                data-warn={index >= 1 ? "true" : "false"}
               />
             ))}
           </span>
-          <button type="button" className={`${styles.hintButton} ix`} onClick={hint.onAsk}>
-            {done ? "已完成" : "取一条提示"}
+          <span className={styles.hintCount}>
+            已用 {hint.used}/{hint.max}
+          </span>
+          <button
+            type="button"
+            className={`${styles.hintButton} ix`}
+            onClick={hint.onAsk}
+            disabled={done || hint.exhausted}
+          >
+            {done ? "已完成" : hint.exhausted ? "本步提示已用完" : "取一条提示"}
           </button>
-          {hint.active && hint.deduct ? <p className={styles.hintWarn}>用提示会扣独立完成分</p> : null}
+          {hint.active && hint.level === 3 ? (
+            <p className={styles.hintWarn}>L3 已高亮目标元素：照着描边的地方做</p>
+          ) : hint.exhausted ? (
+            <p className={styles.hintWarn}>本步提示已用完，先自己试一次；还不行就重做本步</p>
+          ) : hint.nextDeduct > 0 ? (
+            <p className={styles.hintLead}>
+              下一次 −{hint.nextDeduct} 分（L1 −1 / L2 −3 / L3 −5）
+            </p>
+          ) : null}
         </div>
       ) : null}
 

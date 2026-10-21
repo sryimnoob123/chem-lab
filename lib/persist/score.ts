@@ -16,7 +16,7 @@ import {
   recordOutcome,
   tallyCompetency,
 } from "@/lib/pedagogy/competency";
-import type { HintUsage } from "@/lib/pedagogy/hints";
+import { hintDeductForLevel, type HintUsage } from "@/lib/pedagogy/hints";
 import {
   computeCourseResult,
   computeWeightedTotal,
@@ -42,11 +42,22 @@ export interface ScoreIncidentDetail {
   stepIndex: number;
 }
 
+/** 一次提示使用（报告页据此显示"第 N 步 · 提示 k 次 · −X 分"）。 */
+export interface ScoreHintDetail {
+  /** 0-based，与 ExperimentState.stepIndex 对齐 */
+  stepIndex: number;
+  /** 引擎 HintLevel：0 方向 / 1 具体 / 2 高亮 / 3 动作演示 / 4 元认知 */
+  level: number;
+  deduct: number;
+}
+
 export interface ScoreDetail {
   /** 0~1 mastery，键为能力点编码 */
   competency: Record<string, number>;
   objectives: ObjectiveAttainment;
   incidents: ScoreIncidentDetail[];
+  /** 用过的提示，按发生顺序；扣分按 1/3/5（见 lib/pedagogy/hints.ts 的 HINT_DEDUCT_BY_LEVEL） */
+  hints: ScoreHintDetail[];
   reportParts: ReportParts;
 }
 
@@ -269,6 +280,12 @@ export function computeRunScore(input: RunScoreInput): RunScoreResult {
               item.incidentId === record.incidentId && item.stepIndex === record.stepIndex,
           )?.deduct ?? 0,
         stepIndex: record.stepIndex,
+      })),
+      // 提示使用明细：报告页/教师端据此显示"提示 k 次 · −X 分"
+      hints: input.hints.map((usage) => ({
+        stepIndex: usage.stepIndex,
+        level: usage.level,
+        deduct: hintDeductForLevel(usage.level),
       })),
       reportParts,
     },

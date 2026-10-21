@@ -1,4 +1,6 @@
-import { DemoCursor, attachDemoFrame, wait, type RingTone } from "./cursor";
+import { DemoCursor, attachDemoFrame, wait } from "./cursor";
+import { feedbackTone, realClick, setValue, waitClickable } from "./dom";
+import { runDrag } from "./drag";
 import type { DemoScript, DemoStep, DirectorHooks, DirectorState } from "./types";
 
 /** 每种动作的默认停顿（动作完成之后的停顿时长） */
@@ -6,6 +8,7 @@ const DEFAULT_MS: Record<DemoStep["kind"], number> = {
   caption: 1600,
   move: 460,
   click: 560,
+  drag: 900,
   type: 420,
   wait: 800,
   scroll: 620,
@@ -13,86 +16,18 @@ const DEFAULT_MS: Record<DemoStep["kind"], number> = {
   waitFor: 3000,
 };
 
-/** 点击后等结果条渲染出来的固定观察窗；够 React 一帧 + 结果条入场 260ms */
+/** 点击位移随机区间（用户 2026-10-22：固定 320ms 太机械） */
+const MOVE_MIN_MS = 400;
+const MOVE_MAX_MS = 800;
+/** 按下之前先悬停，模拟人"看准了再点" */
+const HOVER_MIN_MS = 200;
+const HOVER_MAX_MS = 400;
+/** 点击/拖拽后等结果条渲染出来的观察窗；够 React 一帧 + 结果条入场 260ms */
 const FEEDBACK_WINDOW_MS = 380;
+/** 动作解说播出后按住不动，别让下一条 caption 立刻把它顶掉（字幕要能读完） */
+const CAPTION_HOLD_MS = 900;
 
-function findTarget(doc: Document, id: string): HTMLElement | null {
-  const el = doc.querySelector(`[data-demo-id="${CSS.escape(id)}"]`);
-  // 元素来自 iframe 的 realm，不能用 instanceof HTMLElement（父窗口的构造函数识别不了）
-  if (!el || (el as Node).nodeType !== 1) return null;
-  return el as HTMLElement;
-}
-
-/** 派发一串真实鼠标事件，React 的合成事件也能收到 */
-function realClick(el: HTMLElement): void {
-  const rect = el.getBoundingClientRect();
-  const x = rect.left + rect.width / 2;
-  const y = rect.top + rect.height / 2;
-  const view = el.ownerDocument.defaultView;
-  const base = { bubbles: true, cancelable: true, clientX: x, clientY: y, view };
-  el.dispatchEvent(new PointerEvent("pointerdown", { ...base, pointerId: 1, isPrimary: true }));
-  el.dispatchEvent(new MouseEvent("mousedown", base));
-  el.dispatchEvent(new PointerEvent("pointerup", { ...base, pointerId: 1, isPrimary: true }));
-  el.dispatchEvent(new MouseEvent("mouseup", base));
-  el.dispatchEvent(new MouseEvent("click", base));
-}
-
-/** 写值也要派发 input/change，否则受控组件不会更新 */
-function setValue(el: HTMLElement, value: string): void {
-  const input = el as HTMLInputElement;
-  const proto = Object.getPrototypeOf(input) as object;
-  const desc = Object.getOwnPropertyDescriptor(proto, "value");
-  const own = Object.getOwnPropertyDescriptor(input, "value");
-  if (desc?.set && !own) desc.set.call(input, value);
-  else input.value = value;
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  input.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-/** 目标可能在折叠的「其他做法」里：逐级展开 details，否则量不到坐标、也点不到 */
-function revealAncestors(el: HTMLElement): void {
-  let node: HTMLElement | null = el;
-  while (node) {
-    if (node.tagName === "DETAILS" && !(node as HTMLDetailsElement).open) {
-      (node as HTMLDetailsElement).open = true;
-    }
-    node = node.parentElement;
-  }
-}
-
-function isDisabled(el: HTMLElement): boolean {
-  const button = el as HTMLButtonElement;
-  if (button.disabled === true) return true;
-  return el.getAttribute("aria-disabled") === "true";
-}
-
-/** 等目标出现、可见、可点（disabled 的按钮点不动，必须等它变可用） */
-async function waitClickable(doc: Document, id: string, timeout: number): Promise<HTMLElement | null> {
-  const deadline = Date.now() + timeout;
-  let last: HTMLElement | null = null;
-  for (;;) {
-    const el = findTarget(doc, id);
-    if (el) {
-      last = el;
-      revealAncestors(el);
-      const rect = el.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0 && !isDisabled(el)) return el;
-    }
-    if (Date.now() >= deadline) return last;
-    await wait(80);
-  }
-}
-
-/** 结果条钩子：demo-feedback-ok-N / demo-feedback-fail-N，据此决定目标反馈环的颜色 */
-function feedbackTone(doc: Document): RingTone {
-  const nodes = doc.querySelectorAll('[data-demo-id^="demo-feedback-"]');
-  for (const node of nodes) {
-    const id = node.getAttribute("data-demo-id") ?? "";
-    if (id.includes("-fail-")) return "fail";
-    if (id.includes("-ok-")) return "ok";
-  }
-  return "river";
-}
+const rand = (min: number, max: number): number => min + Math.round(Math.random() * (max - min));
 
 /**
  * 演示导演：按脚本在被演示页面上走一遍。
@@ -140,6 +75,7 @@ export class DemoDirector {
         // 时序规则：先操作、后解说。动作步骤的字幕在动作与结果反馈之后才播。
         if (step.text && step.kind !== "caption" && step.kind !== "wait") {
           this.hooks.onCaption?.(step.text);
+          await wait(CAPTION_HOLD_MS);
         }
       }
     } finally {
@@ -174,7 +110,7 @@ export class DemoDirector {
     }
 
     if (step.kind === "waitFor") {
-      // 等结果条/下一步卡片出现再继续：不抢跑（拖拽后的 700ms 动画也在这里被吸收）
+      // 等结果条/下一步卡片出现再继续：不抢跑（拖拽后的 700ms 倒入动画也在这里被吸收）
       const waited = await waitClickable(doc, step.target, step.timeout ?? DEFAULT_MS.waitFor);
       if (!waited) console.warn(`[demo] 等不到 data-demo-id=${step.target}`);
       if (step.ms) await wait(step.ms);
@@ -201,8 +137,11 @@ export class DemoDirector {
       return;
     }
 
-    // 点击类用固定 320ms 位移，避免长距离移动把整场演示拖慢
-    await cursor.moveTo(el, step.kind === "click" ? 320 : (step.ms ?? DEFAULT_MS.move));
+    // 点击 / 拖拽位移 400~800ms 随机（固定 320ms 太机械）
+    await cursor.moveTo(
+      el,
+      step.kind === "click" || step.kind === "drag" ? rand(MOVE_MIN_MS, MOVE_MAX_MS) : (step.ms ?? DEFAULT_MS.move),
+    );
 
     if (step.kind === "type") {
       el.focus();
@@ -211,7 +150,25 @@ export class DemoDirector {
       return;
     }
 
+    if (step.kind === "drag") {
+      const toEl = step.to ? await waitClickable(doc, step.to, 1200) : null;
+      if (!toEl) {
+        console.warn(`[demo] 拖拽缺少落点 data-demo-id=${step.to}，已跳过`);
+        await wait(200);
+        return;
+      }
+      await runDrag(cursor, doc, el, toEl);
+      // 投放后 700ms 才 dispatch（倒入动画播完），这里等够再读取结果条
+      await wait(FEEDBACK_WINDOW_MS + 340);
+      const rect = toEl.getBoundingClientRect();
+      cursor.ringAt(rect.left + rect.width / 2, rect.top + rect.height / 2, feedbackTone(doc));
+      const rest = (step.ms ?? DEFAULT_MS.drag) - FEEDBACK_WINDOW_MS - 340;
+      if (rest > 0) await wait(rest);
+      return;
+    }
+
     if (step.kind === "click") {
+      await wait(rand(HOVER_MIN_MS, HOVER_MAX_MS)); // 悬停：看准了再按
       await cursor.outline(el, "river", 180); // 目标高亮：按下之前先亮一圈
       await cursor.press(); // 按下反馈：光标缩放 + ripple
       realClick(el);

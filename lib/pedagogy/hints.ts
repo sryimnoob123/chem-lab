@@ -49,6 +49,26 @@ export const METACOGNITIVE_MIN_DISTINCT_STEPS = 2;
  */
 export const INDEPENDENT_DEDUCT_MIN_LEVEL: HintLevel = 2;
 
+/**
+ * 提示扣分表（用户 2026-10-22 口径）：按级别递增 1 / 3 / 5。
+ *
+ * 与 UI 层 `components/exp/guide/hint-ladder.ts` 的 `HINT_DEDUCT`（L1/L2/L3 → 1/3/5）同一口径：
+ * UI 的 L1 方向 / L2 具体 / L3 高亮 对应引擎 HintLevel 0 / 1 / 2；
+ * H3（动作演示）与 H4（元认知）封顶按 5 计，不再继续加码。
+ */
+export const HINT_DEDUCT_BY_LEVEL: Readonly<Record<HintLevel, number>> = {
+  0: 1,
+  1: 3,
+  2: 5,
+  3: 5,
+  4: 5,
+};
+
+/** 一条提示扣多少分；未知级别按 0，避免 NaN 污染总分。 */
+export function hintDeductForLevel(level: HintLevel): number {
+  return HINT_DEDUCT_BY_LEVEL[level] ?? 0;
+}
+
 /** 一次错误在提示历史里的最小记录（按发生顺序排列）。 */
 export interface HintErrorRecord {
   competency: CompetencyCode;

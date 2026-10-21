@@ -3,6 +3,10 @@ import type { DemoScript } from "../types";
 /**
  * exp03 演示：正确路径 → 第 5 步一次负反馈（L3 · glass-break → 重做）→ 走完 → 交卷看报告。
  * 只点既有 data-demo-id 钩子，动作/文案全部来自 experiments/exp03/definition.ts。
+ *
+ * 拖拽说明：exp03 试剂架只摆蒸馏水（rack-ids.ts），且 6 步里没有一条正确动作的 label/params
+ * 能命中这瓶试剂（resolveDrop 的可倒类型 + 文案匹配），所以**本实验没有可成功的拖拽**。
+ * 这里在第 1 步保留一次真拖拽示范（拖蒸馏水 → 被拒收 + 三行原因），其余动作仍走点选。
  */
 export const exp03Script: DemoScript = {
   id: "exp03",
@@ -11,6 +15,14 @@ export const exp03Script: DemoScript = {
   steps: [
     { kind: "caption", text: "实验 03：醋酸电离度和电离常数测定。下面用脚本把每一步走一遍，光标是模拟的。", ms: 2400 },
     { kind: "caption", text: "第 1 步 · 配母液与安全操作。", ms: 1500 },
+    // 真拖拽示范：本步没有可倒动作，拖蒸馏水会被拒收（回弹 + 抖动 + 三行原因），本步不前进
+    {
+      kind: "drag",
+      target: "demo-scene-reagent-water",
+      to: "demo-scene-drop-flask",
+      text: "真拖拽：本步是通风橱就位 + 酸入水，没有可倒动作；这瓶蒸馏水拖过去会被拒收——回弹 + 目标抖动 + 三行原因，本步不前进。",
+      ms: 1600,
+    },
     { kind: "click", target: "demo-op-step1-assemble" },
     { kind: "click", target: "demo-op-step1-transfer" },
     { kind: "click", target: "demo-op-step1-dilute" },

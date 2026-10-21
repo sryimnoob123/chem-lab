@@ -185,16 +185,23 @@ export default function LoginPage() {
             </>
           ) : (
             <>
-              <label>
-                <span>教师口令（可留空）</span>
-                <input
-                  type="password"
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  autoComplete="current-password"
-                  data-demo-id="demo-login-teacher-passcode"
-                />
-              </label>
+              {/* 教师端口令已取消：打开就进后台。口令字段只在 ?passcode=1 时保留，
+                  给旧链接/兼容用，正常演示看不到（用户 2026-10-22 要求"弹口令那个去掉"）。 */}
+              {typeof window !== "undefined" &&
+              new URLSearchParams(window.location.search).get("passcode") === "1" ? (
+                <label>
+                  <span>教师口令（可留空）</span>
+                  <input
+                    type="password"
+                    value={passcode}
+                    onChange={(e) => setPasscode(e.target.value)}
+                    autoComplete="current-password"
+                    data-demo-id="demo-login-teacher-passcode"
+                  />
+                </label>
+              ) : (
+                <p className="login__foot">教师端免口令，点下面按钮直接进后台</p>
+              )}
             </>
           )}
 

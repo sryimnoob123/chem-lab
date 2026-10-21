@@ -192,12 +192,13 @@
 }
 
 .keyFooter {
-  flex: 0 0 18px;
-  height: 18px;
+  flex: 0 0 34px;
+  height: 34px;
   margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   border-top: 1px solid var(--bench-line);
   background: rgba(246, 247, 245, 0.96);
   color: var(--bench-text);
@@ -205,6 +206,44 @@
   font-size: 9px;
   opacity: 0.62;
   white-space: nowrap;
+}
+
+/* 灯泡按钮：提示的可见入口（键盘 H 之外），约 70×32、触控够大 */
+.hintButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 76px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--bench-line);
+  border-radius: 2px;
+  background: #fff;
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 160ms ease, transform 120ms ease;
+}
+
+.hintButton:hover:not(:disabled) {
+  background: var(--river-50, #eef4fb);
+}
+
+.hintButton:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.hintButton em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--river-600, #1d4e89);
+}
+
+.hintButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .student {
@@ -397,8 +436,15 @@
   box-shadow: inset 0 0 0 1px var(--river-100);
 }
 
-.reagent[data-dragging="true"] {
-  opacity: 0.6;
+/* 抓起：源元素 opacity .92 + scale(.98)（不是点击态的 .97）；
+   用双类压过 motion.css 的 `.ix[data-dragging="true"]`（scale 1.03）——抓起是"被拿起"，
+   幅度要小于点击按下，避免拖影。 */
+.reagent:global(.ix)[data-dragging="true"] {
+  opacity: 0.92;
+  transform: scale(0.98);
+  border-color: var(--river-700);
+  box-shadow: 0 6px 16px rgba(22, 32, 44, 0.12);
+  transition: none;
 }
 
 .reagentBottle {
@@ -502,8 +548,8 @@
   border-color: transparent;
 }
 
-.apparatusWrap[data-bench="true"] .flaskTarget.ix:hover,
-.apparatusWrap[data-bench="true"] .flaskTarget.ix:active {
+.apparatusWrap[data-bench="true"] .flaskTarget:global(.ix):hover,
+.apparatusWrap[data-bench="true"] .flaskTarget:global(.ix):active {
   transform: scale(var(--scale-down));
 }
 
@@ -606,22 +652,62 @@
 }
 
 /* 投放热区本身有 translateX(-50%) 定位，交互缩放要保留它。 */
-.flaskTarget.ix:hover {
+.flaskTarget:global(.ix):hover {
   transform: translateX(-50%) translateY(-1px) scale(var(--scale-up));
 }
 
-.flaskTarget.ix:active {
+.flaskTarget:global(.ix):active {
   transform: translateX(-50%) scale(var(--scale-down));
 }
 
 .flaskTarget[data-over="true"] {
-  border-color: var(--river-100);
-  background: rgba(140, 180, 220, 0.08);
+  border-color: var(--river-700);
+  background: rgba(35, 48, 127, 0.06);
+  outline: 2px solid var(--river-700);
+  outline-offset: 2px;
 }
 
 /* 场景内流程指引：这一步要投试剂 → 锥形瓶热区缓慢脉冲（和试剂架微亮同相位） */
 .flaskTarget[data-next="true"] {
   border-color: var(--river-700);
+}
+
+/* L3 提示：直接在目标元素上描边 + 箭头（只动 transform/opacity；减动效下静态） */
+.flaskTarget[data-hint-highlight="true"] {
+  border-color: var(--river-700);
+  box-shadow: inset 0 0 0 2px var(--river-700);
+}
+
+.flaskTarget[data-hint-highlight="true"]::before {
+  content: "↓";
+  position: absolute;
+  left: 50%;
+  top: -34px;
+  color: var(--river-700);
+  font-size: 20px;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: hint-point 900ms ease-in-out infinite;
+}
+
+@keyframes hint-point {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateX(-50%) translateY(5px);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flaskTarget[data-hint-highlight="true"]::before {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 .flaskTarget[data-next="true"][data-active="false"]::after {

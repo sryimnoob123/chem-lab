@@ -79,6 +79,24 @@
   --bench-line-dark: #2a3644;
   --bench-text-dark: #c9d6e4;
 
+  /* 2.5D 玻璃器皿（亮场）：玻璃不用白色高光，一律淡墨阴影 + 器皿主色。
+     三层质感 = 外轮廓淡墨描边 / 内侧 1px 器皿色亮边 / 底部弧形反光。 */
+  --glass-fill: rgba(74, 87, 104, 0.022);
+  --glass-fill-deep: rgba(74, 87, 104, 0.05);
+  --glass-outline: rgba(74, 87, 104, 0.72);
+  --glass-inner: rgba(74, 87, 104, 0.16);
+  --glass-reflect: rgba(74, 87, 104, 0.1);
+  --glass-shadow: rgba(74, 87, 104, 0.12);
+  --liquid-sheen: rgba(74, 87, 104, 0.16);
+  --liquid-depth: rgba(74, 87, 104, 0.22);
+
+  /* 每实验主色：器皿高光 / 液面 / 任务看板共用 --exp-accent。
+     对比度（纸白 #F6F7F5 上）：exp01 5.42:1 / exp03 6.19:1 / exp09 5.74:1，均 ≥4.5。 */
+  --exp-accent: var(--river-700);
+  --exp-accent-01: #1f6f78; /* 瓷青：称量配制（天平 + 玻璃 + 纯水的清冷） */
+  --exp-accent-03: #3d5a9e; /* 石青：醋酸电离常数（pH 计读数的冷蓝） */
+  --exp-accent-09: #a63a63; /* 酚酞玫红压深：酸碱标定（终点那一滴） */
+
   /* 动效 */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -104,6 +122,20 @@
   --bg: var(--paper);
   --muted: var(--ink-2);
   --accent: var(--river-700);
+}
+
+/* 每实验主色作用域：由 app/exp/[id]/page.tsx 的 <div data-exp={id}> 提供祖先。
+   --exp-accent 一路继承到器皿高光、液面与左上任务看板。 */
+[data-exp="exp01"] {
+  --exp-accent: var(--exp-accent-01);
+}
+
+[data-exp="exp03"] {
+  --exp-accent: var(--exp-accent-03);
+}
+
+[data-exp="exp09"] {
+  --exp-accent: var(--exp-accent-09);
 }
 
 *,

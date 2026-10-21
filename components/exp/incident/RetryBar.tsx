@@ -9,7 +9,7 @@
  * 动效：入场 220ms opacity/translate；reduced-motion 下静止。
  */
 
-import styles from "./incident-followup.module.css";
+import styles from "./incident-retry.module.css";
 
 export interface RetryBarAction {
   label: string;

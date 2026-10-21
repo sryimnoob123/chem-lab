@@ -31,6 +31,11 @@ const POURABLE_TYPES: ReadonlySet<ActionType> = new Set<ActionType>([
   "titrate",
 ]);
 
+/** 这一步的动作是不是"把试剂倒进去"（决定 L3 高亮落在锥形瓶还是主按钮）。 */
+export function canPourAction(type: ActionType): boolean {
+  return POURABLE_TYPES.has(type);
+}
+
 export type DropVerdict =
   | { kind: "accept"; choiceId: string; label: string }
   | {

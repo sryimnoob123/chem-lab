@@ -13,11 +13,16 @@ import { detectFirstIncident, getIncident } from "@/lib/safety/registry";
 import {
   appendError,
   clearCompetencyHistory,
-  isDeductibleHint,
-  levelForStepAttempt,
+  hintDeductForLevel,
   type HintErrorRecord,
   type HintUsage,
 } from "@/lib/pedagogy/hints";
+import {
+  hintIndexFor,
+  hintTierFor,
+  isHintExhausted,
+  type HintTier,
+} from "@/components/exp/guide/hint-ladder";
 import { computeOperationScore } from "@/lib/pedagogy/scoring";
 
 export interface WorkbenchEvent {
@@ -43,6 +48,12 @@ export interface RevealedHint {
   level: HintLevel;
   text: string;
   shouldDeduct: boolean;
+  /** 本次提示扣分：L1 −1 / L2 −3 / L3 −5；"已用完"时为 0 */
+  deduct: number;
+  /** 本步已用提示次数（含这一次） */
+  used: number;
+  /** 本步次数是否已到上限（第 4 次不再给） */
+  exhausted: boolean;
 }
 
 export interface WorkbenchState {
@@ -287,23 +298,50 @@ function buildEvent(
 }
 
 function revealHint(state: WorkbenchState, step: StepDefinition): WorkbenchState {
-  const stepErrors = state.hintHistory.filter((record) => record.stepIndex === step.index).length;
-  const level = levelForStepAttempt(Math.max(1, stepErrors));
+  const used = hintUsedInStep(state, step.index);
+  const tier = hintTierFor(used);
   const competency = step.judge.competency[0] ?? "S1";
-  const usage: HintUsage = { competency, stepIndex: step.index, level };
-  const seen = state.hintUsages.some(
-    (item) => item.stepIndex === usage.stepIndex && item.level === usage.level,
-  );
 
+  // 第 4 次：不再给新提示，也不记扣分；灯泡由 UI 置灰并显示"本步提示已用完"。
+  if (!tier) {
+    return {
+      ...state,
+      hint: {
+        level: 3,
+        text: "本步提示已用完，先自己试一次；还不行就重做本步。",
+        shouldDeduct: false,
+        deduct: 0,
+        used,
+        exhausted: true,
+      },
+    };
+  }
+
+  const level = tier as HintTier;
+  /**
+   * 存进结算记录的是引擎的 HintLevel，不是 UI 的 tier：
+   * tier 1 方向 / 2 具体 / 3 高亮 → level 0 / 1 / 2（扣分 1 / 3 / 5）。
+   * 早先直接把 tier 断言成 HintLevel，会让结算侧读到的级别整体偏移一档。
+   */
+  const usageLevel = (tier - 1) as HintLevel;
+  const usage: HintUsage = { competency, stepIndex: step.index, level: usageLevel };
   return {
     ...state,
     hint: {
       level,
-      text: hintText(step, level),
-      shouldDeduct: isDeductibleHint(level),
+      text: hintText(step, hintIndexFor(level)),
+      shouldDeduct: true,
+      deduct: hintDeductForLevel(usageLevel),
+      used: used + 1,
+      exhausted: isHintExhausted(used + 1),
     },
-    hintUsages: seen ? state.hintUsages : [...state.hintUsages, usage],
+    hintUsages: [...state.hintUsages, usage],
   };
+}
+
+/** 本步已用提示次数（按 hintUsages 计；重做本步会一并清掉）。 */
+export function hintUsedInStep(state: WorkbenchState, stepIndex: number): number {
+  return state.hintUsages.filter((usage) => usage.stepIndex === stepIndex).length;
 }
 
 export function hintText(step: StepDefinition, level: HintLevel): string {
@@ -322,7 +360,7 @@ export function hintText(step: StepDefinition, level: HintLevel): string {
 }
 
 export function operationScore(state: WorkbenchState) {
-  return computeOperationScore({
+  const base = computeOperationScore({
     violations: state.exp.violations,
     incidents: state.exp.incidents.map((record) => ({
       ...record,
@@ -330,6 +368,18 @@ export function operationScore(state: WorkbenchState) {
     })),
     hints: state.hintUsages,
   });
+  // 提示扣分按 1/3/5 累加，与结算侧（lib/pedagogy/scoring.ts）用同一张 HINT_DEDUCT_BY_LEVEL 表。
+  const independentDeduct = state.hintUsages.reduce(
+    (sum, usage) => sum + hintDeductForLevel(usage.level),
+    0,
+  );
+  const rawScore = 100 - base.violationDeduct - base.incidentDeduct - independentDeduct;
+  return {
+    ...base,
+    independentDeduct,
+    rawScore,
+    score: base.terminated ? 0 : Math.max(0, Math.min(100, rawScore)),
+  };
 }
 
 function invalidText(reason: string): string {

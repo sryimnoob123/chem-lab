@@ -10,7 +10,8 @@ export type NavExperiment = { id: string; no: string; title: string; playable: b
 const MAIN_NAV = [
   { href: "/", label: "课程首页" },
   { href: "/experiments", label: "我的实验" },
-  { href: "/lab/design", label: "进阶学习" },
+  // 「进阶学习」的 /lab/design 还没做，留着就是死链（巡检 2026-10-22 报 404）。
+  // 先移除入口，页面本身等做完再挂回来。
 ];
 
 /** APP 外壳：常驻顶栏 + 左侧导航 + 内容列（+ 可选右信息栏）。 */
@@ -78,10 +79,10 @@ export function AppShell({
           <p className="app-side__label app-side__label--gap">其他</p>
           <ul className="app-side__list">
             <li>
-              <Link href="/lab/design" data-active={pathname.startsWith("/lab")}>
-                <span className="app-side__no mono">◆</span>
-                <span className="app-side__text">进阶学习</span>
-              </Link>
+              {/* /lab/design 未实现，先置灰不跳转（死链会在巡检里报 404） */}
+              <span className="app-side__text" data-disabled="true" aria-disabled="true" title="即将开放">
+                <span className="app-side__no mono">◆</span> 进阶学习 · 即将开放
+              </span>
             </li>
           </ul>
           <p className="app-side__meta mono">{groups.length} 组 · {experiments.length} 个实验</p>

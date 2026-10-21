@@ -3,6 +3,7 @@ export type DemoStepKind =
   | "caption"
   | "move"
   | "click"
+  | "drag"
   | "type"
   | "wait"
   | "scroll"
@@ -11,8 +12,10 @@ export type DemoStepKind =
 
 export type DemoStep = {
   kind: DemoStepKind;
-  /** data-demo-id 的值；move/click/type/scroll/highlight/waitFor 必填 */
+  /** data-demo-id 的值；move/click/drag/type/scroll/highlight/waitFor 必填（drag 里是起点） */
   target?: string;
+  /** drag 的终点 data-demo-id（器皿 / 落点热区） */
+  to?: string;
   /**
    * 字幕文案。
    * - caption：操作前的导语，立即播；

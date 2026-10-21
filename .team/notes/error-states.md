@@ -23,3 +23,15 @@
 - 证据：`npx tsc --noEmit` = CLEAN；`npx vitest run` = 29 files / 458 tests passed；`npx eslint components/exp/incident components/exp/scene/fx lib/scene/fx.ts` = 0/0；`npm run lint` 全项目 2 error 均在 `app/exp/[id]/workbench.tsx`（非我作用域，已同步 Lead）。
 - 改了哪些文件：`components/exp/incident/{RejectHint.tsx,incident.module.css,incident-followup.module.css,IncidentBanner.tsx,RetryBar.tsx,messages.ts,messages.test.ts,index.ts,use-is-client.ts}`、`components/exp/scene/fx/{index.tsx,fx-impact.module.css,fx.module.css}`、`lib/scene/fx.ts`、`.team/handoff/error-states.md`。
 - 下一步 / 阻塞：等待 Lead 接线 E1/E2/E3 到 workbench；lint 的 2 个 error 由接线 owner 修。
+
+## 2026-10-22 04:05 · 进行中：L1~L4 四级视觉 + 临时验收页
+- 做了什么：`IncidentBanner` 重写为四级：L1 细边+琥珀左 3px、1.6s 自动收；L2 图标+`−N 分` rAF 数字跳动、2.4s；L3 `--bench-ink-dark` 局部暗场 + 280ms 轻震；L4 全屏压暗（z=8，低于 rail 10/任务看板 12/Dock 27/顶栏 30）+ 红框收束 + 「本次实验终止」+「重做本步 / 查看原因」两动作（≥44px）。`onExplain` 缺省会展开并滚动到 `demo-feedback-detail`（找不到 no-op）。fx 层 L3 改为只暗场景块（`stageDim`），L4 压暗改由 banner 负责（无 fx 的 L4 也有压暗）；新增 `use-count-up.ts`；CSS 拆为 `incident-banner.module.css` / `incident-retry.module.css`；新增临时路由 `app/dev/incident-preview`（devtoolsEnabled 守卫，截完删除）。
+- 证据：Playwright 四级截图已落 `%TEMP%\chemlab-shots\incident-L{1..4}-*.png`；断言：任务看板/右栏与事故条 0 重叠；L3 stageDim opacity=0.18；L4 dim opacity=0.34、红框 2px、两按钮高度 44px 且 elementFromPoint 命中按钮；pageerror 0。
+- 改了哪些文件：`components/exp/incident/{IncidentBanner.tsx,incident-banner.module.css,incident-retry.module.css,use-count-up.ts,index.ts,IncidentPreview.tsx,incident-preview.module.css}`、`components/exp/scene/fx/{index.tsx,fx-impact.module.css}`、临时 `app/dev/incident-preview/page.tsx`。
+- 下一步 / 阻塞：dev 3002 因 `app/exp/[id]/workbench.tsx` L56-60 `REJECT_FALLBACK` 乱码/引号丢失整站 500（非我作用域，已通知 Lead + workbench-ux）；修好后重截干净四图、删除临时路由；Lead 接线需补 `level` / `deduction`，并把 L1/L2（含 violation 事件）也纳入 banner。
+
+## 2026-10-22 04:16 · 完成：L1~L4 四级视觉 + 四级截图 + 临时路由清理
+- 做了什么：`IncidentBanner` 四级落地（L1 细边/琥珀 3px + 1.6s；L2 图标 + rAF 扣分跳动 + 2.4s；L3 暗场 + 280ms 轻震；L4 全屏压暗 z=8 + 红框 + 主文案 + 两动作，全部 ≥44px）。L4 压暗/红框从 fx 层移到 banner（无 fx 的 L4 也有终止视觉）；fx L3 改为 `stageDim` 只暗场景块；CSS 拆成 `incident-banner` / `incident-terminate` / `incident-retry` 三个 ≤300 行模块。临时 `app/dev/incident-preview` 截图后已删除（含 IncidentPreview + preview css），`npx next typegen` 清掉生成类型。
+- 证据：`%TEMP%\chemlab-shots\incident-L1-reminder-exp09-step5.png`、`incident-L2-deduction-exp01-step1.png`、`incident-L3-serious-exp09-step1.png`、`incident-L4-terminate-exp01-step7.png`；Playwright 断言：看板/右栏 0 重叠、L3 stageDim .18、L4 dim .34/红框 2px/两按钮 44px+可点、pageerror 0；`tsc` CLEAN、`npm run lint` 0 error、`vitest` 36 files/519 passed。
+- 改了哪些文件：`components/exp/incident/{IncidentBanner.tsx,incident-banner.module.css,incident-terminate.module.css,incident-retry.module.css,use-count-up.ts,index.ts}`、`components/exp/scene/fx/{index.tsx,fx-impact.module.css}`。
+- 下一步 / 阻塞：workbench 接线还差 `ui.event?.level` 条件 + `level`/`deduction`/`onRetry` 三个 props（已发 Lead 精确 diff）；修完 L1/L2 才会出条，L4 才有两动作。

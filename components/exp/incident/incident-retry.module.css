@@ -1,0 +1,102 @@
+/* ===================================================================
+   RetryBar —— 失败/事故后「重做本步」条（components/exp/incident/）
+   规格：主/次动作 ≥44px、focus-visible；只动 transform/opacity；时长走 token。
+   =================================================================== */
+
+.retryBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+  animation: ix-retry-in var(--enter, 260ms) var(--ease-out, ease-out) 1 both;
+}
+
+@keyframes ix-retry-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.retryMark {
+  flex: 0 0 3px;
+  align-self: stretch;
+  min-height: 28px;
+  background: var(--danger);
+}
+
+.retryHint {
+  flex: 1 1 140px;
+  min-width: 120px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.retryActions {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.retryPrimary,
+.retryGhost {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--hover, 80ms) var(--ease-press, ease);
+}
+
+.retryPrimary:hover,
+.retryGhost:hover {
+  background: rgba(192, 57, 43, 0.12);
+}
+
+.retryGhost {
+  border-color: var(--line);
+  color: var(--ink-2);
+}
+
+.retryGhost:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.retryPrimary:focus-visible,
+.retryGhost:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
+.retryGhost:focus-visible {
+  outline-color: var(--river-700);
+}
+
+.retryPrimary:disabled,
+.retryGhost:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .retryBar {
+    animation: none;
+  }
+}

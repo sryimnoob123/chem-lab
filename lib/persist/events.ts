@@ -22,6 +22,8 @@ import {
   type IncidentLevel,
 } from "@/lib/engine";
 import { detectFirstIncident, getIncident } from "@/lib/safety/registry";
+import { hintDeductForLevel, type HintLevel } from "@/lib/pedagogy/hints";
+import type { CompetencyCode } from "@/lib/pedagogy/competency";
 import { badRequest, conflict, notFound, PersistError } from "./errors";
 import { replayState, type StoredIncidentRow, type StoredTimelineRow } from "./replay";
 
@@ -255,4 +257,70 @@ export async function appendRunEvents(
   }
 
   return { state, events: allEvents, incidents: newIncidents };
+}
+
+export interface AppendedHint {
+  stepIndex: number;
+  level: HintLevel;
+  deduct: number;
+}
+
+const MAX_HINT_LEVEL = 4;
+
+/**
+ * 上报一次"学生主动取提示"（灯泡 / 键盘 H / 空闲自动）。
+ *
+ * 落一条 timeline 审计行（actionType="hint"）：replay 会把它收进 hints，
+ * 交卷时按 1/3/5 计入 independentDeduct；它不参与状态机重放、不推进 stepIndex，
+ * 也不把扣分写进 timeline.deduct（避免与独立完成度重复扣）。
+ */
+export async function appendRunHint(runId: string, raw: unknown): Promise<AppendedHint> {
+  if (typeof raw !== "object" || raw === null) throw badRequest("INVALID_HINT");
+  const record = raw as Record<string, unknown>;
+
+  const stepIndex = typeof record.stepIndex === "number" ? Math.floor(record.stepIndex) : Number.NaN;
+  if (!Number.isFinite(stepIndex) || stepIndex < 0) throw badRequest("INVALID_HINT");
+
+  const level = typeof record.level === "number" ? Math.floor(record.level) : Number.NaN;
+  if (!Number.isFinite(level) || level < 0 || level > MAX_HINT_LEVEL) throw badRequest("INVALID_HINT");
+
+  const competency =
+    typeof record.competency === "string" && record.competency.trim()
+      ? (record.competency.trim() as CompetencyCode)
+      : ("A1" as CompetencyCode);
+
+  const runRows = await db
+    .select({ id: runs.id, status: runs.status })
+    .from(runs)
+    .where(eq(runs.id, runId))
+    .limit(1);
+  const run = runRows[0];
+  if (!run) throw notFound("RUN_NOT_FOUND");
+  if (run.status === "finished") throw conflict("RUN_FINISHED");
+
+  const storedTimeline = await loadTimelineRows(runId);
+  const seq =
+    storedTimeline
+      .filter((row) => row.stepIndex === stepIndex)
+      .reduce((max, row) => Math.max(max, row.seq), 0) + 1;
+
+  const hintLevel = level as HintLevel;
+  const deduct = hintDeductForLevel(hintLevel);
+
+  await db
+    .insert(timelineTable)
+    .values({
+      runId,
+      stepIndex,
+      seq,
+      actionType: "hint",
+      choiceId: `hint-L${level + 1}`,
+      competency,
+      correct: true,
+      deduct: 0,
+      payload: JSON.stringify({ level, deduct }),
+    })
+    .onConflictDoNothing();
+
+  return { stepIndex, level: hintLevel, deduct };
 }

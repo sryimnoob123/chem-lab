@@ -9,7 +9,7 @@
  */
 
 import { appendRunDrop } from "@/lib/persist/drops";
-import { appendRunEvents } from "@/lib/persist/events";
+import { appendRunEvents, appendRunHint } from "@/lib/persist/events";
 import { accessRun } from "../../../_lib/access";
 import { handleError, json, readJsonBody } from "../../../_lib/http";
 
@@ -29,6 +29,12 @@ export async function POST(
     if (body.kind === "drop") {
       const drop = await appendRunDrop(id, body);
       return json({ ok: true, drop });
+    }
+    // 学生主动取提示（灯泡 / 键盘 H / 空闲自动）：{ kind:"hint", hint:{ stepIndex, level, competency? } }。
+    // 落一条 timeline 审计行，交卷时按 1/3/5 计入独立完成度。
+    if (body.kind === "hint") {
+      const hint = await appendRunHint(id, body.hint ?? body);
+      return json({ ok: true, hint });
     }
     const result = await appendRunEvents(id, body.events);
     return json({

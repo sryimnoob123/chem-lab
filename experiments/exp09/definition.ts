@@ -727,7 +727,9 @@ const step7: StepDefinition = {
     correct(
       "step7-repeat",
       "titrate",
-      "重复步 5~6 共 3 次，每次如实记录初/终读数",
+      // 这一步是「平行测定」：把滴定重复到 3 次，不是回到第 5 步。
+      // 原文案「重复步 5~6 共 3 次」读起来像在描述别的步骤（红队 2026-10-22 报）。
+      "再滴定 2 次凑满 3 次平行，每次记初/终读数",
       "demo-op-step7-repeat",
       "K2",
       { ...P({ trials: 3 }), observation: { text: "三次平行滴定完成（消耗 25.18 / 25.22 / 25.20 mL）", value: 3 } },

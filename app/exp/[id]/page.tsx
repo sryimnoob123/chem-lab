@@ -65,12 +65,16 @@ export default async function ExperimentPage({ params, searchParams }: Experimen
 
   return (
     <BopbpsGate expId={id} bypass={demo || playDemo || force}>
-      <Workbench
-        expId={id}
-        demoReagent={demo ? demoReagent : undefined}
-        demoVessel={demo ? demoVessel : undefined}
-        demoReadonly={playDemo}
-      />
+      {/* data-exp 给整页提供 --exp-accent（器皿内侧亮边 / 液面 / 任务看板强调色）。
+          display:contents 不产生盒子，不影响既有布局与热区。 */}
+      <div data-exp={id} style={{ display: "contents" }}>
+        <Workbench
+          expId={id}
+          demoReagent={demo ? demoReagent : undefined}
+          demoVessel={demo ? demoVessel : undefined}
+          demoReadonly={playDemo}
+        />
+      </div>
     </BopbpsGate>
   );
 }

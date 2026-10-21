@@ -17,7 +17,14 @@ export const exp09Script: DemoScript = {
     { kind: "caption", text: "第 2 步 · 量浓盐酸配约 0.1 mol/L 溶液 500 mL。", ms: 1500 },
     { kind: "click", target: "demo-op-step2-add-water" },
     { kind: "click", target: "demo-op-step2-measure-acid" },
-    { kind: "click", target: "demo-op-step2-add-acid" },
+    // 真拖拽：浓盐酸瓶拖进烧杯，drop 后 700ms 倒入动画播完才 dispatch
+    {
+      kind: "drag",
+      target: "demo-scene-reagent-hcl",
+      to: "demo-scene-drop-flask",
+      text: "真拖拽：浓盐酸瓶拖进烧杯，落点吸附高亮后松手——先播 700ms 倒入动画，再记「酸入水」这一步。",
+      ms: 1400,
+    },
     { kind: "click", target: "demo-op-step2-transfer" },
     { kind: "caption", text: "第 3 步 · 滴定管检漏、洗涤与润洗。", ms: 1500 },
     { kind: "click", target: "demo-op-step3-inspect" },
@@ -37,7 +44,14 @@ export const exp09Script: DemoScript = {
     { kind: "caption", text: "第 5 步 · 移取 HCl 并加指示剂。", ms: 1500 },
     { kind: "click", target: "demo-op-step5-rinse-pipette" },
     { kind: "click", target: "demo-op-step5-pipette" },
-    { kind: "click", target: "demo-op-step5-indicator" },
+    // 真拖拽：酚酞瓶拖进锥形瓶（params.indicator 命中，drop 即判「加指示剂」）
+    {
+      kind: "drag",
+      target: "demo-scene-reagent-phenolphthalein",
+      to: "demo-scene-drop-flask",
+      text: "真拖拽：酚酞瓶拖进锥形瓶，drop 当帧命中「加 2 滴酚酞」，倒入动画播完才推进。",
+      ms: 1400,
+    },
     { kind: "caption", text: "第 6 步 · 滴定至终点。", ms: 1500 },
     { kind: "click", target: "demo-op-step6-titrate-fast" },
     { kind: "click", target: "demo-op-step6-half-drop" },

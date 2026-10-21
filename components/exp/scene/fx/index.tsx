@@ -13,7 +13,6 @@ import { FxParticles } from "./fx-particles";
 import { FxToxicGas } from "./fx-toxic-gas";
 import type { FxLevel, FxProps } from "./types";
 import impact from "./fx-impact.module.css";
-import styles from "./fx.module.css";
 
 export type { FxProps };
 
@@ -89,19 +88,23 @@ function Remainder({ kind }: { kind: "ember" | "smoke" | "spark" }) {
   );
 }
 
-/** 按 key 渲染对应事故特效，并叠加强负反馈冲击层（局部震动 / 暗场 / vignette / 余波 / L4 粒子）。 */
+/**
+ * 按 key 渲染对应事故特效，并叠加强负反馈冲击层：
+ * - L1/L2：特效本体 + 分级震动，不压暗；
+ * - L3：场景块局部暗场（--bench-ink-dark，只这一块）+ 280ms 轻震；
+ * - L4：全屏压暗 + 红色边框收束由 IncidentBanner 负责（不依赖是否有 fx，
+ *   且 z-index 低于右栏 10 / 顶栏 30 / 任务看板 12），这里只保留最强震动。
+ */
 export function FxByKey({ fx, level = "L2", ...props }: { fx: FxKey; level?: FxLevel } & FxProps) {
   const Component = FX_COMPONENTS[fx];
   const shellRef = useRef<HTMLDivElement | null>(null);
   useSceneImpact(level, shellRef);
   const reducedMotion = useReducedMotion();
-  const heavy = level === "L3" || level === "L4";
   const aftermath = level === "L1" ? null : getFxAftermath(fx);
   return (
     <div ref={shellRef} className={impact.shell} data-fx-level={level} data-fx-key={fx}>
       <Component {...props} />
-      {heavy ? <div className={styles.impactDark} aria-hidden="true" /> : null}
-      {heavy ? <div className={styles.impactVignette} aria-hidden="true" /> : null}
+      {level === "L3" ? <div className={impact.stageDim} aria-hidden="true" /> : null}
       {aftermath ? <Remainder kind={aftermath} /> : null}
       {level === "L4" && !reducedMotion && (fx === "explosion" || fx === "glassBreak") ? (
         <FxParticles kind={fx} />

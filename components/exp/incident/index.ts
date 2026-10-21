@@ -12,7 +12,11 @@
 
 export { RejectHint, type RejectHintProps } from "./RejectHint";
 export { ErrorToast, type ErrorToastProps, type ErrorToastAction } from "./ErrorToast";
-export { IncidentBanner, type IncidentBannerProps } from "./IncidentBanner";
+export {
+  IncidentBanner,
+  type IncidentBannerProps,
+  type IncidentLevel,
+} from "./IncidentBanner";
 export { RetryBar, type RetryBarProps, type RetryBarAction } from "./RetryBar";
 export {
   errorMessage,

@@ -79,20 +79,20 @@ describe("scoring · 操作分聚合", () => {
     expect(result.score).toBe(90);
   });
 
-  it("提示扣分只统计 H2 及以上，且 H4 也计 1 次", () => {
-    expect(computeIndependentDeduct(hintsOf([0, 1]))).toBe(0);
-    expect(computeIndependentDeduct(hintsOf([0, 1, 2]))).toBe(1);
-    expect(computeIndependentDeduct(hintsOf([2, 2, 3, 4]))).toBe(4);
+  it("提示扣分按级别递增 1/3/5，H3/H4 封顶 5", () => {
+    expect(computeIndependentDeduct(hintsOf([0, 1]))).toBe(4); // 1 + 3
+    expect(computeIndependentDeduct(hintsOf([0, 1, 2]))).toBe(9); // 1 + 3 + 5
+    expect(computeIndependentDeduct(hintsOf([2, 2, 3, 4]))).toBe(20); // 5 × 4（H3/H4 与 H2 同价）
   });
 
-  it("H2 提示扣分计入操作分", () => {
+  it("H0~H3 提示扣分计入操作分", () => {
     const result = computeOperationScore({
       violations: [],
       incidents: [],
       hints: hintsOf([0, 2, 3]),
     });
-    expect(result.independentDeduct).toBe(2);
-    expect(result.score).toBe(98);
+    expect(result.independentDeduct).toBe(11); // 1 + 5 + 5
+    expect(result.score).toBe(89);
   });
 
   it("扣分超过 100 时操作分 clamp 到 0，原始值保留负数", () => {
@@ -247,16 +247,16 @@ describe("scoring · 课程目标达成度", () => {
 describe("scoring · exp09 端到端结算", () => {
   it("操作分、报告分、折算总分与目标达成度全部可核对", () => {
     const result = computeCourseResult(EXP09_CASE);
-    expect(result.operation.score).toBe(87);
+    expect(result.operation.score).toBe(79);
     expect(result.operation.violationDeduct).toBe(6);
     expect(result.operation.incidentDeduct).toBe(5);
-    expect(result.operation.independentDeduct).toBe(2);
+    expect(result.operation.independentDeduct).toBe(10); // 两条 H2/H3 各扣 5
     expect(result.operation.terminated).toBe(false);
     expect(result.reportScore).toBeCloseTo(93, 12);
-    expect(result.threePart).toEqual({ preview: 100, operation: 87, report: result.reportScore });
-    expect(result.weighted.total).toBeCloseTo(91.3, 12);
+    expect(result.threePart).toEqual({ preview: 100, operation: 79, report: result.reportScore });
+    expect(result.weighted.total).toBeCloseTo(88.1, 12);
     expect(result.objectives.objective1).toBeCloseTo(0.9, 12);
-    expect(result.objectives.objective2).toBeCloseTo(0.81, 12);
+    expect(result.objectives.objective2).toBeCloseTo(0.77, 12);
     expect(result.objectives.objective3).toBeCloseTo(0.9, 12);
   });
 

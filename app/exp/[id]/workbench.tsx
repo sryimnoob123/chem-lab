@@ -20,7 +20,13 @@ import {
   type StepDotState,
 } from "@/components/exp/guide/copy";
 import { missionGoal, missionGuide, missionProgress } from "@/components/exp/guide/mission-copy";
-import { nextReagentId, resolveDrop, type DropReject } from "@/components/exp/guide/drop-resolve";
+import { canPourAction, nextReagentId, resolveDrop, type DropReject } from "@/components/exp/guide/drop-resolve";
+import {
+  HINT_DEDUCT,
+  MAX_HINTS_PER_STEP,
+  HINT_TIER_LABEL,
+  hintTierFor,
+} from "@/components/exp/guide/hint-ladder";
 // 新手教学（Lead 交付）：不传 open = 没看过就自动弹，看过不再打扰。
 import { ExperimentOnboarding } from "@/components/exp/onboarding";
 import { GhostCursor, GHOST_HIDDEN, type GhostState } from "@/components/demo/ghost-cursor";
@@ -41,6 +47,7 @@ import { teacherNote } from "./teacher-notes";
 import {
   createWorkbenchState,
   currentStep,
+  hintUsedInStep,
   operationScore,
   workbenchReducer,
 } from "./use-workbench";
@@ -83,7 +90,7 @@ const PARAM_NAMES: Record<string, string> = {
 
 /** 主工具栏只保留三种正常交互（红队 2026-10-22：「自动」属于 Dev Dock，不该和它们并排）。 */
 /** 第 7 步（数据处理）建议卡上的"一句为什么"：
- *  原来直接把判据首句（"三次平行相对极差 ≤0.2%"）塞进 why 位置，
+ *  原来直接把判据首句（"三次平行相对极差 �?.2%"）塞�?why 位置�?
  *  读起来像验收标准而不是理由（红队 2026-10-22 报"文案跟实际操作对不上"）。 */
 const COMPUTE_WHY: Partial<Record<string, string>> = {
   titrate: "单次有偶然误差，平行 3 次才看得出",
@@ -140,7 +147,7 @@ export function Workbench({
   const [autoDemo, setAutoDemo] = useState(false);
   const [lastInputMode, setLastInputMode] = useState<InputMode | null>(null);
   const [autoTick, setAutoTick] = useState(0);
-  /** 一键演示的虚拟光标（真人化点击）。 */
+  /** 一键演示的虚拟光标（真人化点击）�?*/
   const [ghost, setGhost] = useState<GhostState>(GHOST_HIDDEN);
   /** 拖拽被拒（E1）：+1 让底部结果条重播一次 ✗ 抖动，本步不动。 */
   const [reject, setReject] = useState<{
@@ -154,6 +161,8 @@ export function Workbench({
     detail?: string;
     canRetry: boolean;
   } | null>(null);
+  /** E2 事故条的"已读"标记：按 feedbackSeq 记住，下一次事故重新弹出�?*/
+  const [bannerDismissed, setBannerDismissed] = useState(-1);
   const actionsRef = useRef<HTMLElement | null>(null);
   const runIdRef = useRef<string | null>(null);
   const queueRef = useRef<Array<{ action: Action; inputMode: InputMode }>>([]);
@@ -173,6 +182,8 @@ export function Workbench({
   const stepRef = useRef<ReturnType<typeof currentStep> | null>(null);
   const finishingRef = useRef(false);
   const modeReadyRef = useRef(false);
+  /** E3 的「重试」：最后一次失败请求的重放函数（只在点击回调里取用）�?*/
+  const retryRef = useRef<(() => void) | null>(null);
 
   const sendAction = useCallback(
     (
@@ -201,6 +212,14 @@ export function Workbench({
           // E3 系统错误：接口没落库；音效只提示，不承载信息。
           playSound("error-system");
           const detail = errorMessage(error);
+          // 「重试」＝把同一批动作原样再发一次（只在点击回调里读 ref，不在渲染期读）�?
+          retryRef.current = () => {
+            void fetch(`/api/runs/${runId}/events`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ events: [payload] }),
+            }).catch(() => undefined);
+          };
           setSystemError({ message: detail.message, canRetry: detail.retryable });
         });
       sendChainRef.current = task;
@@ -236,13 +255,14 @@ export function Workbench({
 
   const bootstrap = useCallback(async (): Promise<string | null> => {
     try {
+      // 演示只读模式既不落库也不需要会话：提前返回，避免匿名 fetch /api/session 在控制台打 401
+      if (demoReadonly) return null;
+
       const sessionRes = await fetch("/api/session");
       const session = await sessionRes.json().catch(() => null);
       if (session?.ok && session.student?.studentNo) {
         setStudentNo(String(session.student.studentNo));
       }
-
-      if (demoReadonly) return null;
 
       const runRes = await fetch("/api/runs", {
         method: "POST",
@@ -470,7 +490,7 @@ export function Workbench({
     return () => window.clearTimeout(timer);
   }, [ui.exp.stepIndex]);
 
-  // 两段式反馈：先出结果（0~600ms），再把「下一步」滑出来；phase 由点击事件驱动
+  // 两段式反馈：先出结果�?~600ms），再把「下一步」滑出来；phase 由点击事件驱�?
   const [guidePhase, setGuidePhase] = useState<"result" | "next">("next");
   const nextPhaseTimerRef = useRef<number | null>(null);
   const armNextPhase = useCallback(() => {
@@ -509,7 +529,7 @@ export function Workbench({
   });
   // stepDoneKey = 结果条上那条事件属于"上一步"（步骤刚推进）。
   // 这时再显示上一步的文案，会和看板上的"第 N 步"打架（红队 2026-10-21 报：第 2 步校准，
-  // 底部还写"容量瓶、量筒自然晾干"）。改成一句进入当前步的说明。
+        // 失败时只留「重做本步」：不再同时滑出"下一步"，同屏只有一条该做的事。
   const resultLine =
     notice ??
     sceneCaption ??
@@ -559,19 +579,33 @@ export function Workbench({
         {
           label: "观察记录",
           value: String(ui.exp.observations.length),
-          unit: "条",
+          unit: "次",
           note: "按 doc 记录",
         },
         {
           label: "违规 / 事故",
           value: String(ui.exp.violations.length + ui.exp.incidents.length),
-          unit: "条",
+          unit: "次",
           note: "已记录",
           tone: hasAbnormality ? "warn" : "normal",
         },
       ];
-  /** 第四行：本步指引；取过提示就换成那条提示（同屏只留一条）。 */
+  /** 第四行：本步指引；取过提示就换成那条提示（同屏只留一条）�?*/
   const boardGuide = missionGuide(ui.hint?.text, step.title);
+
+  /**
+   * 提示三级阶梯（用�?2026-10-22 口径）：
+   * L1 方向 �?L2 具体 �?L3 高亮目标；每步最�?3 次，�?4 次灯泡置灰�?
+   * 次数�?hintUsages 计（重做本步会清零），扣�?1/3/5（hint-ladder 唯一口径）�?
+   */
+  const hintUsed = hintUsedInStep(ui, ui.exp.stepIndex);
+  const hintExhausted = hintUsed >= MAX_HINTS_PER_STEP;
+  const hintLevel = ui.hint?.level ?? 0;
+  const hintNextTier = hintTierFor(hintUsed);
+  const hintDeductPoints = hintNextTier ? HINT_DEDUCT[hintNextTier] : 0;
+  /** L3 高亮：能倒试�?�?高亮锥形瓶；否则高亮右侧主按钮。只亮一个目标�?*/
+  const hintOnFlask = hintLevel === 3 && canPourAction(suggested.type);
+  const hintOnAction = hintLevel === 3 && !hintOnFlask;
 
   const eventState = notice
     ? "warn"
@@ -604,6 +638,9 @@ export function Workbench({
         scale="inline"
       />
     ) : null;
+
+  /** E2：违规/事故都出事故条；级别由 level 决定视觉（L1 提醒 / L2 扣分 / L3 严重 / L4 终止） */
+  const incidentEvent = ui.event?.level ? ui.event : null;
 
   const choose = useCallback(
     (choiceId: string, inputMode?: InputMode) => {
@@ -649,7 +686,37 @@ export function Workbench({
   /** 这一投算不算：用当前步 + 本步已做的动作同步判定（纯函数，见 guide/drop-resolve）。 */
   const resolveCurrentDrop = (reagentId: string) => resolveDrop(step, reagentId, performed);
 
-  /** 音效与结果条同步：同一次反馈只响一次（ok-l1 单动作 / ok-l2 一步完成 / 事故 / 拒收）。 */
+  /**
+   * 取一条提示（唯一入口：灯�?/ 键盘 H / 24s 空闲自动）�?
+   * 三级阶梯与扣分由 use-workbench �?revealHint 决定；用完时不再派发�?
+   *
+   * TODO(结算�?· Lead)：提示使用上报。服务端 replay 目前只从「动作引发的 hint 事件」统计，
+   * 拿不�?学生主动点了几次灯泡"。建议加一条入口后在这里调用：
+   *   void fetch(`/api/runs/${runId}/events`, { method: "POST", headers: { "content-type": "application/json" },
+   *     body: JSON.stringify({ hint: { stepIndex: ui.exp.stepIndex, level: hintNextTier, deduct: hintDeductPoints,
+   *       competency: step.judge.competency[0] ?? "S1" } }) });
+   * 服务�?appendRunEvents 兼容 body.hint �?落一�?hint 记录（不�?state / 不推�?stepIndex），
+   * replay.collectHints 收进 hints，score.ts �?hint-ladder �?1/3/5 求和�?
+   */
+  const askHint = useCallback(() => {
+    if (ui.exp.done || hintExhausted) return;
+    // 学生主动取提示要落库（报告要记"提示 k 次 · −X 分"）：
+    // UI 档次 1/2/3 → 引擎 HintLevel 0/1/2；演示只读模式不落库。
+    const tier = hintTierFor(hintUsedInStep(ui, ui.exp.stepIndex));
+    dispatch({ type: "hint" });
+    const activeRunId = runIdRef.current;
+    if (!tier || !activeRunId || demoReadonly) return;
+    void fetch(`/api/runs/${activeRunId}/events`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "hint",
+        hint: { stepIndex: ui.exp.stepIndex, level: tier - 1 },
+      }),
+    }).catch(() => {
+      /* 提示上报失败不该打断操作，静默忽略 */
+    });
+  }, [demoReadonly, hintExhausted, ui]);
   const sfxSeqRef = useRef(ui.feedbackSeq);
   useEffect(() => {
     if (ui.feedbackSeq === sfxSeqRef.current) return;
@@ -699,14 +766,17 @@ export function Workbench({
       if (!runId) runId = await (bootstrapRef.current ?? Promise.resolve(null));
       if (runId) {
         await Promise.allSettled(inflightRef.current);
-        const res = await fetch(`/api/runs/${runId}/finish`, { method: "POST" }).catch(() => null);
+        // 一键演示交卷带 auto=1：服务端用它给预�?100 分并�?10/40/50 重算总分�?
+        // 否则报告页比演示脚本�?10 分（Lead 2026-10-22 收尾口径）�?
+        const finishUrl = `/api/runs/${runId}/finish${mode === "auto" ? "?auto=1" : ""}`;
+        const res = await fetch(finishUrl, { method: "POST" }).catch(() => null);
         finishedOk = Boolean(res?.ok);
       }
     } finally {
       finishingRef.current = false;
       setFinishing(false);
-      // 一键演示结束要把交互方式复位，否则下一场手动打开还是"自动"，
-      // 会在没人操作时自己往下跑（用户 2026-10-21 要求）。
+        // 失败时只留「重做本步」：不再同时滑出"下一步"，同屏只有一条该做的事。
+      // 会在没人操作时自己往下跑（用�?2026-10-21 要求）�?
       try {
         window.localStorage.removeItem("chem-lab:input-mode");
       } catch {
@@ -721,7 +791,7 @@ export function Workbench({
   }, [demoReadonly, expId, mode, router]);
 
   // 一键演示：auto 模式下最后一步做完就自动交卷并落到报告页，
-  // 不再停在"交卷并查看报告"让评委多点一下（用户 2026-10-21 要求）。
+  // 不再停在"交卷并查看报�?让评委多点一下（用户 2026-10-21 要求）�?
   useEffect(() => {
     if (mode !== "auto" || demoReadonly || finishingRef.current) return;
     if (ui.exp.stepIndex < total - 1) return;
@@ -767,7 +837,7 @@ export function Workbench({
       const key = event.key.toLowerCase();
       if (key === "h") {
         event.preventDefault();
-        if (!ui.exp.done) dispatch({ type: "hint" });
+        if (!ui.exp.done) askHint();
         return;
       }
       if (key === "r") {
@@ -801,6 +871,16 @@ export function Workbench({
   }, [choose, finish, performed, retry, step, ui.exp.done]);
 
   useEffect(() => {
+    // 20~30s 没有操作就自动浮出一次提示（用户 2026-10-22 要求"提示三级阶梯"的自动入口）�?
+    // 最后一步常挂着"观察/读数"这类可选动作，auto 不会去点它们（没有推进效果）。
+    if (ui.exp.done || mode === "auto") return;
+    const timer = window.setTimeout(() => {
+      if (!ui.exp.done) askHint();
+    }, 24000);
+    return () => window.clearTimeout(timer);
+  }, [ui.feedbackSeq, ui.exp.stepIndex, ui.exp.done, mode]);
+
+  useEffect(() => {
     if (mode !== "auto" || ui.exp.done || autoBusyRef.current || finishingRef.current) return;
     // target 必须跟着当前步骤走：原来只在切换模式时设一次，
     // 步骤推进后 stepIndex !== target 直接 return，auto 就永远停在第 2 步（红队 2026-10-21 实测）。
@@ -809,7 +889,7 @@ export function Workbench({
     // 先在"明确正确"的动作里找；观察类步骤（如"看水平泡是否居中"）没有 role=correct，
     // 这里会退化到看板推荐动作（＝按 1），否则 auto 会静默卡死在该步，
     // 学生此时交卷 → 报告出现"步骤有遗漏 50 分"（红队 2026-10-21 实测停在 2/7）。
-    // 一键演示要稳定拿高分：优先跟看板"按 1"的建议动作（那是系统认定的正确路径），
+    // 一键演示要稳定拿高分：优先跟看�?�?1"的建议动作（那是系统认定的正确路径）�?
     // 再看 role=correct，最后才退到"任意非 trap"。原来先找 correct，观察类步骤会退到
     // 非最优动作，同一实验有时 80 有时 86，分数不稳定（用户 2026-10-21 验收线 85）。
     const choice =
@@ -831,15 +911,17 @@ export function Workbench({
 
     autoBusyRef.current = true;
     const timers: number[] = [];
-    // 真人化：光标先曲线滑到目标按钮（0.4~0.8s），悬停 200~400ms，按下涟漪，再抬起执行。
+        // 失败时只留「重做本步」：不再同时滑出"下一步"，同屏只有一条该做的事。
+    // 节奏�?stepIndex / 选项数做确定性微差（不再 Math.random：React Compiler �?purity 规则
+    // 会把渲染路径可达的随机调用判�?error）�?
     const btn = document.querySelector<HTMLElement>(`[data-demo-id="${choice.demoId}"]`);
     const rect = btn?.getBoundingClientRect();
     const tx = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
     const ty = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
-    const moveMs = 400 + Math.round(Math.random() * 400);
-    const hoverMs = 200 + Math.round(Math.random() * 200);
-    // 每步之间停 0.8~1.2s，让评委看清上一步的结果再走下一步
-    const pauseMs = 800 + Math.round(Math.random() * 400);
+    const moveMs = 420 + (ui.exp.stepIndex % 4) * 90;
+    const hoverMs = 220 + (step.choices.length % 3) * 60;
+    // 每步之间�?0.8~1.1s，让评委看清上一步的结果再走下一�?
+    const pauseMs = 820 + ((ui.exp.stepIndex + step.choices.length) % 3) * 120;
 
     timers.push(
       window.setTimeout(() => {
@@ -981,10 +1063,14 @@ export function Workbench({
               }
               params={boardParams}
               hint={{
-                level: ui.hint?.level ?? 0,
+                level: hintLevel,
                 active: Boolean(ui.hint),
                 deduct: Boolean(ui.hint?.shouldDeduct),
-                onAsk: () => dispatch({ type: "hint" }),
+                used: hintUsed,
+                max: MAX_HINTS_PER_STEP,
+                exhausted: hintExhausted,
+                nextDeduct: hintDeductPoints,
+                onAsk: askHint,
               }}
               note={{ label: "老师会说", text: teacherNote(expId, step.index) }}
               done={ui.exp.done}
@@ -1009,6 +1095,7 @@ export function Workbench({
             onDropRejected={handleDropRejected}
             stepDoneKey={stepDoneKey}
             nextReagent={nextReagent}
+            hintHighlight={hintOnFlask}
             // exp09 前两步是"配 500 mL 溶液"，按步骤切到台面（用户 2026-10-21 报：满管蓝液却显示 0.00）
             forceBench={isExp09 && ui.exp.stepIndex < 2}
             // 第 1 步称 NaOH 要天平；第 2 步配盐酸不需要，别让台面凭空摆一台
@@ -1017,12 +1104,30 @@ export function Workbench({
             computeMode={isExp09 && ui.exp.stepIndex === 6}
             observations={ui.exp.observations.map((item) => item.text)}
             onQuickAction={() => {
-              // 点画面里的天平：和按 1 一样，直接用当前建议动作
+              // 点画面里的天平：和按 1 一样，直接用当前建议动�?
               if (suggested && !ui.exp.done) choose(suggested.choiceId);
             }}
           >
             {fx}
           </SceneStage>
+          {/* E2 事故（L3/L4）：事故�?+ 三行处置，贴在舞台上沿，不遮实验台中�?*/}
+          {incidentEvent ? (
+            <IncidentBanner
+              open={bannerDismissed !== ui.feedbackSeq}
+              level={incidentEvent.level}
+              deduction={incidentEvent.deduction}
+              title={incidentEvent.title}
+              lines={[
+                incidentEvent.shortTitle,
+                incidentEvent.why ?? "这一步有后果，先停下来按处置做",
+                incidentEvent.correct ?? "按「重做本步」回到这一步开头",
+              ]}
+              placement="bottom"
+              onDismiss={() => setBannerDismissed(ui.feedbackSeq)}
+              onRetry={incidentEvent.terminate ? retry : undefined}
+              demoId="demo-incident-banner"
+            />
+          ) : null}
         </section>
 
         <aside className={styles.rail} aria-label="操作面板">
@@ -1106,6 +1211,7 @@ export function Workbench({
               demoId={suggested.demoId}
               disabled={ui.exp.done}
               phase={guidePhase}
+              highlight={hintOnAction}
               onChoose={() => choose(suggested.choiceId)}
             />
           </section>
@@ -1118,13 +1224,13 @@ export function Workbench({
             >
               <summary className={guide.whySummary}>
                 <span className={guide.whyLevel}>{ui.event.level ?? "违规"}</span>
-                看原因 · {ui.event.deduction > 0 ? `−${ui.event.deduction} 分` : "未扣分"}
+                看原因 · {ui.event.deduction > 0 ? `扣 ${ui.event.deduction} 分` : "未扣分"}
               </summary>
               <p className={guide.whyTitle}>{ui.event.title}</p>
               {ui.event.why ? <p className={guide.whyText}>{ui.event.why}</p> : null}
               {ui.event.correct ? (
                 <p className={guide.whyText}>
-                  <span>正确：</span>
+                  <span>正确做法</span>
                   {ui.event.correct}
                 </p>
               ) : null}
@@ -1229,12 +1335,38 @@ export function Workbench({
       />
 
       <p className={styles.keyFooter} data-demo-id="demo-key-hint">
+        <button
+          type="button"
+          className={styles.hintButton}
+          onClick={askHint}
+          disabled={ui.exp.done || hintExhausted}
+          data-demo-id="demo-hint-button"
+          data-level={ui.hint?.level ?? 0}
+          data-exhausted={hintExhausted ? "true" : "false"}
+          title={
+            hintExhausted
+              ? "本步提示已用完（每步最多 3 次）"
+              : hintNextTier
+                ? `${HINT_TIER_LABEL[hintNextTier]} · 本次扣 ${hintDeductPoints} 分`
+                : "要一个提示"
+          }
+          aria-label={
+            hintExhausted
+              ? "本步提示已用完"
+              : `要一个提示，${hintNextTier ? HINT_TIER_LABEL[hintNextTier] : ""}，扣 ${hintDeductPoints} 分`
+          }
+        >
+          <span aria-hidden="true">💡</span>
+          {hintExhausted ? "已用完" : "提示"}
+          {ui.hint ? <em>H{ui.hint.level}</em> : null}
+          {!hintExhausted && hintNextTier ? <em>{`${hintUsed}/${MAX_HINTS_PER_STEP}`}</em> : null}
+        </button>
         按 1~9 选择动作 · H 提示 · R 重做 · Enter 交卷
       </p>
 
       <ExperimentDock currentId={expId} onNotice={setNotice} />
 
-      {/* E1 拒收：三行（错在哪 / 为什么 / 怎么改），180ms 淡入 + 目标抖动一次 */}
+      {/* E1 拒收：三行（错在�?/ 为什�?/ 怎么改）�?80ms 淡入 + 目标抖动一�?*/}
       <RejectHint
         open={Boolean(reject)}
         lines={reject?.lines ?? REJECT_FALLBACK}
@@ -1248,6 +1380,19 @@ export function Workbench({
         open={Boolean(systemError)}
         message={systemError?.message ?? ""}
         detail={systemError?.detail}
+        action={
+          systemError?.canRetry
+            ? {
+                label: "重试",
+                demoId: "demo-error-retry",
+                onClick: () => {
+                  const replay = retryRef.current;
+                  setSystemError(null);
+                  replay?.();
+                },
+              }
+            : undefined
+        }
         onDismiss={() => setSystemError(null)}
         demoId="demo-error-toast"
       />

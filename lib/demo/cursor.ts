@@ -91,6 +91,54 @@ export class DemoCursor {
     this.ringAt(rect.left + 8, rect.top + 10, "river");
   }
 
+  /**
+   * 拖拽的"按住态"：光标保持 scale(.98) 并压出一点阴影，
+   * 与普通点击的 scale(.86) 区分开（红队 2026-10-22 要求拖拽被抓起的质感）。
+   */
+  setHeld(held: boolean): void {
+    const el = this.ensure();
+    el.style.transform = el.style.transform.replace(/scale\([^)]*\)/, held ? "scale(0.98)" : "scale(1)");
+    el.style.filter = held
+      ? "drop-shadow(0 6px 12px rgba(16, 24, 40, 0.35))"
+      : "drop-shadow(0 2px 3px rgba(16, 24, 40, 0.25))";
+  }
+
+  /** 按视口坐标移动光标（拖拽路径逐点用）；duration 设为 0 表示立即定位 */
+  moveToPoint(x: number, y: number, ms = 0): void {
+    const el = this.ensure();
+    el.style.transitionDuration = `${ms}ms`;
+    el.style.transform = `translate3d(${Math.round(x - 4)}px, ${Math.round(y - 4)}px, 0) ${
+      el.style.transform.includes("scale(0.98)") ? "scale(0.98)" : "scale(1)"
+    }`;
+  }
+
+  /** 拖拽轨迹上的一个小点（可见轨迹），lifeMs 后自动清理 */
+  trailAt(x: number, y: number, lifeMs = 420): void {
+    const doc = this.doc;
+    const dot = doc.createElement("div");
+    dot.setAttribute(FX_ATTR, "trail");
+    Object.assign(dot.style, {
+      position: "fixed",
+      left: `${Math.round(x)}px`,
+      top: `${Math.round(y)}px`,
+      width: "6px",
+      height: "6px",
+      marginLeft: "-3px",
+      marginTop: "-3px",
+      borderRadius: "9999px",
+      background: "rgba(29, 78, 137, 0.45)",
+      zIndex: "2147482998",
+      pointerEvents: "none",
+      opacity: "0.75",
+      transition: `opacity ${lifeMs}ms ease-out, transform ${lifeMs}ms ease-out`,
+    } satisfies Partial<CSSStyleDeclaration>);
+    doc.body.appendChild(dot);
+    dot.getBoundingClientRect();
+    dot.style.opacity = "0";
+    dot.style.transform = "scale(0.4)";
+    setTimeout(() => dot.remove(), lifeMs + 40);
+  }
+
   /** 目标高亮 / 结果反馈环：以元素中心为圆心扩散一圈 */
   ringAt(left: number, top: number, tone: RingTone = "river", size = 18): void {
     const doc = this.doc;

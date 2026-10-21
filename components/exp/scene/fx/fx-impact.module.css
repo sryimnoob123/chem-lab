@@ -14,6 +14,9 @@
   --fx-aftermath: 1200ms;
   --fx-aftermath-delay: 600ms;
   --fx-ember-step: 90ms;
+  --fx-dim: 260ms;
+  --fx-terminate: 320ms;
+  --fx-frame: 320ms;
   position: absolute;
   inset: 0;
   z-index: 6;
@@ -31,8 +34,10 @@
   animation: fx-scene-2 var(--fx-shake-2) linear 1 both;
   will-change: transform;
 }
+/* L3 轻震：用户口径 ≤300ms，用元素级变量覆盖 motion.css 的 320ms */
 :global(.fx-scene-impact-3) {
-  animation: fx-scene-3 var(--fx-shake-3) linear 1 both;
+  --fx-scene-shake-3: 280ms;
+  animation: fx-scene-3 var(--fx-scene-shake-3) linear 1 both;
   will-change: transform;
 }
 :global(.fx-scene-impact-4) {
@@ -67,6 +72,27 @@
   52% { transform: translate(4px, -2px); }
   68% { transform: translate(-3px, 1px); }
   84% { transform: translate(2px, -1px); }
+}
+
+/* ---------------- L3 局部暗场（只暗场景这一块） ---------------- */
+
+.stageDim {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: var(--bench-ink-dark);
+  opacity: 0.18;
+  animation: fx-stage-dim var(--fx-dim) ease-out 1 both;
+}
+
+@keyframes fx-stage-dim {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.18;
+  }
 }
 
 /* ---------------- 事故后余波 ---------------- */
@@ -172,6 +198,12 @@
   }
   .aftermathEmber,
   .aftermathWisp {
+    animation: none;
+  }
+  /* 暗场与红框保留静态可见：事故等级信息不丢 */
+  .stageDim,
+  .terminateDim,
+  .terminateFrame {
     animation: none;
   }
 }

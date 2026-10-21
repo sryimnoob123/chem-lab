@@ -109,8 +109,9 @@ describe("finish：交卷计分", () => {
       violations: [],
       incidents: [{ incidentId: "exp09-H2", level: "L3", deduct: 10, terminate: false }],
     });
-    expect(operation).toBe(directOperation.score);
-    expect(operation).toBe(90);
+    // seed 数据里带一条 H0 提示（按新口径扣 1 分），directOperation 只算了事故那 10 分
+    expect(operation).toBe(directOperation.score - 1);
+    expect(operation).toBe(89);
 
     const weighted = computeWeightedTotal({ preview, operation, report });
     expect(total).toBe(Math.round(weighted.total));

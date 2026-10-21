@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getCurriculum } from "@/lib/pedagogy/curriculum";
 import { scoreStage } from "@/lib/pedagogy/curriculum/types";
@@ -20,19 +20,22 @@ const S = {
 /** BOPPPS 后测（P · Post-assessment）：报告页顶部三题，提交后给分与逐题解析 */
 export function BopbpsPostLab({ expId }: { expId: string }) {
   const c = useMemo(() => getCurriculum(expId), [expId]);
-  const [picked, setPicked] = useState<Record<string, string>>({});
-  const [done, setDone] = useState(false);
+  const [manualPicked, setManualPicked] = useState<Record<string, string>>({});
+  const [manualDone, setManualDone] = useState(false);
   const searchParams = useSearchParams();
-  /** 一键演示（?auto=1）：自动按正确答案作答并提交，报告才能给到 90+。 */
+  /**
+   * 一键演示（?auto=1）：自动按正确答案作答并提交，报告才能给到 90+。
+   * 这里用派生值而不是 effect 里同步 setState —— 后者会触发级联渲染告警（lint error）。
+   */
   const autoDemo = searchParams.get("auto") === "1";
-
-  useEffect(() => {
-    if (!autoDemo || !c?.post.length) return;
+  const autoPicked = useMemo(() => {
+    if (!autoDemo || !c?.post.length) return null;
     const all: Record<string, string> = {};
     for (const q of c.post) all[q.id] = q.answer;
-    setPicked(all);
-    setDone(true);
+    return all;
   }, [autoDemo, c]);
+  const picked = autoPicked ?? manualPicked;
+  const done = autoPicked !== null || manualDone;
 
   if (!c || !c.post.length) return null;
 
@@ -80,7 +83,7 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
                     key={o.key}
                     type="button"
                     data-demo-id={`bopbps-post-${q.id}-${o.key}`}
-                    onClick={() => !done && setPicked((p) => ({ ...p, [q.id]: o.key }))}
+                    onClick={() => !done && setManualPicked((p) => ({ ...p, [q.id]: o.key }))}
                     style={{
                       display: "flex",
                       gap: 10,
@@ -125,8 +128,8 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
               type="button"
               data-demo-id="bopbps-post-reset"
               onClick={() => {
-                setDone(false);
-                setPicked({});
+                setManualDone(false);
+                setManualPicked({});
               }}
               className="btn btn--secondary"
               style={{ minHeight: 44, padding: "0 14px" }}
@@ -140,7 +143,7 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
               type="button"
               data-demo-id="bopbps-post-submit"
               disabled={!answered}
-              onClick={() => setDone(true)}
+              onClick={() => setManualDone(true)}
               className="btn btn--primary"
               style={{ minHeight: 44, padding: "0 18px" }}
             >

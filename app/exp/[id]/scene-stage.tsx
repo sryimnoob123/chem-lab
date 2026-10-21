@@ -120,6 +120,7 @@ export function SceneStage({
   onDropRejected,
   stepDoneKey,
   nextReagent,
+  hintHighlight = false,
   onQuickAction,
   forceBench,
   benchInstrument,
@@ -143,6 +144,8 @@ export function SceneStage({
   stepDoneKey?: number;
   /** 场景内流程指引：下一步该用哪瓶 → 试剂架微亮 + 锥形瓶脉冲（和看板指向同一动作）。 */
   nextReagent?: string | null;
+  /** L3 提示：直接在目标元素（锥形瓶热区）上描边 + 箭头。 */
+  hintHighlight?: boolean;
   /** 点台面上的仪器（如天平）＝按 1，直接使用当前建议动作。 */
   onQuickAction?: () => void;
   /** 强制走台面场景（exp09 前两步是配溶液，不该显示滴定台）。 */
@@ -407,6 +410,7 @@ export function SceneStage({
             data-over={flow.overFlask ? "true" : "false"}
             data-next={nextReagent ? "true" : "false"}
             data-dragging={flow.draggingId ? "true" : "false"}
+            data-hint-highlight={hintHighlight ? "true" : "false"}
             data-demo-id="demo-scene-drop-flask"
             aria-label={isBenchScene ? "实验台：把选中的试剂放进来" : "锥形瓶：把选中的试剂放进来"}
             onClick={() => {

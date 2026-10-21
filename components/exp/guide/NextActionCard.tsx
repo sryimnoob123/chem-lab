@@ -23,6 +23,8 @@ export interface NextActionCardProps {
   disabled?: boolean;
   /** result = 刚出结果；next = 继续引导已滑出，按钮再亮一下 */
   phase: "result" | "next";
+  /** L3 提示：在主按钮上直接描边 + 箭头（只亮一个目标） */
+  highlight?: boolean;
   onChoose: () => void;
 }
 
@@ -33,10 +35,17 @@ export function NextActionCard({
   demoId,
   disabled,
   phase,
+  highlight = false,
   onChoose,
 }: NextActionCardProps) {
   return (
-    <section className={styles.card} data-demo-id="demo-guide-card" data-phase={phase} aria-label="建议动作">
+    <section
+      className={styles.card}
+      data-demo-id="demo-guide-card"
+      data-phase={phase}
+      data-hint={highlight ? "true" : "false"}
+      aria-label="建议动作"
+    >
       <button
         type="button"
         className={`${styles.next} ix`}

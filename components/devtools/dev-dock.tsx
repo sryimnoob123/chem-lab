@@ -113,6 +113,11 @@ export function DevDock() {
       }
     }
 
+    // 教师身份探测只在教师/开发者页面做：学生页面上请求 /api/teacher/* 必然 403，
+    // 浏览器会把 403 记进控制台，演示时看起来像"报错"。学生页直接按非教师处理（初始值就是 false）。
+    const path = window.location.pathname;
+    if (!path.startsWith("/dev") && !path.startsWith("/teacher")) return;
+
     try {
       const res = await fetch("/api/teacher/roster?limit=1");
       setTeacher(res.ok);

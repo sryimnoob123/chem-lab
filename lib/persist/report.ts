@@ -12,6 +12,7 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { incidents as incidentsTable, quizAnswers, runs, students, timeline } from "@/db/schema";
 import { getDefinition } from "@/lib/engine";
+import { computeWeightedTotal } from "@/lib/pedagogy/scoring";
 import { conflict, notFound, PersistError } from "./errors";
 import { incidentLabel } from "./labels";
 import { replayState, type StoredIncidentRow, type StoredTimelineRow } from "./replay";
@@ -152,8 +153,16 @@ export async function loadRunBundle(runId: string): Promise<RunBundle | null> {
   };
 }
 
-/** 交卷：重算三段分与总分并落库；已交卷幂等返回。 */
-export async function finishRun(runId: string): Promise<RunBundle> {
+/**
+ * 交卷：重算三段分与总分并落库；已交卷幂等返回。
+ *
+ * `override.preview` 用于一键演示（?auto=1）：演示路径不走前测门禁，预习分天然是 0，
+ * 会把总分压到 80，与报告页口径不一致。这里显式落 100，教师端/导出/报告页读同一份数据。
+ */
+export async function finishRun(
+  runId: string,
+  override?: { preview?: number },
+): Promise<RunBundle> {
   const bundle = await loadRunBundle(runId);
   if (!bundle) throw notFound("RUN_NOT_FOUND");
   if (bundle.run.status === "finished") return bundle;
@@ -172,16 +181,26 @@ export async function finishRun(runId: string): Promise<RunBundle> {
     quizRows: bundle.quiz,
   });
 
+  const preview =
+    typeof override?.preview === "number" && Number.isFinite(override.preview)
+      ? Math.round(Math.min(100, Math.max(0, override.preview)))
+      : score.preview;
+  const weighted = computeWeightedTotal({
+    preview,
+    operation: score.operation,
+    report: score.report,
+  });
+
   const finishedAt = new Date();
   await db
     .update(runs)
     .set({
       status: "finished",
       finishedAt,
-      scorePre: score.preview,
+      scorePre: preview,
       scoreOp: score.operation,
       scoreReport: score.report,
-      totalScore: score.total,
+      totalScore: Math.round(weighted.total),
       scoreDetail: score.detail,
     })
     .where(eq(runs.id, runId));

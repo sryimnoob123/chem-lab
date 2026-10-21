@@ -98,6 +98,17 @@ export function replayState(
   for (const row of ordered) {
     // 投放审计行只用于报告呈现，不参与状态机重放。
     if (row.actionType === "drop") continue;
+    // 学生主动点灯泡的提示：只进 hints，不参与状态机重放（不推进 stepIndex）。
+    if (row.actionType === "hint") {
+      const raw = parseParams(row.payload) as Record<string, unknown> | undefined;
+      const level = typeof raw?.level === "number" ? Math.floor(raw.level) : 0;
+      hints.push({
+        competency: row.competency as CompetencyCode,
+        stepIndex: row.stepIndex,
+        level: Math.min(4, Math.max(0, level)) as HintLevel,
+      });
+      continue;
+    }
     const action = isFixedAction(row);
     const atStep = state.stepIndex;
     const result = apply(state, action);

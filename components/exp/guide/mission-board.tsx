@@ -34,12 +34,20 @@ export interface MissionParam {
 }
 
 export interface MissionHint {
-  /** 提示阶梯 0~3 */
+  /** 提示阶梯 1~3（0 = 本步还没取） */
   level: number;
   /** 本步是否已取过提示（第四行已被提示占用） */
   active: boolean;
   /** 取提示会扣独立完成分 */
   deduct: boolean;
+  /** 本步已用次数（0~max） */
+  used: number;
+  /** 每步上限（三级阶梯 = 3） */
+  max: number;
+  /** 本步已用完：灯泡置灰、文案“本步提示已用完” */
+  exhausted: boolean;
+  /** 下一次提示会扣多少分（1/3/5；用完为 0） */
+  nextDeduct: number;
   onAsk?: () => void;
 }
 

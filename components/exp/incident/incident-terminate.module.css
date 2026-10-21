@@ -1,0 +1,109 @@
+/* ===================================================================
+   IncidentBanner L4 终止层（components/exp/incident/）
+   全屏压暗 + 红框收束 + 主文案 +「重做本步 / 查看原因」两动作。
+   z-index 8：低于右栏 10 / 任务看板 12 / Dock 27 / 顶栏 30 / 结果条 26，
+   不会把操作按钮压暗吃掉；全程 pointer-events:none。
+   只动 transform/opacity；reduced-motion 下静止但信息不丢。
+   =================================================================== */
+
+.incidentTerminate {
+  margin: 0;
+  padding: 8px 12px 0;
+  color: var(--danger);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+}
+
+.incidentActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 12px 10px;
+}
+
+.incidentAction {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--hover, 80ms) var(--ease-press, ease);
+}
+
+.incidentAction:hover {
+  background: rgba(192, 57, 43, 0.12);
+}
+
+.incidentActionGhost {
+  border-color: var(--ink-2);
+  color: var(--ink-2);
+}
+
+.incidentActionGhost:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.incidentAction:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
+.incidentActionGhost:focus-visible {
+  outline-color: var(--river-700);
+}
+
+.terminateDim {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  background: var(--bench-ink-dark);
+  opacity: 0.34;
+  animation: ix-terminate-dim var(--enter, 260ms) ease-out 1 both;
+}
+
+@keyframes ix-terminate-dim {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.34;
+  }
+}
+
+.terminateFrame {
+  position: fixed;
+  inset: 12px;
+  z-index: 8;
+  pointer-events: none;
+  border: 2px solid var(--danger);
+  animation: ix-terminate-frame var(--enter, 260ms) var(--ease-out, ease-out) 1 both;
+}
+
+@keyframes ix-terminate-frame {
+  0% {
+    opacity: 0;
+    transform: scale(1.012);
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terminateDim,
+  .terminateFrame {
+    animation: none;
+  }
+}

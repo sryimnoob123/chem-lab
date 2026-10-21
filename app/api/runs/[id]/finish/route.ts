@@ -14,13 +14,16 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   try {
     const { id } = await params;
     await accessRun(id);
-    const bundle = await finishRun(id);
+    // ?auto=1（一键演示）：预习门禁被绕过，预习分按满分落库，
+    // 保证教师端 / 报告页 / 导出读的是同一份数据。
+    const autoDemo = new URL(request.url).searchParams.get("auto") === "1";
+    const bundle = await finishRun(id, autoDemo ? { preview: 100 } : undefined);
     return json({ ok: true, ...buildReportPayload(bundle) });
   } catch (error) {
     return handleError(error);

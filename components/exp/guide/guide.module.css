@@ -703,3 +703,42 @@
     padding-block: 8px;
   }
 }
+
+/* ---------------- L3 提示高亮（描边 + 箭头，只亮一个目标） ---------------- */
+
+.card[data-hint="true"] .next {
+  outline: 2px solid var(--river-700);
+  outline-offset: 3px;
+}
+
+.card[data-hint="true"] .next::before {
+  content: "→";
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  color: var(--river-700);
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+  animation: hint-arrow 900ms ease-in-out infinite;
+}
+
+@keyframes hint-arrow {
+  0%,
+  100% {
+    transform: translateY(-50%) translateX(0);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateY(-50%) translateX(4px);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card[data-hint="true"] .next::before {
+    animation: none;
+    opacity: 1;
+  }
+}
