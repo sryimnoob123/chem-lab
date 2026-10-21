@@ -1,5 +1,6 @@
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { experiments as experimentsTable } from "@/db/schema";
+import { experiments as experimentsTable, runs as runsTable } from "@/db/schema";
 
 export type CatalogItem = {
   id: string;
@@ -9,6 +10,10 @@ export type CatalogItem = {
   hours: number;
   kind: "验证" | "综合" | "设计";
   playable: boolean;
+  /** 该生是否已完成（status=finished 且总分达标） */
+  completed?: boolean;
+  /** 该生该实验的最高总分（没做过为 null） */
+  bestScore?: number | null;
 };
 
 export type CatalogGroup = {
@@ -16,6 +21,13 @@ export type CatalogGroup = {
   title: string;
   note: string;
   items: CatalogItem[];
+  /** 该档是否已解锁（g1 恒 true，后续档需前一档全部完成） */
+  unlocked: boolean;
+  /** 未解锁时给学生的提示，已解锁为空串 */
+  unlockHint: string;
+  /** 本档已完成实验数 / 总数 */
+  done: number;
+  total: number;
 };
 
 /** 大纲口径：10 个实验 / 36 学时 / 验证 7 · 综合 2 · 设计 1 */
@@ -38,7 +50,46 @@ export const GROUP_SPEC: Array<{ id: string; title: string; note: string; ids: s
   { id: "g3", title: "定量分析", note: "滴定分析：读数、半滴、终点与误差", ids: ["exp09", "exp10"] },
 ];
 
-export async function loadCatalog(): Promise<{ groups: CatalogGroup[]; totalHours: number; playable: number }> {
+/** 该档解锁所需的单实验最低总分（低于它算"做过但没做好"，不解锁下一档） */
+export const UNLOCK_PASS_SCORE = 60;
+
+/**
+ * 纯函数：按每个实验的完成情况算出每档是否解锁。
+ * 规则：g1 恒解锁；后面每档要求**前一档全部实验** completed（finished 且总分 ≥ UNLOCK_PASS_SCORE）。
+ * 抽出来是为了能单测，不用起数据库。
+ */
+export function buildGroups(items: CatalogItem[], unlockAll = false): CatalogGroup[] {
+  let previousDone = true; // g1 恒解锁
+  let prevDone = 0;
+  let prevTotal = 0;
+  return GROUP_SPEC.map((g, gi) => {
+    const groupItems = g.ids
+      .map((id) => items.find((i) => i.id === id))
+      .filter((i): i is CatalogItem => Boolean(i))
+      .sort((a, b) => a.no.localeCompare(b.no));
+
+    const total = groupItems.length;
+    const done = groupItems.filter((i) => i.completed).length;
+    const unlocked = unlockAll || previousDone;
+    const prevTitle = gi > 0 ? GROUP_SPEC[gi - 1].title : "";
+    // 锁住时提示的是**前一档**的进度（"还差几个"指的是上一档）
+    const unlockHint = unlocked
+      ? ""
+      : `完成「${prevTitle}」${prevTotal} 个实验且总分 ≥ ${UNLOCK_PASS_SCORE} 后解锁（已 ${prevDone}/${prevTotal}）`;
+
+    prevDone = done;
+    prevTotal = total;
+    // 下一档是否解锁：本档全部完成（且本档本身已解锁）
+    previousDone = unlocked && done === total;
+
+    return { id: g.id, title: g.title, note: g.note, items: groupItems, unlocked, unlockHint, done, total };
+  });
+}
+
+export async function loadCatalog(
+  studentNo?: string,
+  options: { unlockAll?: boolean } = {},
+): Promise<{ groups: CatalogGroup[]; totalHours: number; playable: number }> {
   const byId = new Map<string, boolean>();
   try {
     const found = await db
@@ -49,19 +100,38 @@ export async function loadCatalog(): Promise<{ groups: CatalogGroup[]; totalHour
     // 库没起来就退回大纲底表，页面不能因此挂掉
   }
 
-  const items = CATALOG.map((c) => ({
-    ...c,
-    // 静态清单里明确开放的实验，不能被旧库里的 playable=false 反向关掉；
-    // 旧库只作为“额外开放”的来源。否则 seed 早于定义上线时会表现为“页面 200 但 0 个选项”。
-    playable: c.playable || (byId.get(c.id) ?? false),
-  }));
-  const groups = GROUP_SPEC.map((g) => {
-    const groupItems = g.ids
-      .map((id) => items.find((i) => i.id === id))
-      .filter((i): i is CatalogItem => Boolean(i))
-      .sort((a, b) => a.no.localeCompare(b.no));
-    return { id: g.id, title: g.title, note: g.note, items: groupItems };
+  // 该生的进度：每个实验是否完成（finished 且总分 ≥ UNLOCK_PASS_SCORE）与最高分
+  const progress = new Map<string, { finished: boolean; best: number | null }>();
+  if (studentNo) {
+    try {
+      const rows = await db
+        .select({ id: runsTable.experimentId, status: runsTable.status, score: runsTable.totalScore })
+        .from(runsTable)
+        .where(eq(runsTable.studentNo, studentNo));
+      for (const r of rows) {
+        const prev = progress.get(r.id) ?? { finished: false, best: null };
+        const best = r.score != null ? Math.max(r.score, prev.best ?? 0) : prev.best;
+        progress.set(r.id, { finished: prev.finished || r.status === "finished", best });
+      }
+    } catch {
+      // 查不到进度就当作没进度，不影响页面渲染
+    }
+  }
+
+  const items: CatalogItem[] = CATALOG.map((c) => {
+    const p = progress.get(c.id);
+    const completed = Boolean(p?.finished && (p?.best ?? 0) >= UNLOCK_PASS_SCORE);
+    return {
+      ...c,
+      // 静态清单里明确开放的实验，不能被旧库里的 playable=false 反向关掉；
+      // 旧库只作为"额外开放"的来源。否则 seed 早于定义上线时会表现为"页面 200 但 0 个选项"。
+      playable: c.playable || (byId.get(c.id) ?? false),
+      completed,
+      bestScore: p?.best ?? null,
+    };
   });
+
+  const groups = buildGroups(items, Boolean(options.unlockAll));
 
   return {
     groups,

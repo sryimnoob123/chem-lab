@@ -508,6 +508,49 @@
   color: var(--ink-2);
 }
 
+/* 已完成进度 / 未解锁提示：靠右，不挤掉标题 */
+.cat-group__progress,
+.cat-group__lock {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+.cat-group__progress {
+  color: var(--river-700);
+}
+
+.cat-group__lock {
+  color: var(--ink-3);
+}
+
+.cat-group__lock svg {
+  flex: none;
+  opacity: 0.85;
+}
+
+/* 整档未解锁：列表整体降透明度，行不可点 */
+.cat-list[data-locked="true"] {
+  opacity: 0.62;
+}
+
+.cat-list[data-locked="true"] .cat-row__link {
+  cursor: not-allowed;
+}
+
+/* 已完成实验名后的小对勾 */
+.cat-row__done {
+  display: inline-block;
+  margin-left: 6px;
+  color: var(--river-700);
+  font-size: var(--text-12);
+  vertical-align: 1px;
+}
+
+
 .cat-group__sep {
   display: block;
   height: 1px;
