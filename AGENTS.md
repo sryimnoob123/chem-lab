@@ -4,6 +4,14 @@
 本地全栈 Web 应用 → 验收全绿 → 推 GitHub main → 扣子编程（code.coze.cn）导入并一键部署。
 扣子硬约束见 skill `coze-coding-webapp`（动工前读）。
 
+### 0.1 扣子部署 / 预览配置（code.coze.cn 一键部署用）
+- `.coze` 已按扣子标准补齐：`sub_id=ff55e765`、`project_type=web`、`requires=["nodejs-22"]`，
+  预览 `preview_enable=enabled`（web 类型可预览）。`sub_id` 创建后不可改。
+- `.preview` 固定 `expose_port=5000`（已加 `.gitignore`，不提交 git）；对平台只暴露 5000，端口不 hardcode 到代码。
+- 预览（`.coze [dev]`）→ `scripts/dev_build.sh` + `scripts/dev_run.sh`（`npx next dev --hostname 0.0.0.0 --port <expose_port>`）。
+- 部署（`.coze [deploy]`）→ `.cozeproj/scripts/deploy_build.sh`（`npm ci` + `npm run build`）+ `deploy_run.sh`（`npm run start -- --port ${PORT:-5000}`）。
+- 构建命令 `npm run build`、启动命令 `npm run start`（端口取平台注入的 `PORT`，缺省 5000）。Node 22。
+
 ## 1. 语言与栈（定死，别自由发挥）
 - **TypeScript strict**，不开 `any` 逃生门（要逃就用 `unknown` + 收窄）。
 - **Next.js App Router**：默认 Server Component；只有需要事件/状态的文件才 `'use client'`。

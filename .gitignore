@@ -32,3 +32,6 @@ logs/
 
 # build cache
 tsconfig.tsbuildinfo
+
+# 预览端口声明文件（不提交 git）
+.preview

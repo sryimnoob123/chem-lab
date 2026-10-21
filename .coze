@@ -1,0 +1,27 @@
+[project]
+sub_id = "ff55e765"
+name = "chem-lab"
+requires = ["nodejs-22"]
+project_type = "web"
+version = "0.1.9"
+
+[preview]
+preview_enable = "enabled"
+
+[dev]
+build = ["bash", "scripts/dev_build.sh"]
+run = ["bash", "scripts/dev_run.sh"]
+
+[deploy]
+build = ["bash", ".cozeproj/scripts/deploy_build.sh"]
+run = ["bash", ".cozeproj/scripts/deploy_run.sh"]
+
+[deploy.profile]
+kind = "service"
+flavor = "web"
+
+[deploy.backend]
+enabled = true
+
+[subprojects]
+path = ["."]
