@@ -234,10 +234,14 @@
 
 .expRow {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto auto;
+  /* 5 列：id / 标题 / 进实验 / 一键演示 / 报告 */
+  grid-template-columns: 42px minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 6px;
-  min-height: 26px;
+  min-height: 36px;
+  padding: 2px 0;
+  /* 按实验行分隔，手点不容易点到隔壁（红队 2026-10-22） */
+  border-bottom: 1px solid rgba(125, 211, 252, 0.14);
 }
 
 .expId {
@@ -257,6 +261,12 @@
 .miniLink {
   color: #7dd3fc;
   font-size: 11.5px;
+  /* 热区 ≥32px：原来只有文字高度（约 15px），投影上点不中（红队 2026-10-22 实测） */
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 4px;
   text-decoration: underline;
   text-underline-offset: 2px;
   white-space: nowrap;

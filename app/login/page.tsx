@@ -87,12 +87,14 @@ export default function LoginPage() {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    void login(
-      role,
-      role === "student"
-        ? { studentNo: studentNo.trim(), name: name.trim() }
-        : { passcode: passcode.trim() },
-    );
+    // 教师端不再校验口令：表单提交也直接进后台（口令字段仅保留给旧链接兼容）
+    if (role === "teacher") {
+      playSound("ok-l1");
+      router.push("/teacher");
+      router.refresh();
+      return;
+    }
+    void login("student", { studentNo: studentNo.trim(), name: name.trim() });
   }
 
   /** 一键进：不填表，直接用演示凭证登录（学生/教师各自的入口）。 */
@@ -105,8 +107,10 @@ export default function LoginPage() {
       void login("student", { studentNo: DEMO_STUDENT.no, name: DEMO_STUDENT.name });
       return;
     }
-    setPasscode(DEMO_TEACHER_PASSCODE);
-    void login("teacher", { passcode: DEMO_TEACHER_PASSCODE });
+    // 教师端：打开就进后台，不再弹口令（口令只留可选，用户 2026-10-22 要求）
+    playSound("ok-l1");
+    router.push("/teacher");
+    router.refresh();
   }
 
   return (
@@ -211,7 +215,7 @@ export default function LoginPage() {
               disabled={busy}
               data-demo-id="demo-login-quick-teacher"
             >
-              用演示口令直接进入教师后台
+              直接进入教师后台（无需口令）
             </button>
           ) : null}
 
@@ -219,6 +223,11 @@ export default function LoginPage() {
             {busy ? "登录中…" : role === "student" ? "进入实验" : "登录教师后台"}
           </button>
         </form>
+
+        {/* 现场演示提示：直接告诉评委用哪个账号（用户 2026-10-22 要求） */}
+        <p className="login__foot" data-demo-id="demo-login-hint">
+          演示账号：20250101 / 周若曦
+        </p>
 
         <p className="login__foot">
           <Link href="/">返回门户</Link>

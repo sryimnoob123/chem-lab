@@ -71,10 +71,11 @@ function buildSteps(expId?: string): readonly OnboardingStep[] {
   const bench = expId ? BENCH_LABS.has(expId) : false;
   return [
     {
-      title: bench ? "把试剂拖到台面器皿上" : "把试剂拖到锥形瓶上",
+      // 滴定类实验（exp09）首步是"配 500 mL 溶液"，拖瓶子的说法和第 1 步对不上。
+      title: bench ? "把试剂拖到台面器皿上" : "按看板提示逐步操作",
       desc: bench
         ? "左边试剂架上的瓶子拖到烧杯 / 容量瓶 / 试管上。松手之后先看动画，再听结果。"
-        : "左边试剂架上的瓶子可以直接拖。松手之后先看动画，再听结果。",
+        : "左边试剂架可以拖，场景里的瓶子也能直接点。左上角看板写着这一步该做什么。",
       icon: ICONS.drag,
     },
     {

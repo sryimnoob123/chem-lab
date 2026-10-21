@@ -65,6 +65,21 @@ export async function signIn(studentNo: string, name: string): Promise<Student |
   return student;
 }
 
+/**
+ * 演示登录：不校验白名单，任何学号/姓名都能进（用户 2026-10-22 要求
+ * "学生端学号姓名随便填或留空都能进，别让现场卡在登录"）。
+ * 留空时回落到演示账号；白名单里有的学生仍返回真实班级。
+ */
+export async function signInDemo(studentNo: string, name: string): Promise<Student> {
+  const no = normalize(studentNo) || normalize("20250101");
+  const studentName = name.trim() || "周若曦";
+  const roster = await findRosterStudent(no, studentName);
+  const student: Student = roster ?? { studentNo: no, name: studentName, className: "演示班级" };
+  const store = await cookies();
+  store.set(SESSION_COOKIE, signSessionValue(student.studentNo), cookieOptions());
+  return student;
+}
+
 /** 当前登录学生；未登录 / cookie 被篡改 / 已从名单移除都返回 null。 */
 export async function getStudent(): Promise<Student | null> {
   const store = await cookies();

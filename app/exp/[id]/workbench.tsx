@@ -126,6 +126,8 @@ export function Workbench({
    */
   const [skipVisible, setSkipVisible] = useState(false);
   const [mode, setMode] = useState<InputMode>("drag");
+  /** 一键演示（?autodemo=1）：跳过新手教学，直接开跑（演示时不该弹教学卡片）。 */
+  const [autoDemo, setAutoDemo] = useState(false);
   const [lastInputMode, setLastInputMode] = useState<InputMode | null>(null);
   const [autoTick, setAutoTick] = useState(0);
   /** 拖拽被拒（E1）：+1 让底部结果条重播一次 ✗ 抖动，本步不动。 */
@@ -269,6 +271,7 @@ export function Workbench({
     const params = new URLSearchParams(window.location.search);
     if (params.get("autodemo") === "1") {
       const timer = window.setTimeout(() => {
+        setAutoDemo(true);
         setMode("auto");
         setAutoTick((tick) => tick + 1);
         modeReadyRef.current = true;
@@ -926,7 +929,7 @@ export function Workbench({
           </div>
 
           {/* 新手教学：首次进任一实验自动弹 4 步（localStorage 记"看过"），看完即可上手 */}
-          <ExperimentOnboarding expId={expId} />
+          {autoDemo ? null : <ExperimentOnboarding expId={expId} />}
           <SceneStage
             expId={expId}
             onCaption={handleSceneCaption}

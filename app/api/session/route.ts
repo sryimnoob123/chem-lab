@@ -7,7 +7,7 @@
  * 未登录时 GET 返回 `401 {ok:false,error:"UNAUTHORIZED"}`（前端据此跳登录页）。
  */
 
-import { getStudent, signIn, signOut } from "@/lib/session";
+import { getStudent, signInDemo, signOut } from "@/lib/session";
 import { handleError, json, readJsonBody } from "../_lib/http";
 
 export const runtime = "nodejs";
@@ -15,15 +15,11 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    const body = await readJsonBody(request);
+    const body = await readJsonBody(request).catch(() => ({}) as Record<string, unknown>);
     const studentNo = typeof body.studentNo === "string" ? body.studentNo : "";
     const name = typeof body.name === "string" ? body.name : "";
-    if (!studentNo.trim() || !name.trim()) {
-      return json({ ok: false, error: "MISSING_CREDENTIALS" }, 400);
-    }
-
-    const student = await signIn(studentNo, name);
-    if (!student) return json({ ok: false, error: "NOT_IN_ROSTER" }, 403);
+    // 演示口径：留空、乱填、不在白名单都放行（现场不能卡在登录页）。
+    const student = await signInDemo(studentNo, name);
     return json({ ok: true, student });
   } catch (error) {
     return handleError(error);
