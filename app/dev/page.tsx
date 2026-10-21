@@ -17,6 +17,7 @@ import { getDefinition } from "@/lib/engine";
 import { getStudent, isTeacher } from "@/lib/session";
 import { DevPanel } from "@/components/devtools/dev-panel";
 import type { DevExperiment, DevEnvInfo, DevSessionInfo } from "@/components/devtools/types";
+import { devtoolsEnabled } from "@/components/devtools/devtools-enabled";
 import { buildHazards } from "./debug-data";
 
 export const metadata: Metadata = {
@@ -26,14 +27,6 @@ export const metadata: Metadata = {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-/** 生产默认关闭；DEVTOOLS=1 显式开启，DEVTOOLS=0 显式关闭。 */
-function devtoolsEnabled(): boolean {
-  const flag = process.env.DEVTOOLS?.trim().toLowerCase();
-  if (flag === "1" || flag === "true" || flag === "on") return true;
-  if (flag === "0" || flag === "false" || flag === "off") return false;
-  return process.env.NODE_ENV !== "production";
-}
 
 export default async function DevPage() {
   if (!devtoolsEnabled()) notFound();

@@ -27,3 +27,9 @@
 - 文件：`app/dev/{page,debug-data}.ts(x)`、`components/devtools/{dev-panel,dev-session,dev-run-inspector,dev-hazard-list,types}.tsx`、`devtools.module.css`；`TODO.md` 追加 §10。
 - 开关：`DEVTOOLS=1` 强开 / `DEVTOOLS=0` 强关 / 未设置时仅非 production 开启；关闭时整页 404，全站无入口，不参与上线验收。删 `app/dev/**` + `components/devtools/**` 即整体移除。
 - 本地入口：当前主 dev（3003）`http://localhost:3003/dev`；隔离验证截图见 `%TEMP%\chemlab-shots\devtools\`。
+
+## 附加交付（2026-10-21）：悬浮 Dev Dock
+- 文件：`components/devtools/dev-dock{,-experiments,-loader,-types}.tsx`、`dev-dock.module.css`、`devtools-enabled.ts`；`app/layout.tsx` 两行挂载（`devtoolsEnabled()` + `next/dynamic ssr:false`）。
+- 位置左下 `left:16 bottom:76`（避开 Next dev 左下角调试圆点，否则点不到）；320px 抽屉；点「进实验」自动收起；生产不加载其 JS/CSS。
+- 截图 `%TEMP%\chemlab-shots\dev-dock\`；与 `/dev` 同一开关，删 `components/devtools/**` 即整体移除。
+- 文件补充：快捷跳转在 components/devtools/dev-dock-shortcuts.tsx；最终版 dev-dock.tsx 278 行。

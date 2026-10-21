@@ -52,3 +52,26 @@
 ### 证据
 - home-1440 / home-390 / login-1440 / login-390 均 `scrollWidth === clientWidth`。
 - tsc 0；lint 0 error（8 个既有 warning）。
+
+## 第四轮：登录页背景换成实验器具线稿（frontend-design）
+### 新文件
+- components/portal/login-scene.tsx（143 行）+ login-scene.module.css（约 120 行）——纯 SVG 线稿，分近景/远景/窄屏三版。
+- app/login/page.tsx：去掉校园图与 3 个器皿漂浮，改为 <LoginScene />；保留浅蓝网格、白卡、tab 滑动条、focus 光圈。
+
+### 画的器具（共 11 件）
+近景（左下，opacity 0.235）：酸式滴定管（管身+刻度+玻璃活塞+尖嘴）、铁架台（底座+立杆+滴定管夹+螺丝）、250 mL 锥形瓶（细颈+三角瓶身+刻度）、洗瓶（瓶身+盖+弯管）、称量瓶（矮筒+磨口盖）、坩埚（斜壁+盖）。
+远景（右上，opacity 0.125）：容量瓶（平底梨形+长颈+磨口塞+颈部刻度）、量筒（直筒+圆弧底+分度）、烧杯（杯口+倾倒嘴+分度）、漏斗+滤纸锥（60 度锥体+直管）、玻璃棒。
+窄屏另排一版：上右滴定管、左上容量瓶、台面锥形瓶+烧杯+量筒。
+
+### 动效
+- 滴定管滴液：2.4s 一滴，translateY 0→100px + opacity，cubic-bezier(.45,0,.9,.55) 模拟重力。
+- 锥形瓶液面：3.5s scaleY .98↔1.01，transform-origin center bottom。
+- 锥形瓶 / 烧杯气泡：8s 上浮 -58px，三个不同负延迟错开。
+- 器具本身不整体漂浮（已删掉原来 21~30s 的 float）。
+- reduced-motion：drop/bubble/sway 全部 animation none，滴液 opacity 0。
+
+### 证据
+- 1440/390：scrollWidth === clientWidth；390 输入框 48px。
+- reduced-motion 实测：dropAnim none, dropOpacity 0, swayAnim none。
+- tsc 0；lint 0 error（9 个既有 warning，均不在本次文件）。
+- 截图：login-1440.png、login-390.png、login-reduced-motion.png。

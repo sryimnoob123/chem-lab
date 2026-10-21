@@ -61,3 +61,14 @@
 - 环境坑（重要，供后续 Playwright 用）：① 同一 checkout 只能跑一个 `next dev`（dev server 单实例锁），自起第二例会提示复用已有端口；我用「源码完整副本（含 node_modules）+ 独立 `.pgdata-dev13`」跑 :3007，跑完已删副本；② 用 `127.0.0.1` 访问 Next dev 时 HMR websocket 被拒、**React 不 hydrate、点击无反应**，Playwright 必须用 `http://localhost:<port>`；③ 仍然**不能 `taskkill /F` 正在跑 dev 的 PGlite**——11:22 复现了一次 `RuntimeError: Aborted()`（删 postmaster.pid 也救不回），只能用 Ctrl+C/优雅退出，或干脆用一次性 PGLITE_DIR。
 - 改了哪些文件：新增 `app/dev/**`、`components/devtools/**`；修改 `TODO.md`（追加 §10）。未动任何正式页面/`lib/**`/`db/**`/配置。
 
+
+## 2026-10-21 16:50 · 完成：悬浮 Dev Dock（开发调试用，不参与上线验收）
+- 做了什么：新增 `components/devtools/dev-dock.tsx`（外壳/身份/快捷）、`dev-dock-experiments.tsx`（实验直达 + 进度锁）、`dev-dock-loader.tsx`（`next/dynamic` + `ssr:false`）、`dev-dock-types.ts`、`dev-dock.module.css`、`devtools-enabled.ts`（共享开关）；`app/layout.tsx` 仅加两行挂载（`devtoolsEnabled()` 为真才渲染）；`app/dev/page.tsx` 改用共享开关；`TODO.md` §10 追加一条。
+- 四组：身份（学生 20250101 一键登录/登出 + 教师 2026 解锁 + cookie 状态）、实验直达（10 个实验「进实验 `?force=1` / 报告」+ 清全部前测）、进度锁（逐实验 前测已/未解锁 + run 进行中 + 解锁/重置）、快捷跳转（门户/实验列表/教师端/方案设计/调试台/场景预览）。
+- 位置：左下角 `left:16 bottom:76`（抬高 60px 避开 Next dev 左下角调试圆点，`nextjs-portal` 会拦截点击），抽屉宽 320、相对悬浮球 `bottom:56`、最大高 72vh；右侧「预习」浮泡不受影响；点「进实验 / 报告」自动收起抽屉。
+- 开关：生产（`NODE_ENV=production` 且未设 `DEVTOOLS`）时 layout 不渲染 loader → dock 的 JS/CSS 都不加载；开发默认显示；`DEVTOOLS=1` 强制开、`DEVTOOLS=0` 强制关（与 `/dev` 同口径）。
+- 证据（ego lite，隔离副本 dev :3011 + `.pgdata-dev19`，`http://localhost:3011`）：悬浮球存在 → 抽屉打开；学生登录后 `GET /api/session` = `{ok,20250101 周若曦 化工 25-1 班}`；教师解锁后 `GET /api/teacher/roster?limit=1` = 200；exp02 解锁后 `localStorage['bopbps:v1:exp02:pre']='pass'`；点「进实验」→ `/exp/exp01?force=1`、`[data-demo-id="demo-finish"]` 渲染、抽屉自动收起（DOM 中 drawer=0）、dock 仍在。悬浮球 rect `{x:16,y:822,w:71,h:44}`（1707×942）。截图 `%TEMP%\chemlab-shots\dev-dock\{01-home-dock-closed,02-dock-open,03-dock-logged-in,04-exp01-workbench}.png`。
+- 环境坑：ego lite 浏览器 profile 会保留 `chem_sid`/`chem_teacher` cookie，复测要先登出；Next dev 的 `nextjs-portal` 圆点位于左下角，会拦截悬浮球点击 → dock 必须抬高；`npx tsc --noEmit` 期间 `lib/catalog.ts` 曾因别人并行编辑短暂报错，稍后自愈。
+- 改了哪些文件：新增 `components/devtools/dev-dock*`、`devtools-enabled.ts`；修改 `app/layout.tsx`、`app/dev/page.tsx`、`TODO.md`。未动 `lib/**`、`db/**`、`package.json`、`app/page.tsx`、`app/globals.css`、`app/exp/**`。
+- 下一步/阻塞：无；隔离副本与 :3011 已清理，3001（生产 standalone）/3002 未受影响。
+- 补充（16:58）：快捷跳转拆到 `components/devtools/dev-dock-shortcuts.tsx`，`dev-dock.tsx` 278 行、CSS 299 行（全部 ≤300）；最终代码在仓库主 dev :3002 复测：4 组区块都在、实验行 10、进度锁行 10、点「实验列表」跳转 `/experiments` 且抽屉自动收起，截图 `%TEMP%\chemlab-shots\dev-dock\05-dock-final.png`。

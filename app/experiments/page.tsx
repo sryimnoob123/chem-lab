@@ -75,7 +75,8 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
             </Reveal>
             <ol className="cat-list" data-locked={group.unlocked ? "false" : "true"}>
               {group.items.map((item, i) => {
-                const open = group.unlocked && item.playable;
+                // 已完成的实验永远可进（回看/重做），不受档位锁定限制
+                const open = item.playable && (group.unlocked || Boolean(item.completed));
                 return (
                   <Reveal key={item.id} as="li" index={Math.min(i, 5)} className="cat-row" data-state={open ? "open" : "locked"}>
                     <Link

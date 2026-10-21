@@ -83,5 +83,6 @@
 - **生产默认行为**：不设 `DEVTOOLS` 时 `/dev` 整页 404；全站没有任何入口链接指向 `/dev`，页面自身 `robots: noindex`。
 - **部署时怎么关**：不设 `DEVTOOLS`（或显式 `DEVTOOLS=0`）即可；线上排障确实需要时再临时设 `DEVTOOLS=1` 重新部署，用完删掉。
 - **不参与验收**：第 8 节的 5 条上线验收不含 `/dev`，截图基线也不需要它。
-- **实现文件**：`app/dev/**` + `components/devtools/**`（只读这两个目录即可整体删除，不影响正式页面）。
+- **悬浮 Dev Dock**：任意页面左下角的「DEV」按钮（`components/devtools/dev-dock*.tsx`），点开是 320px 抽屉：身份（一键学生/教师登录）、10 实验直达、进度锁（前测解锁/重置）、快捷跳转；与 `/dev` 用同一开关，生产构建不加载它的 JS/CSS。
+- **实现文件**：`app/dev/**` + `components/devtools/**`（只读这两个目录即可整体删除，不影响正式页面；`app/layout.tsx` 里只有两行挂载代码）。
 

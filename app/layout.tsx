@@ -7,6 +7,8 @@ import "./styles/app.css";
 import "./styles/motion.css";
 import "./styles/svg-motion.css";
 import "./styles/demo.css";
+import { DevDockLoader } from "@/components/devtools/dev-dock-loader";
+import { devtoolsEnabled } from "@/components/devtools/devtools-enabled";
 
 export const metadata: Metadata = {
   title: {
@@ -26,7 +28,10 @@ export default function RootLayout({
         {/* 霞鹜文楷：97 个 subset 分片，只能用 link 引入，不进 Tailwind 处理 */}
         <link rel="stylesheet" href="/fonts/lxgw-wenkai/lxgwwenkai-regular.css" />
       </head>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        {children}
+        {devtoolsEnabled() ? <DevDockLoader /> : null}
+      </body>
     </html>
   );
 }

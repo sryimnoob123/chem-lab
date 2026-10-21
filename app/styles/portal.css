@@ -550,6 +550,22 @@
   vertical-align: 1px;
 }
 
+/* 窄屏：锁提示要换行，否则长句会撑出横向滚动 */
+@media (max-width: 640px) {
+  .cat-group__head {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .cat-group__progress,
+  .cat-group__lock {
+    margin-left: 0;
+    flex-basis: 100%;
+    white-space: normal;
+    line-height: 1.5;
+  }
+}
+
 
 .cat-group__sep {
   display: block;
