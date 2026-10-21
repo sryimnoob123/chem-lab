@@ -12,6 +12,16 @@
 - 部署（`.coze [deploy]`）→ `.cozeproj/scripts/deploy_build.sh`（`npm ci` + `npm run build`）+ `deploy_run.sh`（`npm run start -- --port ${PORT:-5000}`）。
 - 构建命令 `npm run build`、启动命令 `npm run start`（端口取平台注入的 `PORT`，缺省 5000）。Node 22。
 
+### 0.2 线上数据库（扣子部署必读，2026-10 踩坑）
+- 扣子线上容器文件系统**只读**：只要 `lib/db/index.ts` 的 `resolveDatabaseUrl()` 返回 null，就会 fallback 到
+  PGlite 本地文件模式，尝试 mkdir `/opt/bytefaas/.pgdata` → EROFS → `/api/experiments` 等接口 500。
+- 因此**线上必须注入真实 PostgreSQL 连接串**才能跑通数据接口。代码按优先级探测：
+  `DATABASE_URL` / `COZE_DATABASE_URL` / `COZE_PG_URL` / `COZE_POSTGRES_URL` / `COZE_DB_URL` / `POSTGRES_URL`
+  （须为 `postgres://` 或 `postgresql://` 开头），或拆分段 `COZE_PG_HOST`|`PGHOST` + `COZE_PG_USER`|`PGUSER`
+  + `COZE_PG_DATABASE`|`PGDATABASE`（host/user/database 三者齐全，端口 `COZE_PG_PORT`|`PGPORT` 缺省 5432）。
+- 本地开发/预览无 `DATABASE_URL` 时走 PGlite（`.pgdata`，可写），`/api/experiments` 正常 200。
+- 详见 `lib/db/index.ts` 注释与 `docs/扣子部署适配.md`。
+
 ## 1. 语言与栈（定死，别自由发挥）
 - **TypeScript strict**，不开 `any` 逃生门（要逃就用 `unknown` + 收窄）。
 - **Next.js App Router**：默认 Server Component；只有需要事件/状态的文件才 `'use client'`。
