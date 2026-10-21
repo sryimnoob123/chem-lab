@@ -35,3 +35,9 @@
 - 证据：`%TEMP%\chemlab-shots\incident-L1-reminder-exp09-step5.png`、`incident-L2-deduction-exp01-step1.png`、`incident-L3-serious-exp09-step1.png`、`incident-L4-terminate-exp01-step7.png`；Playwright 断言：看板/右栏 0 重叠、L3 stageDim .18、L4 dim .34/红框 2px/两按钮 44px+可点、pageerror 0；`tsc` CLEAN、`npm run lint` 0 error、`vitest` 36 files/519 passed。
 - 改了哪些文件：`components/exp/incident/{IncidentBanner.tsx,incident-banner.module.css,incident-terminate.module.css,incident-retry.module.css,use-count-up.ts,index.ts}`、`components/exp/scene/fx/{index.tsx,fx-impact.module.css}`。
 - 下一步 / 阻塞：workbench 接线还差 `ui.event?.level` 条件 + `level`/`deduction`/`onRetry` 三个 props（已发 Lead 精确 diff）；修完 L1/L2 才会出条，L4 才有两动作。
+
+## 2026-10-22 04:45 · 完成：真实链路 L1~L4 截图（:3001 prod）+ L1/L2 收成细条
+- 做了什么：在 prod build 上按真实操作触发四级（登录→实验页第1步→点陷阱），验证 workbench 接线后的真实效果；发现 L1/L2 与结果条/右栏三重复读，把 L1/L2 从三行收成「单行怎么改」细条（L3/L4 仍三行），更贴合用户「细边条」口径。为截到新样式：停 3001 → `npm run build`（04:42）→ `scripts\restart-prod.ps1`（DEVTOOLS=1 保留，/dev=200）。
+- 证据：`incident-real-L1-exp01-step1-wipe.png`、`incident-real-L2-exp01-step1-oven.png`、`incident-real-L3-exp09-step1-bare-hands.png`、`incident-real-L4-exp03-step1-open-acid.png`（均在 `%TEMP%\chemlab-shots`）；每级都实测 `data-level` 与期望一致；看板/右栏/结果条 0 重叠；L4 dim .34/红框 2px/z=8、三按钮（含关闭）44px 且 elementFromPoint 命中；pageerror 0。
+- 改了哪些文件：`components/exp/incident/{IncidentBanner.tsx,incident-banner.module.css}`；构建产物 `.next` 更新并重启 3001。
+- 下一步 / 阻塞：无。若 workbench-ux 仍觉得和结果条重复，可只对 L1/L2 隐藏 ResultBar 的失败文案（他们的文件），banner 建议保留——四级视觉需要它。

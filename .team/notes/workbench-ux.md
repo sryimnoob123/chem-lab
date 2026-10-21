@@ -124,3 +124,12 @@
 - 最终证据：`tsc 0`；`lint 0 error / 15 warning`；`vitest 519 passed`（36 files，04:32 稳定跑）；:3001 实测 hint 三级 / 三段式 / 移动端全过。
 - 空闲自动提示实测（`.team/idle-check.mjs`，exp09）：t=0 与 t=15s 看板第 4 行仍是本步指引、`data-level=0`；
   **t=27s（阈值 24s）**自动浮出 L1「这一步出了安全问题…」，灯泡变 `H1 1/3` → 20~30s 无操作自动 L1 达标。
+
+## 2026-10-22 04:55 · 清过期 TODO + demo 401 复测（构建没更新）
+- Lead 批准清理 `askHint` 上方那段过期 TODO（原 L689-700）。已用 node fs 按行替换成 6 行干净注释：
+  唯一入口（灯泡/H/24s）、上报 `{kind:"hint"}`、服务端落审计行→replay→`HINT_DEDUCT_BY_LEVEL` 求和、`?play=demo` 不落库。
+  **只动注释，`askHint` 逻辑零改动**；文件 U+FFFD 行数 29 → **23**（剩余全在注释）。`npx tsc --noEmit` 0、`npm run lint` 0 error / 15 warning。
+- `?play=demo` 401 复测（`.team/demo-401-check.mjs`）：readonly badge 正常（「演示模式 · 不记录」），仍是 **1 条 `401 /api/session`**，`/api/runs` 已不发。
+  查证构建时间：`.next/BUILD_ID` **04:42:40**、`standalone/server.js` **04:42:43**、CSS chunk **04:42:35**、node pid 1668 启动 **04:43:08**
+  → **:3001 仍是 04:42 旧构建，Lead 说的新 build 没落到这台机器的 `.next`**。已请 Lead 重新 `npm run build` + `restart-prod.ps1`；
+  起来后用同一脚本复测，验收口径 = Network 里没有 `/api/session`。

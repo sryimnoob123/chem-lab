@@ -687,16 +687,11 @@ export function Workbench({
   const resolveCurrentDrop = (reagentId: string) => resolveDrop(step, reagentId, performed);
 
   /**
-   * 取一条提示（唯一入口：灯�?/ 键盘 H / 24s 空闲自动）�?
-   * 三级阶梯与扣分由 use-workbench �?revealHint 决定；用完时不再派发�?
-   *
-   * TODO(结算�?· Lead)：提示使用上报。服务端 replay 目前只从「动作引发的 hint 事件」统计，
-   * 拿不�?学生主动点了几次灯泡"。建议加一条入口后在这里调用：
-   *   void fetch(`/api/runs/${runId}/events`, { method: "POST", headers: { "content-type": "application/json" },
-   *     body: JSON.stringify({ hint: { stepIndex: ui.exp.stepIndex, level: hintNextTier, deduct: hintDeductPoints,
-   *       competency: step.judge.competency[0] ?? "S1" } }) });
-   * 服务�?appendRunEvents 兼容 body.hint �?落一�?hint 记录（不�?state / 不推�?stepIndex），
-   * replay.collectHints 收进 hints，score.ts �?hint-ladder �?1/3/5 求和�?
+   * 取一条提示（唯一入口：灯泡 / 键盘 H / 24s 空闲自动）。
+   * 三级阶梯与扣分由 use-workbench 的 revealHint 决定；用完时不再派发。
+   * 学生主动取提示会上报 `{ kind: "hint" }`（报告记「提示 k 次 · −X 分」）：
+   * 服务端 appendRunEvents 落审计行 → replay 收集 → 计分按 HINT_DEDUCT_BY_LEVEL 求和；
+   * 演示只读模式（`?play=demo`）不落库。
    */
   const askHint = useCallback(() => {
     if (ui.exp.done || hintExhausted) return;

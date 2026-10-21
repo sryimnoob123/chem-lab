@@ -53,8 +53,9 @@ export function DevDock() {
   const load = useCallback(async () => {
     try {
       const res = await fetch("/api/session");
-      if (res.ok) {
-        const body: unknown = await res.json().catch(() => null);
+      // GET /api/session 匿名返回 200 + ok:false（不再是 401），所以要看 body.ok 而不是 res.ok
+      const body: unknown = await res.json().catch(() => null);
+      if (res.ok && isRecord(body) && body.ok === true) {
         const info = isRecord(body) && isRecord(body.student) ? body.student : null;
         setStudent(
           info && typeof info.studentNo === "string" && typeof info.name === "string"
