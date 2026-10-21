@@ -27,9 +27,11 @@ export default defineConfig({
   webServer: externalBase
     ? undefined
     : {
-        command: "npm run dev",
+        // 裸跑 e2e 时自动建好独立库并播种，避免首页"读取失败"导致 smoke 失败
+        command: "node db/init.mjs && node db/seed-demo.mjs && npm run dev",
         url: "http://127.0.0.1:3000",
         reuseExistingServer: true,
-        timeout: 180_000,
+        timeout: 300_000,
+        env: { PGLITE_DIR: ".pgdata-e2e" },
       },
 });
