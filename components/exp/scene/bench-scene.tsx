@@ -21,11 +21,12 @@ const FX_MS: Record<SceneFx, number> = {
 export type BenchReaction = { vesselId: string; outcome: SceneOutcome; key: number };
 
 const LABEL_POSITION: Readonly<Record<string, { y: number; contentY: number }>> = {
-  burette: { y: 356, contentY: 368 },
-  flask: { y: 356, contentY: 368 },
-  beaker: { y: 356, contentY: 368 },
-  "tube-a": { y: 356, contentY: 368 },
-  "tube-b": { y: 356, contentY: 368 },
+  /* 名称 16px + 内容 14px：间距 12 会叠字（"容量瓶 100 mL" 压住"空"），拉到 26 */
+  burette: { y: 358, contentY: 384 },
+  flask: { y: 358, contentY: 384 },
+  beaker: { y: 358, contentY: 384 },
+  "tube-a": { y: 358, contentY: 384 },
+  "tube-b": { y: 358, contentY: 384 },
 };
 
 /** 一次投放的即时手感：成功弹一下（+ 光环）/ 拒收抖一下。 */

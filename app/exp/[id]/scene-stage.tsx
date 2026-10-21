@@ -20,6 +20,9 @@ import styles from "./workbench.module.css";
  */
 const EXP01_BENCH_VESSELS = ["beaker", "volumetric", "tube-a", "tube-b"];
 const EXP03_BENCH_VESSELS = ["beaker", "volumetric", "tube-a", "tube-b", "flask"];
+/** exp09 前两步（配 500 mL 溶液）也走台面：只要烧杯/容量瓶/试管。
+ *  绝不能落回全量——画布已收到 x>=370，滴定管会被排到 x=-426（2026-10-21 回归）。 */
+const EXP09_BENCH_VESSELS = ["beaker", "volumetric", "tube-a", "tube-b"];
 
 /**
  * 3D 试点（?scene=3d）：three.js 场景只在客户端加载，ssr:false；
@@ -76,6 +79,16 @@ const EXP03_BENCH_CONTENTS: Readonly<Record<string, readonly string[]>> = {
   volumetric: ["water"],
 };
 
+/** exp09 前两步：烧杯装 NaOH（配标准溶液），容量瓶待定容；标签不能再写 Na₂CO₃。 */
+const EXP09_BENCH_CONTENTS: Readonly<Record<string, readonly string[]>> = {
+  burette: [],
+  flask: [],
+  beaker: ["naoh"],
+  "tube-a": [],
+  "tube-b": [],
+  volumetric: [],
+};
+
 const EXP04_BENCH_CONTENTS: Readonly<Record<string, readonly string[]>> = {
   burette: [],
   flask: [],
@@ -106,6 +119,7 @@ export function SceneStage({
   nextReagent,
   onQuickAction,
   forceBench,
+  benchInstrument,
   children,
 }: {
   expId?: string;
@@ -128,6 +142,8 @@ export function SceneStage({
   onQuickAction?: () => void;
   /** 强制走台面场景（exp09 前两步是配溶液，不该显示滴定台）。 */
   forceBench?: boolean;
+  /** 台面场景摆哪台仪器：balance / ph / none（不传按 expId 走默认）。 */
+  benchInstrument?: "balance" | "ph" | "none";
   children?: ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -334,15 +350,19 @@ export function SceneStage({
                     ? EXP01_BENCH_VESSELS
                     : expId === "exp03"
                       ? EXP03_BENCH_VESSELS
-                      : undefined
+                      : expId === "exp09"
+                        ? EXP09_BENCH_VESSELS
+                        : undefined
                 }
-                instrument={expId === "exp03" ? "ph" : "balance"}
+                instrument={benchInstrument ?? (expId === "exp03" ? "ph" : "balance")}
                 contents={
                   expId === "exp03"
                     ? EXP03_BENCH_CONTENTS
                     : expId === "exp04"
                       ? EXP04_BENCH_CONTENTS
-                      : BENCH_CONTENTS
+                      : expId === "exp09"
+                        ? EXP09_BENCH_CONTENTS
+                        : BENCH_CONTENTS
                 }
                 reaction={null}
                 selectedReagentId={null}

@@ -889,6 +889,8 @@ export function Workbench({
             nextReagent={nextReagent}
             // exp09 前两步是"配 500 mL 溶液"，按步骤切到台面（用户 2026-10-21 报：满管蓝液却显示 0.00）
             forceBench={isExp09 && ui.exp.stepIndex < 2}
+            // 第 1 步称 NaOH 要天平；第 2 步配盐酸不需要，别让台面凭空摆一台
+            benchInstrument={isExp09 ? (ui.exp.stepIndex === 0 ? "balance" : "none") : undefined}
             onQuickAction={() => {
               // 点画面里的天平：和按 1 一样，直接用当前建议动作
               if (suggested && !ui.exp.done) choose(suggested.choiceId);
