@@ -36,11 +36,11 @@ export default function Cover() {
       <main className="cover-hero">
         <div className="cover-hero__inner">
           <span className="cover-hero__rule" aria-hidden="true" />
-          <h1 className="cover-hero__title">无机及分析化学实验</h1>
+          <h1 className="cover-hero__title" data-demo-id="demo-home-hero-title">无机及分析化学实验</h1>
           <p className="cover-hero__sub">
             河南大学 · 化学化工学院 · 03600004 · 36 学时 · 10 个实验
           </p>
-          <p className="cover-hero__slogan">把每一次读数，写进同一本台账。</p>
+          <p className="cover-hero__slogan" data-demo-id="demo-home-readout">把每一次读数，写进同一本台账。</p>
 
           <div className="cover-hero__actions">
             <Link className="btn btn--primary cover-hero__cta" href="/login" data-demo-id="demo-cover-cta">
@@ -48,7 +48,7 @@ export default function Cover() {
             </Link>
           </div>
 
-          <section className="cover-exp" aria-label="实验目录">
+          <section className="cover-exp" aria-label="实验目录" data-demo-id="demo-home-ledger">
             <ExperimentList />
           </section>
         </div>
