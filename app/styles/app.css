@@ -19,7 +19,8 @@
   height: 54px;
   padding: 0 20px;
   background: var(--bench-ink);
-  color: #fff;
+  /* 之前是 color:#fff——顶栏换成纸白后品牌名变成白底白字（红队 2026-10-21 报） */
+  color: var(--ink);
 }
 
 .app-bar__brand {

@@ -403,8 +403,9 @@
   }
 }
 
+/* 纸白台面上必须用深青绿：旧值 #b7e3d6 是暗场配色，白底对比度只有 1.29:1（红队 2026-10-21 实测） */
 .resultLine[data-tone="success"] {
-  color: #b7e3d6;
+  color: var(--jade-600);
 }
 
 .resultLine[data-tone="warn"] {
@@ -419,12 +420,13 @@
   color: var(--bench-text);
   font-size: 10px;
   line-height: 1.3;
-  opacity: 0.62;
+  opacity: 0.85;
 }
 
 /* 600ms 后滑出：信息出现，动画只做位移+透明度 */
 .resultNext {
-  color: var(--river-100);
+  /* 旧值 var(--river-100)=#e6e9f7 在纸白底上几乎看不见，改深墨 */
+  color: var(--bench-text);
   font-size: 11px;
   line-height: 1.35;
   animation: guide-next 220ms ease-out;

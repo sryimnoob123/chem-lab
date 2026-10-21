@@ -121,14 +121,11 @@ export function BenchScene({
         onClearSelection();
       }}
     >
-      <svg className={styles.benchSvg} viewBox="0 50 940 340" role="img" aria-label="实验台：玻璃器皿与分析天平">
-        {/* 台面与铁架台 */}
+      <svg className={styles.benchSvg} viewBox="370 60 570 330" role="img" aria-label="实验台：玻璃器皿与分析天平">
+        {/* 台面（铁架台已删除：exp01/exp03 都不用滴定台，空夹子会被当成"这是什么"） */}
         <g aria-hidden="true">
-          <rect x="0" y="340" width="940" height="80" fill="var(--bench)" />
-          <line x1="0" y1="340" x2="940" y2="340" stroke="var(--line)" strokeWidth="1" />
-          <ellipse cx="64" cy="340" rx="22" ry="5" fill="#4A5768" opacity="0.16" />
-          <line x1="64" y1="92" x2="64" y2="340" stroke="#4A5768" strokeOpacity="0.6" strokeWidth="2" />
-          <rect x="58" y="206" width="26" height="4" rx="1" fill="#4A5768" opacity="0.55" />
+          <rect x="370" y="340" width="570" height="80" fill="var(--bench)" />
+          <line x1="370" y1="340" x2="940" y2="340" stroke="var(--line)" strokeWidth="1" />
           <text x="924" y="402" textAnchor="end" className={styles.benchMark}>
             实验台
           </text>
@@ -136,7 +133,21 @@ export function BenchScene({
 
         {/* 分析天平（称量类实验的识别物，静态外形；读数在 step-demo 文案里表达） */}
         {instrument === "balance" ? (
-        <g data-demo-id="demo-scene-instrument-balance" aria-hidden="true" transform="translate(792 214)">
+        <g
+          data-demo-id="demo-scene-instrument-balance"
+          transform="translate(792 214)"
+          role="button"
+          tabIndex={0}
+          aria-label="分析天平：点一下使用建议动作"
+          style={{ cursor: "pointer" }}
+          onClick={() => onActivateVessel("balance")}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              onActivateVessel("balance");
+            }
+          }}
+        >
           {/* 底座 + 立柱 */}
           <rect x="0" y="108" width="132" height="18" rx="3" fill="#4A5768" opacity="0.85" />
           <rect x="56" y="44" width="20" height="64" fill="#4A5768" opacity="0.7" />

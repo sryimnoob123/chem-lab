@@ -481,8 +481,17 @@ export function Workbench({
     correct: ui.event?.correct,
     deduction: ui.event?.deduction ?? 0,
   });
+  // stepDoneKey = 结果条上那条事件属于"上一步"（步骤刚推进）。
+  // 这时再显示上一步的文案，会和看板上的"第 N 步"打架（红队 2026-10-21 报：第 2 步校准，
+  // 底部还写"容量瓶、量筒自然晾干"）。改成一句进入当前步的说明。
   const resultLine =
-    notice ?? sceneCaption ?? (ui.event ? resultCopy.line : "点建议动作或拖试剂");
+    notice ??
+    sceneCaption ??
+    (stepDoneKey
+      ? `进入第 ${stepNo} 步 · ${step.title}`
+      : ui.event
+        ? resultCopy.line
+        : "点建议动作或拖试剂");
   const resultLine2 = ui.event ? resultCopy.line2 : undefined;
   const dots: StepDotState[] = stepStates.map((state) =>
     state === "done" ? "done" : state === "current" ? "current" : "todo",
@@ -503,7 +512,7 @@ export function Workbench({
   const toleranceUnit = tolerance?.unit ?? "";
   const toleranceName = tolerance ? PARAM_NAMES[tolerance.paramKey] ?? tolerance.paramKey : "";
   const readingNote =
-    ui.exp.stepIndex < 3 ? "滴定管尚未装液" : reading === 0 ? "已调零，待滴定" : "凹液面读数";
+    ui.exp.stepIndex < 4 ? "滴定管尚未装液" : reading === 0 ? "已调零，待滴定" : "凹液面读数";
   const hasAbnormality = ui.exp.incidents.length + ui.exp.violations.length > 0;
 
   /**
@@ -878,6 +887,12 @@ export function Workbench({
             onDropRejected={handleDropRejected}
             stepDoneKey={stepDoneKey}
             nextReagent={nextReagent}
+            // exp09 前两步是"配 500 mL 溶液"，按步骤切到台面（用户 2026-10-21 报：满管蓝液却显示 0.00）
+            forceBench={isExp09 && ui.exp.stepIndex < 2}
+            onQuickAction={() => {
+              // 点画面里的天平：和按 1 一样，直接用当前建议动作
+              if (suggested && !ui.exp.done) choose(suggested.choiceId);
+            }}
           >
             {fx}
           </SceneStage>

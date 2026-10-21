@@ -807,6 +807,28 @@
   padding: 0;
   list-style: none;
 }
+/* 16:9 占位缩略图：没有实拍图，用"台面渐变 + 大编号水印"撑住版面，
+   否则三张卡是无图扁条（红队 2026-10-21 报列表页第一印象差）。 */
+.cat-card__thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  margin: -16px -16px 10px;
+  border-bottom: 1px solid var(--line);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 82%, rgba(74, 87, 104, 0.10), transparent 62%),
+    linear-gradient(158deg, #f7f8f7 0%, #ecefef 100%);
+}
+.cat-card__thumbNo {
+  position: absolute;
+  left: 14px;
+  bottom: 8px;
+  font-size: 46px;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  color: rgba(74, 87, 104, 0.15);
+}
 .cat-card {
   display: flex;
   flex-direction: column;

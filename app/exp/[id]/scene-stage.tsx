@@ -104,6 +104,8 @@ export function SceneStage({
   onDropRejected,
   stepDoneKey,
   nextReagent,
+  onQuickAction,
+  forceBench,
   children,
 }: {
   expId?: string;
@@ -122,6 +124,10 @@ export function SceneStage({
   stepDoneKey?: number;
   /** 场景内流程指引：下一步该用哪瓶 → 试剂架微亮 + 锥形瓶脉冲（和看板指向同一动作）。 */
   nextReagent?: string | null;
+  /** 点台面上的仪器（如天平）＝按 1，直接使用当前建议动作。 */
+  onQuickAction?: () => void;
+  /** 强制走台面场景（exp09 前两步是配溶液，不该显示滴定台）。 */
+  forceBench?: boolean;
   children?: ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -149,6 +155,7 @@ export function SceneStage({
    * 打开是滴定管+锥形瓶，跟"称量配制"完全对不上（用户 2026-10-21 报的硬伤①）。
    */
   const isBenchScene =
+    forceBench === true ||
     expId === "exp01" ||
     expId === "exp08" ||
     expId === "exp02" ||
@@ -269,7 +276,9 @@ export function SceneStage({
                 ? "台上：离心管 · 烧杯 · 试管 · 容量瓶 · Na₂CO₃ / 蒸馏水"
                 : expId === "exp08"
                   ? "台上：分析天平 200 g / 0.1 mg · 烧杯 · Na₂CO₃ 试样"
-                  : "台上：酸式滴定管 50 mL / 锥形瓶 250 mL"}
+                  : isBenchScene
+                    ? "台上：分析天平 · 烧杯 · 容量瓶 · 试剂"
+                    : "台上：酸式滴定管 50 mL / 锥形瓶 250 mL"}
         </p>
       </aside>
 
@@ -341,7 +350,10 @@ export function SceneStage({
                 feedback={null}
                 onFeedbackEnd={() => undefined}
                 onDropReagent={() => undefined}
-                onActivateVessel={() => undefined}
+                onActivateVessel={(id) => {
+                  // 台面场景：点天平 = 按 1（用户 2026-10-21 要求）
+                  if (id === "balance") onQuickAction?.();
+                }}
                 onClearSelection={() => undefined}
                 onReveal={() => undefined}
               />
@@ -356,8 +368,9 @@ export function SceneStage({
             data-drop-target={targetActive ? "true" : "false"}
             data-over={flow.overFlask ? "true" : "false"}
             data-next={nextReagent ? "true" : "false"}
+            data-dragging={flow.draggingId ? "true" : "false"}
             data-demo-id="demo-scene-drop-flask"
-            aria-label="锥形瓶：把选中的试剂放进来"
+            aria-label={isBenchScene ? "实验台：把选中的试剂放进来" : "锥形瓶：把选中的试剂放进来"}
             onClick={() => {
               if (selectedId) flow.tapTarget(selectedId);
             }}

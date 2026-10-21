@@ -94,6 +94,9 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                   href={`/exp/${item.id}`}
                   data-demo-id={`demo-catalog-${item.id}`}
                 >
+                  <span className="cat-card__thumb" aria-hidden="true">
+                    <span className="cat-card__thumbNo mono">{item.no}</span>
+                  </span>
                   <span className="cat-card__top">
                     <span className="cat-card__no mono">{item.no}</span>
                     <span className="cat-card__hours mono">{item.hours} 学时</span>
@@ -102,13 +105,6 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                   <span className="cat-card__desc">{item.desc}</span>
                   <span className="cat-card__foot">
                     <span className="mono">{item.kind}</span>
-                    {item.bestScore != null ? (
-                      <span className="cat-card__score mono">{item.bestScore} 分</span>
-                    ) : (
-                      <span className="cat-card__score mono" data-empty="true">
-                        未做
-                      </span>
-                    )}
                   </span>
                 </Link>
               </li>

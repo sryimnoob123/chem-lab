@@ -507,13 +507,15 @@
 
 /* 台面场景：常驻态不画框（796×270 的大框罩住整排器皿，看着像卡片边框）；
    只有拖拽悬停/选中时才给一条淡虚框，提示"放这儿"。 */
-/* 台面场景：热区彻底不画边线（常驻/脉冲都不要），只保留"拖拽悬停"时的淡虚框。
-   796×270 的框罩住整排器皿，看着像卡片边框（红队 2026-10-21 报）。 */
+/* 台面场景：热区不画边线，也不接收点击——之前它 1218×342 盖住整条台面，
+   点哪儿都命中"锥形瓶"（红队 2026-10-21 实测）。只在拖拽进行中接管指针以接收 drop。 */
 .apparatusWrap[data-bench="true"] .flaskTarget {
   border: 0 !important;
+  pointer-events: none;
 }
 
-.apparatusWrap[data-bench="true"] .flaskTarget[data-over="true"] {
+.apparatusWrap[data-bench="true"] .flaskTarget[data-dragging="true"] {
+  pointer-events: auto;
   border: 1px dashed rgba(74, 87, 104, 0.32) !important;
 }
 
