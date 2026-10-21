@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { LabScene } from "@/components/portal/lab-scene";
+import { VesselGlyph } from "@/components/portal/vessel-strip";
 
 type Role = "student" | "teacher";
 
@@ -56,8 +56,21 @@ export default function LoginPage() {
 
   return (
     <div className="login-screen">
-      <LabScene className="login-scene" />
-      <span className="login-screen__scrim" aria-hidden="true" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="login-bg" src="/brand/campus/campus-02.jpg" alt="" aria-hidden="true" />
+      <span className="login-screen__veil" aria-hidden="true" />
+
+      <div className="login-art" aria-hidden="true">
+        <span className="login-art__item" data-pos="left">
+          <VesselGlyph index={3} />
+        </span>
+        <span className="login-art__item" data-pos="top">
+          <VesselGlyph index={4} />
+        </span>
+        <span className="login-art__item" data-pos="right">
+          <VesselGlyph index={1} />
+        </span>
+      </div>
 
       <div className="login-card">
         <Link className="login__brand" href="/">
@@ -68,7 +81,8 @@ export default function LoginPage() {
           <span>河南大学 · 无机及分析化学实验</span>
         </Link>
 
-        <div className="login__tabs" role="tablist" aria-label="登录身份">
+        <div className="login__tabs" role="tablist" aria-label="登录身份" data-role={role}>
+          <span className="login__tab-ink" aria-hidden="true" />
           <button
             type="button"
             role="tab"
@@ -159,7 +173,7 @@ export default function LoginPage() {
       <style>{`
         body:has(.login-screen) {
           padding-left: 0;
-          background: #081018;
+          background: #f3f6fb;
         }
         .login-screen {
           position: fixed;
@@ -168,27 +182,73 @@ export default function LoginPage() {
           place-items: center;
           overflow-y: auto;
           padding: clamp(18px, 4vh, 34px) 16px;
-          background: #081018;
           box-sizing: border-box;
+          background:
+            radial-gradient(60% 55% at 15% 18%, rgba(35, 48, 127, .1), transparent 70%),
+            radial-gradient(52% 46% at 86% 82%, rgba(15, 123, 108, .08), transparent 74%),
+            linear-gradient(90deg, rgba(35, 48, 127, .05) 1px, transparent 1px) 0 0 / 72px 72px,
+            linear-gradient(rgba(35, 48, 127, .05) 1px, transparent 1px) 0 0 / 72px 72px,
+            #f3f6fb;
         }
-        .login-scene {
+        .login-bg {
           position: absolute;
-          left: 0;
-          top: -8%;
-          width: 116%;
-          height: 116%;
-          z-index: 0;
-          filter: brightness(1.32) saturate(1.08) contrast(1.04);
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center;
+          opacity: .16;
+          filter: saturate(.88) contrast(1.02);
+          pointer-events: none;
         }
-        .login-screen__scrim {
+        .login-screen__veil {
           position: absolute;
           inset: 0;
           z-index: 1;
           pointer-events: none;
           background:
-            radial-gradient(ellipse at 50% 45%, rgba(3, 8, 13, .02) 0%, rgba(3, 8, 13, .14) 68%, rgba(3, 8, 13, .32) 100%),
-            linear-gradient(180deg, rgba(3, 8, 13, .18) 0%, rgba(3, 8, 13, .02) 46%, rgba(3, 8, 13, .24) 100%);
+            linear-gradient(180deg, rgba(246, 248, 252, .72) 0%, rgba(255, 255, 255, .86) 58%, rgba(243, 246, 251, .9) 100%),
+            radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, .5), rgba(243, 246, 251, .9) 78%);
         }
+        .login-art {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          overflow: hidden;
+          pointer-events: none;
+          color: var(--river-700);
+        }
+        .login-art__item {
+          position: absolute;
+          display: block;
+          opacity: .14;
+          animation: login-float 26s ease-in-out infinite alternate;
+          will-change: transform;
+        }
+        .login-art__item svg { width: 100%; height: 100%; }
+        .login-art__item[data-pos="left"] {
+          left: 7%;
+          bottom: 13%;
+          width: 110px;
+          height: 132px;
+        }
+        .login-art__item[data-pos="top"] {
+          left: 19%;
+          top: 16%;
+          width: 72px;
+          height: 86px;
+          animation-duration: 21s;
+          animation-delay: -6s;
+        }
+        .login-art__item[data-pos="right"] {
+          right: 8%;
+          top: 22%;
+          width: 132px;
+          height: 158px;
+          animation-duration: 30s;
+          animation-delay: -12s;
+        }
+
         .login-card {
           position: relative;
           z-index: 2;
@@ -197,24 +257,49 @@ export default function LoginPage() {
           width: min(430px, 100%);
           box-sizing: border-box;
           padding: 28px 28px 22px;
-          border-radius: 20px;
-          border: 1px solid rgba(255, 255, 255, .55);
-          background: rgba(255, 255, 255, .97);
-          box-shadow: 0 28px 90px rgba(2, 7, 12, .52);
-          backdrop-filter: blur(16px);
-          animation: login-in 280ms cubic-bezier(.22, .61, .36, 1) both;
+          border-radius: 18px;
+          border: 1px solid rgba(213, 220, 228, .9);
+          background: rgba(255, 255, 255, .96);
+          box-shadow: 0 24px 64px rgba(35, 48, 127, .14), 0 2px 8px rgba(22, 32, 44, .05);
+          backdrop-filter: blur(10px);
+          animation: login-in 280ms cubic-bezier(.23, 1, .32, 1) both;
         }
         .login-card .login__brand {
           font-size: 13px;
           gap: 9px;
+          color: var(--ink-2);
         }
+        .login-card .login__brand .brand__mark { color: var(--river-700); }
         .login-card .login__tabs {
-          margin-top: 28px;
+          position: relative;
+          margin-top: 24px;
+          border-bottom: 1px solid var(--line);
         }
         .login-card .login__tabs button {
+          position: relative;
+          z-index: 1;
           min-height: 46px;
           padding: 0;
+          border-bottom: 0;
+          background: transparent;
+          color: var(--ink-2);
         }
+        .login-card .login__tabs button[data-active="true"] {
+          color: var(--river-700);
+          border-bottom-color: transparent;
+        }
+        .login__tab-ink {
+          position: absolute;
+          left: 0;
+          bottom: -1px;
+          width: 50%;
+          height: 2px;
+          background: var(--river-700);
+          transform: translateX(0);
+          transition: transform 160ms cubic-bezier(.23, 1, .32, 1);
+        }
+        .login__tabs[data-role="teacher"] .login__tab-ink { transform: translateX(100%); }
+
         .login-card .login__form {
           margin-top: 20px;
           gap: 15px;
@@ -229,40 +314,52 @@ export default function LoginPage() {
           border-radius: 8px;
           font-size: 15px;
           background: #fbfcfd;
+          transition:
+            border-color 160ms cubic-bezier(.23, 1, .32, 1),
+            box-shadow 160ms cubic-bezier(.23, 1, .32, 1);
         }
         .login-card .login__form input:focus {
-          outline: 2px solid var(--river-500);
-          outline-offset: 1px;
-          border-color: transparent;
+          outline: 0;
+          border-color: var(--river-700);
+          box-shadow: 0 0 0 3px rgba(35, 48, 127, .12);
         }
         .login-card .login__submit {
           height: 50px;
           margin-top: 6px;
           border-radius: 8px;
           font-size: 15px;
+          background: var(--river-700);
+          box-shadow: 0 10px 24px rgba(35, 48, 127, .2);
         }
-        .login-card .login__submit:active {
-          transform: scale(.97);
-        }
-        @media (hover: hover) and (pointer: fine) {
-          .login-card .login__submit:hover {
-            background: #2d3d9e;
-            transform: scale(1.01);
-          }
-        }
+        .login-card .login__submit:active { transform: scale(.97); }
         .login-card .login__foot {
           margin-top: 24px;
           font-size: 12px;
         }
+        @media (hover: hover) and (pointer: fine) {
+          .login-card .login__submit:hover {
+            background: var(--river-800, #1b266a);
+            transform: scale(1.01);
+          }
+        }
         @keyframes login-in {
-          from { opacity: 0; transform: translateY(14px) scale(.96); }
+          from { opacity: 0; transform: translateY(12px) scale(.96); }
           to { opacity: 1; transform: none; }
+        }
+        @keyframes login-float {
+          from { transform: translateY(0) rotate(-2deg); }
+          to { transform: translateY(-16px) rotate(2deg); }
         }
         @media (max-width: 420px) {
           .login-card { padding: 24px 20px 20px; border-radius: 16px; }
+          .login-art__item[data-pos="right"] { opacity: .09; }
         }
         @media (prefers-reduced-motion: reduce) {
           .login-card { animation: none; }
+          .login-art__item { animation: none; }
+          .login__tab-ink,
+          .login-card .login__form input,
+          .login-card .login__submit { transition: none; }
         }
       `}</style>
     </div>

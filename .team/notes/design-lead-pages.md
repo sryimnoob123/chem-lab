@@ -27,3 +27,28 @@
 - SVG 微动效：卡内器皿 hover 液面 0.98↔1.02 / 2.4s；查看全部箭头 hover +2px；stats CountUp 260ms。
 - 截图：home-1440/390、login-1440/390、carousel-1/2（间隔 5s）、home-crossfade（opacity 0.537/0.463，blur 2px）。
 - tsc 0 / lint 0 error（8 个既有 warning）。
+
+## 第三轮（用户对线上版三条反馈）
+### 1. 首页 H1 教育属性
+- H1 = `无机及分析化学实验`（原「把每一次读数…」降级为 12px 灰 slogan，在 H1 下一行）。
+- 副标题：`河南大学 · 化学化工学院 · 03600004 · 36 学时 · 10 个实验`。
+- 顶栏副标题改「化学化工学院」；页脚也改「化学化工学院」。
+
+### 2. 三张大卡 → 简明实验清单（新文件 components/portal/experiment-list.tsx）
+- 5 条：01 / 02 / 08 / 09 / 10；每条「编号 + 实验名 + 一句特点」。
+- 桌面 2 列、≤720px 单列；行高 46px（移动 44px），无卡片阴影无缩略图。
+- 列表块高度：1440 时 160px（原三卡约 250px+），390 时 260px。
+- 底部「查看全部 10 个实验 →」，箭头 hover +2px。
+
+### 3. 登录页 白蓝 + 动效
+- 去暗场 lab-scene，改：浅蓝底 #f3f6fb + 72px 蓝网格 + 双径向光晕；校园图 campus-02 作 16% 淡背景 + 白色蒙版。
+- 三个器皿线稿（容量瓶/滴定管/烧杯）14% 蓝、21~30s 缓慢漂浮。
+- 卡片入场 280ms `cubic-bezier(.23,1,.32,1)`，从 `translateY(12px) scale(.96)`。
+- tab 指示条独立元素 160ms `translateX(0→100%)` 滑动（实测 matrix 0→186）。
+- 输入框 focus：边框 → river-700 + 3px 12% 蓝光圈，160ms。
+- 按钮 hover scale(1.01)（仅 hover 设备）、按下 scale(.97)。
+- reduced-motion 全关。
+
+### 证据
+- home-1440 / home-390 / login-1440 / login-390 均 `scrollWidth === clientWidth`。
+- tsc 0；lint 0 error（8 个既有 warning）。
