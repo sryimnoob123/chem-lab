@@ -1,0 +1,42 @@
+{
+  "buttonLabel": "一键演示",
+  "scenes": [
+    {
+      "t": 1,
+      "src": "/?play=demo"
+    },
+    {
+      "t": 5,
+      "src": "/login?play=demo"
+    },
+    {
+      "t": 12,
+      "src": "/experiments?play=demo"
+    },
+    {
+      "t": 20,
+      "src": "/exp/exp09?play=demo"
+    },
+    {
+      "t": 42,
+      "src": "/exp/exp09/report?play=demo"
+    },
+    {
+      "t": 44,
+      "src": "/scene-preview?show=fx&play=demo"
+    },
+    {
+      "t": 76,
+      "src": "/teacher?play=demo"
+    }
+  ],
+  "pauseResult": "pause:已暂停→演示中",
+  "captions": 36,
+  "failureBranchShown": true,
+  "retryShown": true,
+  "closedByEsc": true,
+  "scrollRestored": true,
+  "restartSrc": "/?play=demo",
+  "writeRequests": [],
+  "pageErrors": []
+}

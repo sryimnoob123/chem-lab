@@ -1,0 +1,43 @@
+﻿<!doctype html>
+<meta charset="utf-8" />
+<title>品牌资产预览</title>
+<style>
+  :root { --ink:#16202c; --muted:#5b6472; --line:#dfe3e9; --bg:#f6f7f9; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif; }
+  .wrap { padding: 34px 44px 30px; }
+  header { display: flex; align-items: baseline; gap: 14px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: .02em; }
+  header p { margin: 0; color: var(--muted); font-size: 12px; }
+  .row { display: flex; gap: 20px; padding-top: 24px; }
+  .card { flex: 1; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: #fff; }
+  .stage { height: 190px; display: flex; align-items: center; justify-content: center; }
+  .light { background: #f1eee6; }`n  .white { background: #fff; }
+  .dark { background: #16202c; }
+  .cap { padding: 12px 16px 14px; border-top: 1px solid var(--line); }
+  .cap b { display: block; font-size: 13px; }
+  .cap span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; font-family: "IBM Plex Mono", monospace; }
+  .note { margin-top: 18px; color: var(--muted); font-size: 11px; line-height: 1.7; }
+</style>
+<div class="wrap">
+  <header>
+    <h1>品牌资产</h1>
+    <p>河南大学 · 能源科学与技术学院 · 仅本课程教学使用，标注来源</p>
+  </header>
+  <div class="row">
+    <div class="card">
+      <div class="stage white"><img src="../../../public/brand/henan-university-emblem.png" alt="河南大学校徽" style="height:150px" /></div>
+      <div class="cap"><b>圆形校徽</b><span>218 × 214 · PNG · 白色底（非透明）</span></div>
+    </div>
+    <div class="card">
+      <div class="stage dark"><img src="../../../public/brand/henan-university-lockup.png" alt="河南大学横版" style="max-width:88%;max-height:110px" /></div>
+      <div class="cap"><b>校名横版</b><span>260 × 73 · PNG · 白字透明底 → 只能放深色</span></div>
+    </div>
+    <div class="card">
+      <div class="stage dark"><img src="../../../public/brand/college-lockup.png" alt="学院横版" style="max-width:94%;max-height:90px" /></div>
+      <div class="cap"><b>学院横版</b><span>736 × 71 · PNG · 白字透明底 → 只能放深色</span></div>
+    </div>
+  </div>
+  <p class="note">校徽 / 校名 / 学院名均为河南大学学校标识，版权归河南大学所有。本仓库为 private，仅用于《无机及分析化学实验》虚拟仿真教学；
+    任何对外公开发布（含课赛展示、公开部署链接）前须请示校方并取得书面许可。来源与合规说明见 public/brand/README.md。</p>
+</div>

@@ -1,0 +1,14 @@
+﻿import { chromium } from "@playwright/test";
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+await p.goto("http://localhost:3000/demo", { waitUntil: "networkidle" });
+await p.waitForTimeout(1200);
+await p.screenshot({ path: process.env.TEMP + "\\chemlab-shots\\demo-idle.png" });
+await p.getByTestId("none").count().catch(() => {});
+await p.click('[data-demo-id="demo-page-play"]');
+await p.waitForTimeout(7000);
+await p.screenshot({ path: process.env.TEMP + "\\chemlab-shots\\demo-playing.png" });
+const cap = await p.locator(".demo-caption__text").innerText();
+const st = await p.locator(".demo-bar__state").innerText();
+console.log("state=", st, "| caption=", cap);
+await b.close();

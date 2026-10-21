@@ -1,0 +1,346 @@
+/* ===================================================================
+   封面：白蓝版（学校色调）
+   —— 在 cover.css 之后引入，只做覆盖，不改结构
+   =================================================================== */
+
+.cover {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* 主视觉：暗场图转成"白底蓝线工程图"（不重画 SVG，靠滤镜换色，构图完全保留） */
+.cover__scene {
+  filter: invert(0.93) hue-rotate(176deg) saturate(1.6) brightness(1.02) contrast(1.18);
+  opacity: 0.92;
+}
+
+/* 左侧实心纸色保可读，右侧几乎通透把器材露出来 */
+.cover__scrim {
+  background:
+    linear-gradient(100deg, var(--paper) 0%, var(--paper) 30%, rgba(246, 247, 245, 0.94) 42%, rgba(246, 247, 245, 0.42) 62%, rgba(246, 247, 245, 0.08) 88%, transparent 100%),
+    linear-gradient(to top, var(--paper) 0%, rgba(246, 247, 245, 0.5) 9%, transparent 24%);
+}
+
+/* 台面下沿压一道极淡的河大蓝，让场景"落"在版面上 */
+.cover::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 44px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(35, 48, 127, 0.18), transparent);
+  z-index: 2;
+}
+
+.cover__tick {
+  border-color: rgba(35, 48, 127, 0.35);
+}
+
+/* 顶栏转浅色 */
+.cover-bar {
+  background: rgba(255, 255, 255, 0.72);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+}
+
+.cover-bar__brand,
+.cover-bar__name {
+  color: var(--ink);
+}
+
+.cover-bar__sub {
+  color: var(--ink-2);
+  border-left-color: var(--line);
+}
+
+.cover-bar__status {
+  color: var(--ink-2);
+}
+
+.cover-bar__dot {
+  background: var(--jade-600);
+}
+
+/* 文字转深色 */
+.cover-hero__rule {
+  background: var(--river-700);
+}
+
+.cover-hero__kicker {
+  color: var(--ink-2);
+}
+
+.cover-hero__title {
+  color: var(--ink);
+}
+
+.cover-hero__title mark {
+  background: var(--river-700);
+  color: #fff;
+}
+
+.cover-hero__sub {
+  color: var(--ink-2);
+}
+
+.cover-hero__stats li {
+  border-left-color: var(--line);
+}
+
+.cover-hero__stat-no {
+  color: var(--river-900);
+}
+
+.cover-hero__stat-label {
+  color: var(--ink-2);
+}
+
+.cover-hero__link {
+  color: var(--ink-2);
+  border-bottom-color: var(--line);
+}
+
+.cover-hero__link:hover {
+  color: var(--river-700);
+  border-color: var(--river-700);
+}
+
+/* 功能卡转白卡 */
+.cover-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  backdrop-filter: none;
+  box-shadow: 0 1px 2px rgba(22, 32, 44, 0.06);
+}
+
+.cover-card:hover {
+  border-color: var(--river-500);
+  box-shadow: 0 6px 16px rgba(22, 32, 44, 0.08);
+}
+
+.cover-card::before {
+  background: var(--river-700);
+  opacity: 0.35;
+}
+
+.cover-card:hover::before {
+  opacity: 1;
+}
+
+.cover-card__icon {
+  background: var(--river-100);
+  color: var(--river-700);
+}
+
+.cover-card__title {
+  color: var(--ink);
+}
+
+.cover-card__desc {
+  color: var(--ink-2);
+}
+
+.cover-card__no {
+  color: rgba(74, 87, 104, 0.35);
+}
+
+/* 遥测条转浅 */
+.cover-telemetry {
+  color: rgba(74, 87, 104, 0.55);
+  border-top: 1px solid var(--line);
+}
+
+.cover-telemetry span + span::before {
+  color: rgba(74, 87, 104, 0.25);
+}
+
+/* ===================================================================
+   轻微动效（只动 transform / opacity，reduced-motion 归零）
+   =================================================================== */
+
+/* 器材随呼吸微微浮动 */
+@keyframes cover-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.cover__scene {
+  animation: cover-float 9s ease-in-out infinite;
+  transform-origin: 50% 70%;
+}
+
+/* 功能区卡片错峰浮现后常驻 */
+@keyframes cover-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+.cover-card {
+  animation: cover-rise 620ms var(--ease-out) both;
+}
+
+/* 标题色块上的一道光缓慢扫过（用渐变遮罩，不动布局） */
+.cover-hero__title mark {
+  position: relative;
+  background-image: linear-gradient(
+    100deg,
+    var(--river-700) 0%,
+    var(--river-700) 42%,
+    var(--river-500) 50%,
+    var(--river-700) 58%,
+    var(--river-700) 100%
+  );
+  background-size: 300% 100%;
+  animation: cover-sheen 7s linear infinite;
+}
+
+@keyframes cover-sheen {
+  0% { background-position: 120% 0; }
+  60%, 100% { background-position: -40% 0; }
+}
+
+/* 绿色状态点呼吸 */
+.cover-bar__dot {
+  animation: cover-breathe 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cover__scene,
+  .cover-card,
+  .cover-hero__title mark,
+  .cover-bar__dot {
+    animation: none !important;
+  }
+}
+
+/* ===================================================================
+   白蓝版版面：单列文案 + 三张卡横排
+   =================================================================== */
+.cover-hero {
+  display: block;
+  max-width: 780px;
+  margin: 0;
+  padding-left: clamp(32px, 7vw, 116px);
+  padding-block: clamp(64px, 11vh, 132px) clamp(24px, 4vh, 48px);
+}
+
+/* 校徽：直接放左上角，不垫方框 */
+.cover-bar__brand {
+  gap: 12px;
+}
+
+.cover-bar__emblem {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+
+.cover-bar__names {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.15;
+}
+
+.cover-bar__cn {
+  font-size: var(--text-16);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.cover-bar__sub {
+  font-size: 11px;
+  color: var(--ink-2);
+  border-left: 0;
+  padding-left: 0;
+}
+
+/* 三张卡：横排，压在 CTA 下方 */
+.cover-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 40px;
+}
+
+.cover-card {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 14px 14px 14px 16px;
+}
+
+.cover-card__no {
+  display: none;
+}
+
+.cover-card__icon {
+  width: 30px;
+  height: 30px;
+}
+
+.cover-card__title {
+  font-size: var(--text-13);
+  line-height: 1.4;
+}
+
+.cover-card__desc {
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* 底栏：左侧校训 + 中间遥测 + 右侧学院 */
+.cover-foot {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  height: 46px;
+  padding: 0 clamp(20px, 3.5vw, 40px);
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.cover-foot__motto {
+  font-family: var(--font-serif);
+  font-size: var(--text-13);
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
+.cover-foot__org {
+  color: rgba(74, 87, 104, 0.7);
+}
+
+.cover-telemetry {
+  border-top: 0;
+  height: auto;
+  gap: 14px;
+  font-size: 10px;
+  color: rgba(74, 87, 104, 0.45);
+}
+
+@media (max-width: 980px) {
+  .cover__scene {
+    opacity: 0.26;
+  }
+
+  .cover-hero {
+    max-width: none;
+    padding-left: clamp(20px, 5vw, 40px);
+  }
+
+  .cover-cards {
+    grid-template-columns: 1fr;
+    margin-top: 26px;
+  }
+
+  .cover-foot__motto,
+  .cover-foot__org,
+  .cover-telemetry {
+    display: none;
+  }
+}

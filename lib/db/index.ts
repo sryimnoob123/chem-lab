@@ -15,7 +15,9 @@ const dir = path.resolve(process.cwd(), process.env.PGLITE_DIR ?? "./.pgdata");
 const globalForDb = globalThis as unknown as { __pg?: PGlite };
 
 const client = globalForDb.__pg ?? new PGlite(dir);
-if (process.env.NODE_ENV !== "production") globalForDb.__pg = client;
+// 生产 standalone 构建会把同一模块打进多个 chunk；必须无条件缓存到 globalThis，
+// 否则 API 路由和 RSC 页面各自 new 一个 PGlite，出现“写入成功但报告读不到”的假象。
+globalForDb.__pg = client;
 
 export const db = drizzle(client, { schema });
 export { client };

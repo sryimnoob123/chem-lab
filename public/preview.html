@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>chem-lab 预览 · 无机及分析化学实验</title>
+<style>
+  :root{
+    --ink:#12233b; --ink-2:#4a5c72; --ink-3:#7b8a9c;
+    --blue:#1f5fa8; --blue-2:#2f7fd0; --blue-soft:#eaf2fb;
+    --line:#dbe5f0; --bg:#f5f8fc; --card:#ffffff;
+    --ok:#1a7f4b; --ok-soft:#e6f6ed; --todo:#9a6a12; --todo-soft:#fdf3df;
+    --shadow:0 1px 2px rgba(18,35,59,.06), 0 8px 24px rgba(18,35,59,.06);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font:15px/1.6 "PingFang SC","Microsoft YaHei",-apple-system,"Segoe UI",sans-serif;
+    color:var(--ink); background:var(--bg);
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 64px}
+
+  .hero{
+    position:relative; overflow:hidden;
+    background:linear-gradient(135deg,#f8fbff 0%,#eaf2fb 60%,#e2eefb 100%);
+    border:1px solid var(--line); border-radius:20px;
+    padding:26px 28px; box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:""; position:absolute; inset:auto -60px -90px auto;
+    width:320px;height:320px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, rgba(47,127,208,.16), transparent 70%);
+  }
+  .brandline{display:flex;align-items:center;gap:10px;color:var(--blue);font-size:13px;letter-spacing:.08em;font-weight:600}
+  .brandline .dot{width:8px;height:8px;border-radius:50%;background:var(--blue-2)}
+  h1{font-size:26px;line-height:1.3;margin:12px 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--ink-2);font-size:14px;margin:0}
+  .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .kpi{
+    background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-width:112px;
+    box-shadow:0 1px 1px rgba(18,35,59,.03)
+  }
+  .kpi b{display:block;font-size:20px;font-variant-numeric:tabular-nums;line-height:1.2}
+  .kpi span{font-size:12px;color:var(--ink-3)}
+
+  .note{
+    display:flex;gap:10px;align-items:flex-start;
+    margin:18px 0 0;padding:12px 14px;border-radius:12px;
+    background:var(--blue-soft);border:1px solid #d3e3f6;color:#1b4a7d;font-size:13px
+  }
+  .note code{background:#fff;border:1px solid #d3e3f6;border-radius:6px;padding:1px 6px;font-size:12px}
+
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:22px}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  }
+  .card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(18,35,59,.07),0 14px 32px rgba(18,35,59,.09);border-color:#c8d9ec}
+  .card.is-locked{background:#fbfcfe}
+  .card-head{display:flex;align-items:flex-start;gap:12px}
+  .no{
+    flex:none;width:40px;height:40px;border-radius:11px;display:grid;place-items:center;
+    background:var(--blue-soft);color:var(--blue);font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;
+  }
+  .is-locked .no{background:#eef2f7;color:var(--ink-3)}
+  .headtext{flex:1;min-width:0}
+  h2{font-size:16px;margin:1px 0 3px;line-height:1.35}
+  .meta{margin:0;font-size:12.5px;color:var(--ink-3)}
+  .badge{
+    flex:none;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid transparent;
+    white-space:nowrap
+  }
+  .badge.ok{background:var(--ok-soft);color:var(--ok);border-color:#c9ebd7}
+  .badge.todo{background:var(--todo-soft);color:var(--todo);border-color:#f3e2bd}
+
+  .stat{display:flex;gap:8px;list-style:none;margin:0;padding:0;flex-wrap:wrap}
+  .stat li{
+    display:flex;align-items:baseline;gap:4px;background:#f7fafd;border:1px solid var(--line);
+    border-radius:9px;padding:5px 9px
+  }
+  .stat b{font-size:15px;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .stat span{font-size:11.5px;color:var(--ink-3)}
+  .stat.muted{font-size:12.5px;color:var(--ink-3)}
+
+  .shots{display:flex;flex-direction:column;gap:8px}
+  .shot-main{position:relative;display:block;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#fff}
+  .shot-main img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;object-position:top center}
+  .shot-tag{
+    position:absolute;left:8px;bottom:8px;background:rgba(18,35,59,.78);color:#fff;
+    font-size:11px;padding:2px 8px;border-radius:6px;letter-spacing:.02em
+  }
+  .shot-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+  .shot-mini{display:block;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+  .shot-mini img{display:block;width:100%;height:44px;object-fit:cover;object-position:top center}
+  .shot-count{font-size:11.5px;color:var(--ink-3)}
+  .shots.empty{
+    border:1px dashed var(--line);border-radius:10px;padding:18px;text-align:center;
+    color:var(--ink-3);font-size:12.5px;background:#fafcfe
+  }
+
+  .card-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+  .btn{
+    font-size:13px;font-weight:600;padding:7px 12px;border-radius:9px;border:1px solid transparent;
+    transition:transform .12s ease, background .12s ease, border-color .12s ease
+  }
+  .btn:active{transform:scale(.97)}
+  .btn.primary{background:var(--blue);color:#fff}
+  .btn.primary:hover{background:#1a5393}
+  .btn.ghost{background:#fff;border-color:var(--line);color:var(--blue)}
+  .btn.ghost:hover{border-color:#c8d9ec;background:#f9fbfe}
+  .btn.disabled{background:#f1f4f8;color:var(--ink-3);cursor:not-allowed}
+  .card-foot code{font-size:11.5px;color:var(--ink-3);margin-left:auto}
+
+  footer.page{margin-top:28px;color:var(--ink-3);font-size:12px;line-height:1.8}
+  footer.page code{background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <div class="brandline"><span class="dot"></span>河南大学 · 化学化工学院 · 虚拟仿真</div>
+    <h1>无机及分析化学实验 03600004</h1>
+    <p class="sub">chem-lab 生产态预览 · 过程性评价 100%（预习 10% · 操作 40% · 报告 50%）</p>
+    <div class="kpis">
+      <div class="kpi"><b>10</b><span>实验总数</span></div>
+      <div class="kpi"><b>10</b><span>可玩实验</span></div>
+      <div class="kpi"><b>70</b><span>验收截图</span></div>
+      <div class="kpi"><b>0</b><span>页面报错</span></div>
+    </div>
+    <div class="note">
+      <span>ℹ️</span>
+      <span>预览页是静态快照：<b>截图</b>直接看，“打开操作台 / 看报告页”需要本机 <code>localhost:3001</code> 正在运行
+      （<code>start-chem-lab.bat</code> 启动）。未接通的实验点进去是友好提示页，不会 404。</span>
+    </div>
+  </section>
+
+  <main class="grid">
+    
+  <article class="card is-playable">
+    <header class="card-head">
+      <div class="no">01</div>
+      <div class="headtext">
+        <h2>仪器的认领、天平使用及溶液配制</h2>
+        <p class="meta">验证实验 · 5 学时 · 洗涤、称量、定容、浓硫酸稀释</p>
+      </div>
+      <span class="badge ok">可玩</span>
+    </header>
+    <ul class="stat">
+    <li><b>7</b><span>步</span></li>
+    <li><b>35</b><span>动作</span></li>
+    <li><b>15</b><span>陷阱</span></li>
+    <li><b>3</b><span>L3</span></li>
+    <li><b>1</b><span>L4</span></li>
+  </ul>
+    <div class="shots">
+    <a class="shot-main" href="shots-prod/exp01/03-exp01-initial.png" target="_blank" rel="noreferrer">
+      <img src="shots-prod/exp01/03-exp01-initial.png" alt="仪器的认领、天平使用及溶液配制 首屏截图" loading="lazy" />
+      <span class="shot-tag">03-exp01-initial.png</span>
+    </a>
+    <div class="shot-strip">
+      <a class="shot-mini" href="shots-prod/exp01/01-portal.png" target="_blank" rel="noreferrer" title="01-portal.png">
+            <img src="shots-prod/exp01/01-portal.png" alt="01-portal.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp01/02-catalog.png" target="_blank" rel="noreferrer" title="02-catalog.png">
+            <img src="shots-prod/exp01/02-catalog.png" alt="02-catalog.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp01/04-failure.png" target="_blank" rel="noreferrer" title="04-failure.png">
+            <img src="shots-prod/exp01/04-failure.png" alt="04-failure.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp01/05-retry.png" target="_blank" rel="noreferrer" title="05-retry.png">
+            <img src="shots-prod/exp01/05-retry.png" alt="05-retry.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp01/06-success.png" target="_blank" rel="noreferrer" title="06-success.png">
+            <img src="shots-prod/exp01/06-success.png" alt="06-success.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp01/07-report.png" target="_blank" rel="noreferrer" title="07-report.png">
+            <img src="shots-prod/exp01/07-report.png" alt="07-report.png" loading="lazy" /></a>
+    </div>
+    <div class="shot-count">7 张 · 点击看大图</div>
+  </div>
+    <footer class="card-foot">
+      <a class="btn primary" href="http://localhost:3001/exp/exp01" target="_blank" rel="noreferrer">打开操作台</a>
+             <a class="btn ghost" href="http://localhost:3001/exp/exp01/report" target="_blank" rel="noreferrer">看报告页</a>
+      <code>/exp/exp01</code>
+    </footer>
+  </article>
+
+  <article class="card is-playable">
+    <header class="card-head">
+      <div class="no">02</div>
+      <div class="headtext">
+        <h2>试剂级氯化钠制备</h2>
+        <p class="meta">验证实验 · 5 学时 · 除杂、过滤、蒸发结晶、算产率</p>
+      </div>
+      <span class="badge ok">可玩</span>
+    </header>
+    <ul class="stat">
+    <li><b>6</b><span>步</span></li>
+    <li><b>27</b><span>动作</span></li>
+    <li><b>12</b><span>陷阱</span></li>
+    <li><b>2</b><span>L3</span></li>
+    <li><b>1</b><span>L4</span></li>
+  </ul>
+    <div class="shots">
+    <a class="shot-main" href="shots-prod/exp02/03-exp02-initial.png" target="_blank" rel="noreferrer">
+      <img src="shots-prod/exp02/03-exp02-initial.png" alt="试剂级氯化钠制备 首屏截图" loading="lazy" />
+      <span class="shot-tag">03-exp02-initial.png</span>
+    </a>
+    <div class="shot-strip">
+      <a class="shot-mini" href="shots-prod/exp02/01-portal.png" target="_blank" rel="noreferrer" title="01-portal.png">
+            <img src="shots-prod/exp02/01-portal.png" alt="01-portal.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp02/02-catalog.png" target="_blank" rel="noreferrer" title="02-catalog.png">
+            <img src="shots-prod/exp02/02-catalog.png" alt="02-catalog.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp02/04-failure.png" target="_blank" rel="noreferrer" title="04-failure.png">
+            <img src="shots-prod/exp02/04-failure.png" alt="04-failure.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp02/05-retry.png" target="_blank" rel="noreferrer" title="05-retry.png">
+            <img src="shots-prod/exp02/05-retry.png" alt="05-retry.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp02/06-success.png" target="_blank" rel="noreferrer" title="06-success.png">
+            <img src="shots-prod/exp02/06-success.png" alt="06-success.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp02/07-report.png" target="_blank" rel="noreferrer" title="07-report.png">
+            <img src="shots-prod/exp02/07-report.png" alt="07-report.png" loading="lazy" /></a>
+    </div>
+    <div class="shot-count">7 张 · 点击看大图</div>
+  </div>
+    <footer class="card-foot">
+      <a class="btn primary" href="http://localhost:3001/exp/exp02" target="_blank" rel="noreferrer">打开操作台</a>
+             <a class="btn ghost" href="http://localhost:3001/exp/exp02/report" target="_blank" rel="noreferrer">看报告页</a>
+      <code>/exp/exp02</code>
+    </footer>
+  </article>
+
+  <article class="card is-playable">
+    <header class="card-head">
+      <div class="no">03</div>
+      <div class="headtext">
+        <h2>醋酸电离度和电离常数测定</h2>
+        <p class="meta">验证实验 · 3 学时 · 系列稀释、pH 计、Ka 计算</p>
+      </div>
+      <span class="badge ok">可玩</span>
+    </header>
+    <ul class="stat">
+    <li><b>6</b><span>步</span></li>
+    <li><b>26</b><span>动作</span></li>
+    <li><b>12</b><span>陷阱</span></li>
+    <li><b>2</b><span>L3</span></li>
+    <li><b>1</b><span>L4</span></li>
+  </ul>
+    <div class="shots">
+    <a class="shot-main" href="shots-prod/exp03/03-exp03-initial.png" target="_blank" rel="noreferrer">
+      <img src="shots-prod/exp03/03-exp03-initial.png" alt="醋酸电离度和电离常数测定 首屏截图" loading="lazy" />
+      <span class="shot-tag">03-exp03-initial.png</span>
+    </a>
+    <div class="shot-strip">
+      <a class="shot-mini" href="shots-prod/exp03/01-portal.png" target="_blank" rel="noreferrer" title="01-portal.png">
+            <img src="shots-prod/exp03/01-portal.png" alt="01-portal.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp03/02-catalog.png" target="_blank" rel="noreferrer" title="02-catalog.png">
+            <img src="shots-prod/exp03/02-catalog.png" alt="02-catalog.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp03/04-failure.png" target="_blank" rel="noreferrer" title="04-failure.png">
+            <img src="shots-prod/exp03/04-failure.png" alt="04-failure.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp03/05-retry.png" target="_blank" rel="noreferrer" title="05-retry.png">
+            <img src="shots-prod/exp03/05-retry.png" alt="05-retry.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp03/06-success.png" target="_blank" rel="noreferrer" title="06-success.png">
+            <img src="shots-prod/exp03/06-success.png" alt="06-success.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp03/07-report.png" target="_blank" rel="noreferrer" title="07-report.png">
+            <img src="shots-prod/exp03/07-report.png" alt="07-report.png" loading="lazy" /></a>
+    </div>
+    <div class="shot-count">7 张 · 点击看大图</div>
+  </div>
+    <footer class="card-foot">
+      <a class="btn primary" href="http://localhost:3001/exp/exp03" target="_blank" rel="noreferrer">打开操作台</a>
+             <a class="btn ghost" href="http://localhost:3001/exp/exp03/report" target="_blank" rel="noreferrer">看报告页</a>
+      <code>/exp/exp03</code>
+    </footer>
+  </article>
+
+  <article class="card is-playable">
+    <header class="card-head">
+      <div class="no">04</div>
+      <div class="headtext">
+        <h2>沉淀的生成与溶解平衡</h2>
+        <p class="meta">综合实验 · 4 学时 · 沉淀制备、离心、分步沉淀、转化</p>
+      </div>
+      <span class="badge ok">可玩</span>
+    </header>
+    <ul class="stat">
+    <li><b>5</b><span>步</span></li>
+    <li><b>23</b><span>动作</span></li>
+    <li><b>11</b><span>陷阱</span></li>
+    <li><b>5</b><span>L3</span></li>
+    <li><b>1</b><span>L4</span></li>
+  </ul>
+    <div class="shots">
+    <a class="shot-main" href="shots-prod/exp04/03-exp04-initial.png" target="_blank" rel="noreferrer">
+      <img src="shots-prod/exp04/03-exp04-initial.png" alt="沉淀的生成与溶解平衡 首屏截图" loading="lazy" />
+      <span class="shot-tag">03-exp04-initial.png</span>
+    </a>
+    <div class="shot-strip">
+      <a class="shot-mini" href="shots-prod/exp04/01-portal.png" target="_blank" rel="noreferrer" title="01-portal.png">
+            <img src="shots-prod/exp04/01-portal.png" alt="01-portal.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp04/02-catalog.png" target="_blank" rel="noreferrer" title="02-catalog.png">
+            <img src="shots-prod/exp04/02-catalog.png" alt="02-catalog.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp04/04-failure.png" target="_blank" rel="noreferrer" title="04-failure.png">
+            <img src="shots-prod/exp04/04-failure.png" alt="04-failure.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp04/05-retry.png" target="_blank" rel="noreferrer" title="05-retry.png">
+            <img src="shots-prod/exp04/05-retry.png" alt="05-retry.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp04/06-success.png" target="_blank" rel="noreferrer" title="06-success.png">
+            <img src="shots-prod/exp04/06-success.png" alt="06-success.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp04/07-report.png" target="_blank" rel="noreferrer" title="07-report.png">
+            <img src="shots-prod/exp04/07-report.png" alt="07-report.png" loading="lazy" /></a>
+    </div>
+    <div class="shot-count">7 张 · 点击看大图</div>
+  </div>
+    <footer class="card-foot">
+      <a class="btn primary" href="http://localhost:3001/exp/exp04" target="_blank" rel="noreferrer">打开操作台</a>
+             <a class="btn ghost" href="http://localhost:3001/exp/exp04/report" target="_blank" rel="noreferrer">看报告页</a>
+      <code>/exp/exp04</code>
+    </footer>
+  </article>
+
+  <article class="card is-playable">
+    <header class="card-head">
+      <div class="no">05</div>
+      <div class="headtext">
+        <h2>氧化还原反应和电化学</h2>
+        <p class="meta">验证实验 · 3 学时 · 原电池、盐桥、电动势测定</p>
+      </div>
+      <span class="badge ok">可玩</span>
+    </header>
+    <ul class="stat">
+    <li><b>6</b><span>步</span></li>
+    <li><b>30</b><span>动作</span></li>
+    <li><b>13</b><span>陷阱</span></li>
+    <li><b>5</b><span>L3</span></li>
+    <li><b>1</b><span>L4</span></li>
+  </ul>
+    <div class="shots">
+    <a class="shot-main" href="shots-prod/exp05/03-exp05-initial.png" target="_blank" rel="noreferrer">
+      <img src="shots-prod/exp05/03-exp05-initial.png" alt="氧化还原反应和电化学 首屏截图" loading="lazy" />
+      <span class="shot-tag">03-exp05-initial.png</span>
+    </a>
+    <div class="shot-strip">
+      <a class="shot-mini" href="shots-prod/exp05/01-portal.png" target="_blank" rel="noreferrer" title="01-portal.png">
+            <img src="shots-prod/exp05/01-portal.png" alt="01-portal.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp05/02-catalog.png" target="_blank" rel="noreferrer" title="02-catalog.png">
+            <img src="shots-prod/exp05/02-catalog.png" alt="02-catalog.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp05/04-failure.png" target="_blank" rel="noreferrer" title="04-failure.png">
+            <img src="shots-prod/exp05/04-failure.png" alt="04-failure.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp05/05-retry.png" target="_blank" rel="noreferrer" title="05-retry.png">
+            <img src="shots-prod/exp05/05-retry.png" alt="05-retry.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp05/06-success.png" target="_blank" rel="noreferrer" title="06-success.png">
+            <img src="shots-prod/exp05/06-success.png" alt="06-success.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp05/07-report.png" target="_blank" rel="noreferrer" title="07-report.png">
+            <img src="shots-prod/exp05/07-report.png" alt="07-report.png" loading="lazy" /></a>
+    </div>
+    <div class="shot-count">7 张 · 点击看大图</div>
+  </div>
+    <footer class="card-foot">
+      <a class="btn primary" href="http://localhost:3001/exp/exp05" target="_blank" rel="noreferrer">打开操作台</a>
+             <a class="btn ghost" href="http://localhost:3001/exp/exp05/report" target="_blank" rel="noreferrer">看报告页</a>
+      <code>/exp/exp05</code>
+    </footer>
+  </article>
+
+  <article class="card is-playable">
+    <header class="card-head">
+      <div class="no">06</div>
+      <div class="headtext">
+        <h2>配合物的生成和性质</h2>
+        <p class="meta">综合实验 · 3 学时 · 配位平衡、螯合物、稳定性比较</p>
+      </div>
+      <span class="badge ok">可玩</span>
+    </header>
+    <ul class="stat">
+    <li><b>6</b><span>步</span></li>
+    <li><b>28</b><span>动作</span></li>
+    <li><b>10</b><span>陷阱</span></li>
+    <li><b>3</b><span>L3</span></li>
+    <li><b>1</b><span>L4</span></li>
+  </ul>
+    <div class="shots">
+    <a class="shot-main" href="shots-prod/exp06/03-exp06-initial.png" target="_blank" rel="noreferrer">
+      <img src="shots-prod/exp06/03-exp06-initial.png" alt="配合物的生成和性质 首屏截图" loading="lazy" />
+      <span class="shot-tag">03-exp06-initial.png</span>
+    </a>
+    <div class="shot-strip">
+      <a class="shot-mini" href="shots-prod/exp06/01-portal.png" target="_blank" rel="noreferrer" title="01-portal.png">
+            <img src="shots-prod/exp06/01-portal.png" alt="01-portal.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp06/02-catalog.png" target="_blank" rel="noreferrer" title="02-catalog.png">
+            <img src="shots-prod/exp06/02-catalog.png" alt="02-catalog.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp06/04-failure.png" target="_blank" rel="noreferrer" title="04-failure.png">
+            <img src="shots-prod/exp06/04-failure.png" alt="04-failure.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp06/05-retry.png" target="_blank" rel="noreferrer" title="05-retry.png">
+            <img src="shots-prod/exp06/05-retry.png" alt="05-retry.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp06/06-success.png" target="_blank" rel="noreferrer" title="06-success.png">
+            <img src="shots-prod/exp06/06-success.png" alt="06-success.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp06/07-report.png" target="_blank" rel="noreferrer" title="07-report.png">
+            <img src="shots-prod/exp06/07-report.png" alt="07-report.png" loading="lazy" /></a>
+    </div>
+    <div class="shot-count">7 张 · 点击看大图</div>
+  </div>
+    <footer class="card-foot">
+      <a class="btn primary" href="http://localhost:3001/exp/exp06" target="_blank" rel="noreferrer">打开操作台</a>
+             <a class="btn ghost" href="http://localhost:3001/exp/exp06/report" target="_blank" rel="noreferrer">看报告页</a>
+      <code>/exp/exp06</code>
+    </footer>
+  </article>
+
+  <article class="card is-playable">
+    <header class="card-head">
+      <div class="no">07</div>
+      <div class="headtext">
+        <h2>常见阳离子的分离与鉴定（一）</h2>
+        <p class="meta">验证实验 · 4 学时 · 特征反应、分组分离、排除干扰</p>
+      </div>
+      <span class="badge ok">可玩</span>
+    </header>
+    <ul class="stat">
+    <li><b>6</b><span>步</span></li>
+    <li><b>27</b><span>动作</span></li>
+    <li><b>10</b><span>陷阱</span></li>
+    <li><b>6</b><span>L3</span></li>
+    <li><b>1</b><span>L4</span></li>
+  </ul>
+    <div class="shots">
+    <a class="shot-main" href="shots-prod/exp07/03-exp07-initial.png" target="_blank" rel="noreferrer">
+      <img src="shots-prod/exp07/03-exp07-initial.png" alt="常见阳离子的分离与鉴定（一） 首屏截图" loading="lazy" />
+      <span class="shot-tag">03-exp07-initial.png</span>
+    </a>
+    <div class="shot-strip">
+      <a class="shot-mini" href="shots-prod/exp07/01-portal.png" target="_blank" rel="noreferrer" title="01-portal.png">
+            <img src="shots-prod/exp07/01-portal.png" alt="01-portal.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp07/02-catalog.png" target="_blank" rel="noreferrer" title="02-catalog.png">
+            <img src="shots-prod/exp07/02-catalog.png" alt="02-catalog.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp07/04-failure.png" target="_blank" rel="noreferrer" title="04-failure.png">
+            <img src="shots-prod/exp07/04-failure.png" alt="04-failure.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp07/05-retry.png" target="_blank" rel="noreferrer" title="05-retry.png">
+            <img src="shots-prod/exp07/05-retry.png" alt="05-retry.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp07/06-success.png" target="_blank" rel="noreferrer" title="06-success.png">
+            <img src="shots-prod/exp07/06-success.png" alt="06-success.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp07/07-report.png" target="_blank" rel="noreferrer" title="07-report.png">
+            <img src="shots-prod/exp07/07-report.png" alt="07-report.png" loading="lazy" /></a>
+    </div>
+    <div class="shot-count">7 张 · 点击看大图</div>
+  </div>
+    <footer class="card-foot">
+      <a class="btn primary" href="http://localhost:3001/exp/exp07" target="_blank" rel="noreferrer">打开操作台</a>
+             <a class="btn ghost" href="http://localhost:3001/exp/exp07/report" target="_blank" rel="noreferrer">看报告页</a>
+      <code>/exp/exp07</code>
+    </footer>
+  </article>
+
+  <article class="card is-playable">
+    <header class="card-head">
+      <div class="no">08</div>
+      <div class="headtext">
+        <h2>清点仪器，分析天平称量练习</h2>
+        <p class="meta">验证实验 · 3 学时 · 固定质量称量、递减法、记录规范</p>
+      </div>
+      <span class="badge ok">可玩</span>
+    </header>
+    <ul class="stat">
+    <li><b>7</b><span>步</span></li>
+    <li><b>34</b><span>动作</span></li>
+    <li><b>15</b><span>陷阱</span></li>
+    <li><b>2</b><span>L3</span></li>
+    <li><b>1</b><span>L4</span></li>
+  </ul>
+    <div class="shots">
+    <a class="shot-main" href="shots-prod/exp08/03-exp08-initial.png" target="_blank" rel="noreferrer">
+      <img src="shots-prod/exp08/03-exp08-initial.png" alt="清点仪器，分析天平称量练习 首屏截图" loading="lazy" />
+      <span class="shot-tag">03-exp08-initial.png</span>
+    </a>
+    <div class="shot-strip">
+      <a class="shot-mini" href="shots-prod/exp08/01-portal.png" target="_blank" rel="noreferrer" title="01-portal.png">
+            <img src="shots-prod/exp08/01-portal.png" alt="01-portal.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp08/02-catalog.png" target="_blank" rel="noreferrer" title="02-catalog.png">
+            <img src="shots-prod/exp08/02-catalog.png" alt="02-catalog.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp08/04-failure.png" target="_blank" rel="noreferrer" title="04-failure.png">
+            <img src="shots-prod/exp08/04-failure.png" alt="04-failure.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp08/05-retry.png" target="_blank" rel="noreferrer" title="05-retry.png">
+            <img src="shots-prod/exp08/05-retry.png" alt="05-retry.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp08/06-success.png" target="_blank" rel="noreferrer" title="06-success.png">
+            <img src="shots-prod/exp08/06-success.png" alt="06-success.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp08/07-report.png" target="_blank" rel="noreferrer" title="07-report.png">
+            <img src="shots-prod/exp08/07-report.png" alt="07-report.png" loading="lazy" /></a>
+    </div>
+    <div class="shot-count">7 张 · 点击看大图</div>
+  </div>
+    <footer class="card-foot">
+      <a class="btn primary" href="http://localhost:3001/exp/exp08" target="_blank" rel="noreferrer">打开操作台</a>
+             <a class="btn ghost" href="http://localhost:3001/exp/exp08/report" target="_blank" rel="noreferrer">看报告页</a>
+      <code>/exp/exp08</code>
+    </footer>
+  </article>
+
+  <article class="card is-playable">
+    <header class="card-head">
+      <div class="no">09</div>
+      <div class="headtext">
+        <h2>酸碱标准溶液的配制与浓度比较</h2>
+        <p class="meta">验证实验 · 3 学时 · 滴定管洗涤润洗、半滴操作、终点判定</p>
+      </div>
+      <span class="badge ok">可玩</span>
+    </header>
+    <ul class="stat">
+    <li><b>7</b><span>步</span></li>
+    <li><b>36</b><span>动作</span></li>
+    <li><b>15</b><span>陷阱</span></li>
+    <li><b>3</b><span>L3</span></li>
+    <li><b>1</b><span>L4</span></li>
+  </ul>
+    <div class="shots">
+    <a class="shot-main" href="shots-prod/exp09/03-exp09-initial.png" target="_blank" rel="noreferrer">
+      <img src="shots-prod/exp09/03-exp09-initial.png" alt="酸碱标准溶液的配制与浓度比较 首屏截图" loading="lazy" />
+      <span class="shot-tag">03-exp09-initial.png</span>
+    </a>
+    <div class="shot-strip">
+      <a class="shot-mini" href="shots-prod/exp09/01-portal.png" target="_blank" rel="noreferrer" title="01-portal.png">
+            <img src="shots-prod/exp09/01-portal.png" alt="01-portal.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp09/02-catalog.png" target="_blank" rel="noreferrer" title="02-catalog.png">
+            <img src="shots-prod/exp09/02-catalog.png" alt="02-catalog.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp09/04-failure.png" target="_blank" rel="noreferrer" title="04-failure.png">
+            <img src="shots-prod/exp09/04-failure.png" alt="04-failure.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp09/05-retry.png" target="_blank" rel="noreferrer" title="05-retry.png">
+            <img src="shots-prod/exp09/05-retry.png" alt="05-retry.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp09/06-success.png" target="_blank" rel="noreferrer" title="06-success.png">
+            <img src="shots-prod/exp09/06-success.png" alt="06-success.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp09/07-report.png" target="_blank" rel="noreferrer" title="07-report.png">
+            <img src="shots-prod/exp09/07-report.png" alt="07-report.png" loading="lazy" /></a>
+    </div>
+    <div class="shot-count">7 张 · 点击看大图</div>
+  </div>
+    <footer class="card-foot">
+      <a class="btn primary" href="http://localhost:3001/exp/exp09" target="_blank" rel="noreferrer">打开操作台</a>
+             <a class="btn ghost" href="http://localhost:3001/exp/exp09/report" target="_blank" rel="noreferrer">看报告页</a>
+      <code>/exp/exp09</code>
+    </footer>
+  </article>
+
+  <article class="card is-playable">
+    <header class="card-head">
+      <div class="no">10</div>
+      <div class="headtext">
+        <h2>盐酸标准溶液的标定与工业纯碱总碱度的测定</h2>
+        <p class="meta">设计实验 · 3 学时 · 基准物质标定、双指示剂法测总碱度</p>
+      </div>
+      <span class="badge ok">可玩</span>
+    </header>
+    <ul class="stat">
+    <li><b>6</b><span>步</span></li>
+    <li><b>30</b><span>动作</span></li>
+    <li><b>13</b><span>陷阱</span></li>
+    <li><b>7</b><span>L3</span></li>
+    <li><b>1</b><span>L4</span></li>
+  </ul>
+    <div class="shots">
+    <a class="shot-main" href="shots-prod/exp10/03-exp10-initial.png" target="_blank" rel="noreferrer">
+      <img src="shots-prod/exp10/03-exp10-initial.png" alt="盐酸标准溶液的标定与工业纯碱总碱度的测定 首屏截图" loading="lazy" />
+      <span class="shot-tag">03-exp10-initial.png</span>
+    </a>
+    <div class="shot-strip">
+      <a class="shot-mini" href="shots-prod/exp10/01-portal.png" target="_blank" rel="noreferrer" title="01-portal.png">
+            <img src="shots-prod/exp10/01-portal.png" alt="01-portal.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp10/02-catalog.png" target="_blank" rel="noreferrer" title="02-catalog.png">
+            <img src="shots-prod/exp10/02-catalog.png" alt="02-catalog.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp10/04-failure.png" target="_blank" rel="noreferrer" title="04-failure.png">
+            <img src="shots-prod/exp10/04-failure.png" alt="04-failure.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp10/05-retry.png" target="_blank" rel="noreferrer" title="05-retry.png">
+            <img src="shots-prod/exp10/05-retry.png" alt="05-retry.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp10/06-success.png" target="_blank" rel="noreferrer" title="06-success.png">
+            <img src="shots-prod/exp10/06-success.png" alt="06-success.png" loading="lazy" /></a><a class="shot-mini" href="shots-prod/exp10/07-report.png" target="_blank" rel="noreferrer" title="07-report.png">
+            <img src="shots-prod/exp10/07-report.png" alt="07-report.png" loading="lazy" /></a>
+    </div>
+    <div class="shot-count">7 张 · 点击看大图</div>
+  </div>
+    <footer class="card-foot">
+      <a class="btn primary" href="http://localhost:3001/exp/exp10" target="_blank" rel="noreferrer">打开操作台</a>
+             <a class="btn ghost" href="http://localhost:3001/exp/exp10/report" target="_blank" rel="noreferrer">看报告页</a>
+      <code>/exp/exp10</code>
+    </footer>
+  </article>
+  </main>
+
+  <footer class="page">
+    <div>生成时间 2026/10/21 09:19:14 · 由 <code>node scripts/build-preview.mjs</code> 从 catalog + definition + 截图目录自动生成</div>
+    <div>验收命令：<code>BASE_URL=http://localhost:3001 node scripts/expNN-chain.mjs</code> · 演示账号 <code>20250101 / 周若曦</code></div>
+  </footer>
+</div>
+</body>
+</html>

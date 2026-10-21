@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>截图素材 · 一键演示流程</title>
+<style>
+  :root { --paper:#f6f7f5; --ink:#16202c; --river:#23307f; --line:rgba(22,32,44,.12); }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:32px clamp(16px,4vw,56px) 64px; background:var(--paper); color:var(--ink);
+         font-family: "LXGW WenKai", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display:flex; align-items:baseline; gap:16px; border-bottom:1px solid var(--line); padding-bottom:14px; margin-bottom:24px; }
+  h1 { font-size:22px; margin:0; letter-spacing:.02em; }
+  .sub { font-size:13px; color:rgba(22,32,44,.55); }
+  .mono { font-family: ui-monospace, "SF Mono", Consolas, monospace; }
+  .grid { display:grid; gap:18px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  .card { display:block; text-decoration:none; color:inherit; border:1px solid var(--line); background:#fff;
+          border-radius:2px; overflow:hidden; transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
+  .card:hover { transform: translateY(-2px); border-color:var(--river); box-shadow: 0 8px 22px rgba(22,32,44,.12); }
+  .thumb { aspect-ratio: 16/10; overflow:hidden; background:#e9ebe7; border-bottom:1px solid var(--line); }
+  .thumb img { width:100%; height:100%; object-fit: cover; object-position: top left; display:block; }
+  .meta { display:flex; align-items:center; gap:10px; padding:10px 12px; font-size:13px; }
+  .no { font-family: ui-monospace, Consolas, monospace; color:var(--river); font-weight:700; }
+  .label { flex:1; }
+  .kb { color:rgba(22,32,44,.45); font-family: ui-monospace, Consolas, monospace; font-size:12px; }
+  footer { margin-top:28px; font-size:12px; color:rgba(22,32,44,.5); }
+</style>
+</head>
+<body>
+  <header>
+    <h1>截图素材</h1>
+    <span class="sub mono">1440×900 @2x · 16 张 · 点击看大图</span>
+  </header>
+  <div class="grid">
+      <a class="card" href="./01-portal.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./01-portal.png" alt="门户首页" loading="lazy" /></div>
+        <div class="meta"><span class="no">01</span><span class="label">门户首页</span><span class="kb">1735KB</span></div>
+      </a>
+      <a class="card" href="./02-login.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./02-login.png" alt="学生登录" loading="lazy" /></div>
+        <div class="meta"><span class="no">02</span><span class="label">学生登录</span><span class="kb">123KB</span></div>
+      </a>
+      <a class="card" href="./03-catalog.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./03-catalog.png" alt="实验选择" loading="lazy" /></div>
+        <div class="meta"><span class="no">03</span><span class="label">实验选择</span><span class="kb">346KB</span></div>
+      </a>
+      <a class="card" href="./04-exp-initial.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./04-exp-initial.png" alt="实验页 · 初始" loading="lazy" /></div>
+        <div class="meta"><span class="no">04</span><span class="label">实验页 · 初始</span><span class="kb">420KB</span></div>
+      </a>
+      <a class="card" href="./05-drag-reagent.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./05-drag-reagent.png" alt="拖试剂 · 投放结果" loading="lazy" /></div>
+        <div class="meta"><span class="no">05</span><span class="label">拖试剂 · 投放结果</span><span class="kb">427KB</span></div>
+      </a>
+      <a class="card" href="./06-click-selected.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./06-click-selected.png" alt="点选 · 已选中待投放" loading="lazy" /></div>
+        <div class="meta"><span class="no">06</span><span class="label">点选 · 已选中待投放</span><span class="kb">434KB</span></div>
+      </a>
+      <a class="card" href="./07-success.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./07-success.png" alt="成功分支 · 为什么对" loading="lazy" /></div>
+        <div class="meta"><span class="no">07</span><span class="label">成功分支 · 为什么对</span><span class="kb">399KB</span></div>
+      </a>
+      <a class="card" href="./08-failure.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./08-failure.png" alt="失败分支 · 错在哪/为什么" loading="lazy" /></div>
+        <div class="meta"><span class="no">08</span><span class="label">失败分支 · 错在哪/为什么</span><span class="kb">597KB</span></div>
+      </a>
+      <a class="card" href="./09-retry.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./09-retry.png" alt="重做本步 · 回到开头" loading="lazy" /></div>
+        <div class="meta"><span class="no">09</span><span class="label">重做本步 · 回到开头</span><span class="kb">420KB</span></div>
+      </a>
+      <a class="card" href="./10-demo-open.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./10-demo-open.png" alt="演示模式 · 点开" loading="lazy" /></div>
+        <div class="meta"><span class="no">10</span><span class="label">演示模式 · 点开</span><span class="kb">2409KB</span></div>
+      </a>
+      <a class="card" href="./11-demo-login.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./11-demo-login.png" alt="演示 · 自动登录" loading="lazy" /></div>
+        <div class="meta"><span class="no">11</span><span class="label">演示 · 自动登录</span><span class="kb">1710KB</span></div>
+      </a>
+      <a class="card" href="./12-demo-catalog.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./12-demo-catalog.png" alt="演示 · 实验选择" loading="lazy" /></div>
+        <div class="meta"><span class="no">12</span><span class="label">演示 · 实验选择</span><span class="kb">2409KB</span></div>
+      </a>
+      <a class="card" href="./13-demo-exp.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./13-demo-exp.png" alt="演示 · 实验台" loading="lazy" /></div>
+        <div class="meta"><span class="no">13</span><span class="label">演示 · 实验台</span><span class="kb">2409KB</span></div>
+      </a>
+      <a class="card" href="./14-demo-report.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./14-demo-report.png" alt="演示 · 结果页" loading="lazy" /></div>
+        <div class="meta"><span class="no">14</span><span class="label">演示 · 结果页</span><span class="kb">1710KB</span></div>
+      </a>
+      <a class="card" href="./15-demo-fx.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./15-demo-fx.png" alt="演示 · 事故大秀" loading="lazy" /></div>
+        <div class="meta"><span class="no">15</span><span class="label">演示 · 事故大秀</span><span class="kb">2409KB</span></div>
+      </a>
+      <a class="card" href="./16-demo-teacher.png" target="_blank" rel="noreferrer">
+        <div class="thumb"><img src="./16-demo-teacher.png" alt="演示 · 教师端" loading="lazy" /></div>
+        <div class="meta"><span class="no">16</span><span class="label">演示 · 教师端</span><span class="kb">2409KB</span></div>
+      </a>
+  </div>
+  <footer>由 <span class="mono">node scripts/shots.mjs</span> 生成，重跑即可覆盖。</footer>
+</body>
+</html>

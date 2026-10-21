@@ -1,0 +1,239 @@
+/* ===================================================================
+   MOTION —— 交互反馈的唯一来源（token + 状态类）
+   规则见 docs/design/MOTION.md 与 .team/DECISIONS.md §17/§19
+   -------------------------------------------------------------------
+   原则：
+   1. 按下 30ms 内必须能看到 scale(0.97)；hover 80ms 内描边亮或浮起
+   2. 任何点击 100~300ms 内有可见反馈（缩放/发光/轻震/粒子）
+   3. 只动 transform / opacity / filter；阴影只在静态态用
+   4. 所有时长/缓动只从这里取值，组件里不许写死数字
+   =================================================================== */
+
+:root {
+  /* ---- 时长 ---- */
+  --press-in: 30ms;      /* 按下生效，必须 ≤30ms */
+  --press-out: 120ms;    /* 回弹 */
+  --hover: 80ms;         /* 悬停描边/浮起，必须 ≤80ms */
+  --pop: 180ms;          /* 数值弹一下 */
+  --snap: 160ms;         /* 拖拽落位吸附 */
+  --shake: 240ms;        /* 拒收抖动 */
+  --pulse: 360ms;        /* 器皿正反馈光环 */
+  --enter: 260ms;        /* 内容入场 */
+  --tint: 600ms;         /* 液体变色 */
+
+  /* ---- 缓动 ---- */
+  --ease-press: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1); /* 带回弹 */
+  --ease-snap: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ---- 缩放档位 ---- */
+  --scale-down: 0.97;    /* 按下 */
+  --scale-up: 1.04;      /* 悬停/选中 */
+  --scale-pop: 1.06;     /* 落位瞬间 */
+
+  /* ---- 反馈色 ---- */
+  --ix-hover-ring: rgba(35, 48, 127, 0.22);
+  --ix-press-ring: rgba(35, 48, 127, 0.34);
+  --ix-ok: var(--jade-600);
+  --ix-fail: var(--danger);
+}
+
+/* ===================================================================
+   通用可交互基类：任何可点元素加 .ix
+   =================================================================== */
+.ix {
+  position: relative;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--press-out) var(--ease-pop),
+    box-shadow var(--hover) var(--ease-press),
+    border-color var(--hover) var(--ease-press),
+    filter var(--hover) var(--ease-press);
+  will-change: transform;
+}
+
+/* 悬停：80ms 内描边点亮 + 轻微浮起 */
+.ix:hover {
+  transform: translateY(-1px) scale(var(--scale-up));
+  box-shadow: 0 0 0 2px var(--ix-hover-ring);
+}
+
+/* 按下：30ms 内缩到 0.97 */
+.ix:active,
+.ix[data-pressed="true"] {
+  transform: scale(var(--scale-down));
+  box-shadow: 0 0 0 2px var(--ix-press-ring);
+  transition-duration: var(--press-in);
+}
+
+/* 选中态：常亮描边 */
+.ix[data-selected="true"] {
+  box-shadow: 0 0 0 2px var(--rx-selected, var(--river-700));
+}
+
+/* 键盘可达 */
+.ix:focus-visible {
+  outline: 2px solid var(--river-500);
+  outline-offset: 2px;
+}
+
+/* ===================================================================
+   反馈动作
+   =================================================================== */
+
+/* 落位吸附：从略大弹回 1 */
+@keyframes ix-snap {
+  0% { transform: scale(var(--scale-pop)); }
+  60% { transform: scale(0.995); }
+  100% { transform: scale(1); }
+}
+.ix-snap {
+  animation: ix-snap var(--snap) var(--ease-snap);
+}
+
+/* 拒收抖动（只抖元素，不抖页面） */
+@keyframes ix-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-4px); }
+  35% { transform: translateX(4px); }
+  55% { transform: translateX(-3px); }
+  75% { transform: translateX(2px); }
+}
+.ix-shake {
+  animation: ix-shake var(--shake) var(--ease-press);
+}
+
+/* 成功光环脉冲（器皿 / 按钮都可用） */
+@keyframes ix-pulse-ok {
+  0% {
+    box-shadow: 0 0 0 0 rgba(15, 123, 108, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(15, 123, 108, 0);
+  }
+}
+.ix-pulse-ok {
+  animation: ix-pulse-ok var(--pulse) var(--ease-snap);
+}
+
+/* 失败光环脉冲 */
+@keyframes ix-pulse-fail {
+  0% {
+    box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(192, 57, 43, 0);
+  }
+}
+.ix-pulse-fail {
+  animation: ix-pulse-fail var(--pulse) var(--ease-snap);
+}
+
+/* 数值弹一下 */
+@keyframes ix-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+.ix-pop {
+  animation: ix-pop var(--pop) var(--ease-pop);
+}
+
+/* 内容入场（步骤推进用，不做退场等待） */
+@keyframes ix-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ix-enter {
+  animation: ix-enter var(--enter) var(--ease-out);
+}
+
+/* 拖拽中：跟手（禁用过渡，避免拖影滞后） */
+.ix[data-dragging="true"] {
+  transition: none;
+  transform: scale(1.03);
+  box-shadow: 0 8px 20px rgba(22, 32, 44, 0.18);
+  opacity: 0.92;
+  z-index: 10;
+}
+
+/* 可投放目标：用伪元素画脉冲环，**不动元素本身的 transform**，
+   否则会盖住按下态的 scale(0.97)（实测锥形瓶被顶成 1.03） */
+@keyframes ix-target-ring {
+  0% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+.ix[data-drop-target="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border: 2px dashed var(--river-500);
+  border-radius: 3px;
+  pointer-events: none;
+  animation: ix-target-ring 900ms ease-out infinite;
+}
+
+/* 可投放时只给一点亮度，不改 transform */
+.ix[data-drop-target="true"] {
+  filter: brightness(1.06);
+}
+
+/* 步骤条：当前项左侧色条滑入 */
+.ix-step[data-current="true"] {
+  box-shadow: inset 2px 0 0 var(--river-700);
+}
+
+/* ===================================================================
+   降级：保留颜色与描边变化，只去掉位移与循环
+   =================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .ix,
+  .ix:hover,
+  .ix:active,
+  .ix[data-pressed="true"] {
+    transform: none !important;
+    transition-duration: 1ms !important;
+  }
+
+  .ix-snap,
+  .ix-shake,
+  .ix-pulse-ok,
+  .ix-pulse-fail,
+  .ix-pop,
+  .ix-enter,
+  .ix[data-drop-target="true"] {
+    animation: none !important;
+  }
+
+  /* 信息不能丢：用描边与底色替代动画 */
+  .ix[data-drop-target="true"] {
+    box-shadow: 0 0 0 3px var(--river-500);
+  }
+
+  .ix-pulse-ok {
+    box-shadow: 0 0 0 2px var(--ix-ok) !important;
+  }
+
+  .ix-pulse-fail {
+    box-shadow: 0 0 0 2px var(--ix-fail) !important;
+  }
+}

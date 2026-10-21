@@ -1,0 +1,561 @@
+/* 拖拽反应场景（asset-pipeline 独占）
+ * 颜色只用契约 token：paper / ink / line / river / jade / bench。
+ * 动画只动 transform / opacity（液体 fill 过渡是契约特批例外）。
+ */
+
+.scene {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+/* ---------------- 试剂架 ---------------- */
+.rack {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 2px;
+  padding: 14px 12px 16px;
+}
+
+.rackTitle {
+  margin: 0;
+  font-size: var(--text-14);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.rackHint {
+  margin: 4px 0 12px;
+  font-size: var(--text-12);
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+.rackGroup + .rackGroup {
+  margin-top: 14px;
+}
+
+.rackGroupTitle {
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+}
+
+.bottles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bottle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 96px;
+  padding: 8px 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  cursor: grab;
+  transition:
+    transform 120ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.bottle:hover {
+  border-color: var(--river-700);
+}
+
+.bottle:focus-visible {
+  outline: 2px solid var(--river-700);
+  outline-offset: 2px;
+}
+
+.bottle[data-selected="true"] {
+  border-color: var(--river-700);
+  box-shadow: inset 0 0 0 1px var(--river-700);
+}
+
+.bottle[data-dragging="true"] {
+  transform: scale(1.04);
+  box-shadow: 0 4px 12px rgba(22, 32, 44, 0.16);
+  cursor: grabbing;
+}
+
+.bottleArt {
+  display: block;
+  width: 34px;
+  height: 44px;
+}
+
+.bottleName {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.bottleFormula {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-2);
+  text-align: center;
+}
+
+/* ---------------- 舞台 ---------------- */
+.stageCol {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.stageTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.instructions {
+  margin: 0;
+  font-size: var(--text-13);
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+.reset {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-13);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.reset:hover {
+  border-color: var(--river-700);
+}
+
+.reset:active {
+  transform: scale(0.97);
+}
+
+.stage {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.benchSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.benchMark {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  fill: var(--ink-2);
+  opacity: 0.65;
+}
+
+.vesselName {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  fill: var(--ink);
+}
+
+.vesselContents {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--ink-2);
+}
+
+.vesselArt {
+  pointer-events: none;
+}
+
+.droppable {
+  cursor: pointer;
+}
+
+.static {
+  cursor: default;
+}
+
+.vessel:focus {
+  outline: none;
+}
+
+.hit {
+  fill: transparent;
+}
+
+.focusRing {
+  fill: none;
+  stroke: var(--river-700);
+  stroke-width: 2;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.focusVisible {
+  opacity: 1;
+}
+
+/* 只有键盘操作才显示焦点框；鼠标/触屏点选不画蓝框 */
+.vessel:focus-visible .focusRing {
+  opacity: 1;
+}
+
+/* 拖近/点选高亮 */
+.dropHint {
+  pointer-events: none;
+}
+
+.dropRing {
+  fill: var(--river-100);
+  fill-opacity: 0.22;
+  stroke: var(--river-700);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  animation: hintPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes hintPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.dropTagBg {
+  fill: var(--river-700);
+}
+
+.dropTag {
+  fill: #fff;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* ---------------- 现象动画 ---------------- */
+.liquid {
+  transition: fill 600ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.bubble {
+  opacity: 0;
+  animation: bubbleUp 1500ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  animation-delay: var(--bubble-delay, 0ms);
+}
+
+@keyframes bubbleUp {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(calc(var(--bubble-rise, 60px) * -1)) scale(1.05);
+  }
+}
+
+.precipitate {
+  animation: settle 1200ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 0.95;
+    transform: translateY(0);
+  }
+}
+
+.heat path {
+  opacity: 0.5;
+  animation: heatBreath 1800ms ease-in-out infinite;
+}
+
+@keyframes heatBreath {
+  0%,
+  100% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.smokePuff {
+  opacity: 0;
+  animation: puff 2000ms ease-out both;
+}
+
+@keyframes puff {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.6);
+  }
+  to {
+    opacity: 0.35;
+    transform: translateY(-46px) scale(1.6);
+  }
+}
+
+/* ---------------- 事件条 / 页脚 ---------------- */
+.event {
+  min-height: 44px;
+}
+
+.footnote {
+  margin: 0;
+  font-size: var(--text-12);
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+/* 事故特效层：绝对定位、不吃指针 */
+.fxSlot {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* ---------------- 视口 ---------------- */
+@media (max-width: 960px) {
+  .scene {
+    grid-template-columns: 1fr;
+  }
+
+  .bottles {
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  }
+
+  .bottle {
+    min-height: 88px;
+  }
+}
+
+@media (max-width: 520px) {
+  .stageTop {
+    flex-wrap: wrap;
+  }
+
+  .bottles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ---------------- 无障碍降级 ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  .bubble,
+  .precipitate,
+  .smokePuff {
+    animation: none;
+    opacity: 0.9;
+    transform: none;
+  }
+
+  .heat path {
+    animation: none;
+    opacity: 0.7;
+  }
+
+  .liquid {
+    transition: none;
+  }
+
+  .dropRing {
+    animation: none;
+    opacity: 0.8;
+  }
+
+  .bottle,
+  .reset {
+    transition: none;
+  }
+}
+/* ================= 场景补充（基类/状态类见 app/styles/motion.css） =================
+   只保留 SVG 里 box-shadow 画不出来的部分：器皿光环、液面抬升、拖近缩放；时长全部取 token。 */
+.vessel {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.vessel[data-drag-over="true"] {
+  /* 只提示，不放大元素本体：放大交给虚线环，避免和 :active 的 scale(0.97) 打架 */
+  cursor: copy;
+}
+
+/* 成功光环：SVG 里用描边圆角框画，替代 div 的 box-shadow */
+.pulseRing {
+  fill: none;
+  stroke: var(--ix-ok);
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulseOut var(--pulse) var(--ease-snap) both;
+  pointer-events: none;
+}
+
+/* 拒收红环 */
+.rejectRing {
+  fill: none;
+  stroke: var(--ix-fail);
+  stroke-width: 2;
+  opacity: 0;
+  animation: rejectFlash calc(var(--shake) + 60ms) linear both;
+  pointer-events: none;
+}
+
+/* 投放后液面 180ms 抬升（只动 transform） */
+.vessel[data-feedback="success"] .liquid {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: liquidRise var(--snap) var(--ease-press) both;
+}
+
+@keyframes pulseOut {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes rejectFlash {
+  0%,
+  100% {
+    stroke-opacity: 0;
+  }
+  40% {
+    stroke-opacity: 1;
+  }
+}
+
+@keyframes liquidRise {
+  0% {
+    transform: translateY(6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vessel[data-drag-over="true"] {
+    transform: none;
+  }
+
+  .pulseRing,
+  .rejectRing,
+  .vessel[data-feedback="success"] .liquid {
+    animation: none;
+  }
+
+  .pulseRing {
+    opacity: 1;
+  }
+}
+/* 试剂瓶“已选中”浮标（定位补在瓶口上方，只在选中时出现） */
+.selectedTag {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  z-index: 2;
+  padding: 1px 6px;
+  border: 1px solid var(--river-700);
+  border-radius: 2px;
+  background: var(--river-700);
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition:
+    transform var(--press-out) var(--ease-press),
+    opacity var(--hover) linear;
+  pointer-events: none;
+}
+
+.bottle[data-selected="true"] .selectedTag {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .selectedTag {
+    transition: none;
+  }
+}
+/* 拖拽悬停的可投放目标：虚线环脉冲（只动描边/透明度，不动元素 transform） */
+.targetRing {
+  fill: none;
+  stroke: var(--river-700);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  opacity: 0;
+  animation: targetPulse 900ms ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes targetPulse {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .targetRing {
+    animation: none;
+    opacity: 0.85;
+  }
+}

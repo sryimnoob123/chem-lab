@@ -1,0 +1,175 @@
+{
+  "base": "http://localhost:3001",
+  "rounds": 20,
+  "ok": true,
+  "failedRounds": 0,
+  "heap": {
+    "series": [
+      3.1,
+      3.2,
+      3.1,
+      3.2,
+      3.2,
+      3.1,
+      3.1,
+      3.1,
+      3.1,
+      3.2,
+      3.1,
+      3.1,
+      3.1,
+      3.1,
+      3.2,
+      3.2,
+      3.2,
+      3.2,
+      3.2,
+      3.2
+    ],
+    "growth": 0.10000000000000009,
+    "tailGrowth": 0.10000000000000009
+  },
+  "errors": [],
+  "rows": [
+    {
+      "round": 1,
+      "ok": true,
+      "heapMB": 3.1,
+      "deltaMB": 2.6,
+      "newErrors": 0
+    },
+    {
+      "round": 2,
+      "ok": true,
+      "heapMB": 3.2,
+      "deltaMB": 0.1,
+      "newErrors": 0
+    },
+    {
+      "round": 3,
+      "ok": true,
+      "heapMB": 3.1,
+      "deltaMB": -0.1,
+      "newErrors": 0
+    },
+    {
+      "round": 4,
+      "ok": true,
+      "heapMB": 3.2,
+      "deltaMB": 0.1,
+      "newErrors": 0
+    },
+    {
+      "round": 5,
+      "ok": true,
+      "heapMB": 3.2,
+      "deltaMB": 0,
+      "newErrors": 0
+    },
+    {
+      "round": 6,
+      "ok": true,
+      "heapMB": 3.1,
+      "deltaMB": -0.1,
+      "newErrors": 0
+    },
+    {
+      "round": 7,
+      "ok": true,
+      "heapMB": 3.1,
+      "deltaMB": 0,
+      "newErrors": 0
+    },
+    {
+      "round": 8,
+      "ok": true,
+      "heapMB": 3.1,
+      "deltaMB": 0,
+      "newErrors": 0
+    },
+    {
+      "round": 9,
+      "ok": true,
+      "heapMB": 3.1,
+      "deltaMB": 0,
+      "newErrors": 0
+    },
+    {
+      "round": 10,
+      "ok": true,
+      "heapMB": 3.2,
+      "deltaMB": 0.1,
+      "newErrors": 0
+    },
+    {
+      "round": 11,
+      "ok": true,
+      "heapMB": 3.1,
+      "deltaMB": -0.1,
+      "newErrors": 0
+    },
+    {
+      "round": 12,
+      "ok": true,
+      "heapMB": 3.1,
+      "deltaMB": 0,
+      "newErrors": 0
+    },
+    {
+      "round": 13,
+      "ok": true,
+      "heapMB": 3.1,
+      "deltaMB": 0,
+      "newErrors": 0
+    },
+    {
+      "round": 14,
+      "ok": true,
+      "heapMB": 3.1,
+      "deltaMB": 0,
+      "newErrors": 0
+    },
+    {
+      "round": 15,
+      "ok": true,
+      "heapMB": 3.2,
+      "deltaMB": 0.1,
+      "newErrors": 0
+    },
+    {
+      "round": 16,
+      "ok": true,
+      "heapMB": 3.2,
+      "deltaMB": 0,
+      "newErrors": 0
+    },
+    {
+      "round": 17,
+      "ok": true,
+      "heapMB": 3.2,
+      "deltaMB": 0,
+      "newErrors": 0
+    },
+    {
+      "round": 18,
+      "ok": true,
+      "heapMB": 3.2,
+      "deltaMB": 0,
+      "newErrors": 0
+    },
+    {
+      "round": 19,
+      "ok": true,
+      "heapMB": 3.2,
+      "deltaMB": 0,
+      "newErrors": 0
+    },
+    {
+      "round": 20,
+      "ok": true,
+      "heapMB": 3.2,
+      "deltaMB": 0,
+      "newErrors": 0
+    }
+  ]
+}

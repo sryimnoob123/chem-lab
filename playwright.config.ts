@@ -1,5 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
+/**
+ * 默认自己起 dev server（3000）。
+ * 想在已跑起来的服务上跑（如生产态 3001），设置 E2E_BASE_URL，例如：
+ *   E2E_BASE_URL=http://localhost:3001 npx playwright test
+ * 此时不再拉起 webServer。
+ */
+const externalBase = process.env.E2E_BASE_URL;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -8,7 +16,7 @@ export default defineConfig({
   reporter: [["list"], ["html", { outputFolder: "e2e-review/playwright-report", open: "never" }]],
   outputDir: "e2e-review/test-results",
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL: externalBase ?? "http://127.0.0.1:3000",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
@@ -16,10 +24,12 @@ export default defineConfig({
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
-  webServer: {
-    command: "npm run dev",
-    url: "http://127.0.0.1:3000",
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  webServer: externalBase
+    ? undefined
+    : {
+        command: "npm run dev",
+        url: "http://127.0.0.1:3000",
+        reuseExistingServer: true,
+        timeout: 180_000,
+      },
 });

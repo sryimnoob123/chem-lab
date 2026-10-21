@@ -1,0 +1,420 @@
+/* 事故特效共享样式（asset-pipeline 独占）
+ *
+ * 铁律：默认样式 = **终态**，keyframes 从初始态演到终态。
+ * 这样 `prefers-reduced-motion: reduce` 下只要 `animation: none`，
+ * 每个元素自动停在终态一帧，信息不丢（不是整个消失）。
+ * 只动 transform / opacity / filter（filter 只用于模糊与亮度）。
+ */
+
+.layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.benchStrip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 14%;
+  background: var(--bench);
+  border-top: 1px solid var(--line);
+  pointer-events: none;
+}
+
+.svg {
+  position: relative;
+  z-index: 1;
+  display: block;
+  overflow: visible;
+}
+
+.inline .svg {
+  width: 320px;
+  height: 240px;
+}
+
+.full .svg {
+  width: 100%;
+  height: 100%;
+}
+
+.svg * {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* ---------------- 角标 ---------------- */
+.badge {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 2px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.badgeTop {
+  top: 10px;
+  right: 10px;
+}
+
+.badgeBottom {
+  bottom: 10px;
+  left: 10px;
+}
+
+.badgeIcon {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* ---------------- 通用动画 ---------------- */
+.shake {
+  animation: shake 240ms steps(4, end) 1 both;
+}
+
+@keyframes shake {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-4px, 2px);
+  }
+  50% {
+    transform: translate(4px, -2px);
+  }
+  75% {
+    transform: translate(-2px, -3px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+/* 爆炸：白闪 */
+.flash {
+  opacity: 0;
+  animation: flash 420ms ease-out 1 both;
+}
+
+@keyframes flash {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.25);
+  }
+  35% {
+    opacity: 0.75;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* 爆炸：冲击环 */
+.ring {
+  opacity: 0;
+  animation: ring 900ms cubic-bezier(0.16, 1, 0.3, 1) 1 both;
+}
+
+@keyframes ring {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3.4);
+  }
+}
+
+.ringGhost {
+  opacity: 0.42;
+  animation: fadeIn 480ms 260ms ease-out 1 both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 0.42;
+    transform: scale(1);
+  }
+}
+
+/* 碎玻璃 / 碎片飞散：起点在中心，终点是作者坐标（--dx/--dy/--rot） */
+.debris {
+  transform: translate(var(--dx, 0), var(--dy, 0)) rotate(var(--rot, 0deg)) scale(1);
+  animation: debris 900ms cubic-bezier(0.12, 0.7, 0.3, 1) 1 both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes debris {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg) scale(0.35);
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translate(var(--dx, 0), var(--dy, 0)) rotate(var(--rot, 0deg)) scale(1);
+  }
+}
+
+/* 烟团 / 雾团：上浮扩张 */
+.smoke {
+  opacity: 0.34;
+  animation: smoke 2s cubic-bezier(0.2, 0.7, 0.3, 1) 1 both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes smoke {
+  0% {
+    opacity: 0;
+    transform: translate(0, 18px) scale(0.55);
+  }
+  30% {
+    opacity: 0.66;
+  }
+  100% {
+    opacity: 0.3;
+    transform: translate(var(--dx, 0), var(--dy, -88px)) scale(1.9);
+  }
+}
+
+/* 火苗抖动（循环） */
+.flicker {
+  animation: flicker 520ms ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes flicker {
+  from {
+    transform: scaleY(0.94) scaleX(1.02) skewX(-1.4deg);
+  }
+  to {
+    transform: scaleY(1.08) scaleX(0.97) skewX(1.6deg);
+  }
+}
+
+/* 火星 / 气泡上升 */
+.rise {
+  animation: rise var(--dur, 900ms) ease-out infinite;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.5);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(var(--dy, -60px)) scale(1.1);
+  }
+}
+
+/* 溢出液流：沿器壁流下 */
+.pour {
+  transform: translateY(var(--drop, 46px)) scaleY(1);
+  animation: pour 1.2s 260ms cubic-bezier(0.4, 0, 0.9, 0.5) 1 both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes pour {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scaleY(0.2);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.85;
+    transform: translateY(var(--drop, 46px)) scaleY(1);
+  }
+}
+
+/* 台面湿渍扩散 */
+.puddle {
+  transform: scaleX(1.35) scaleY(1);
+  animation: puddle 1.2s 420ms cubic-bezier(0.16, 1, 0.3, 1) 1 both;
+}
+
+@keyframes puddle {
+  from {
+    opacity: 0;
+    transform: scaleX(0.15) scaleY(0.6);
+  }
+  to {
+    opacity: 0.6;
+    transform: scaleX(1.35) scaleY(1);
+  }
+}
+
+/* 裂纹：逐条画出（契约特批的 stroke-dashoffset） */
+.crack {
+  stroke-dasharray: 220;
+  stroke-dashoffset: 0;
+  animation: draw 520ms ease-out 1 both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 220;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* 坠落（碎片下落） */
+.fall {
+  transform: translateY(var(--fall, 62px)) rotate(var(--rot, 40deg));
+  animation: fall 700ms 300ms cubic-bezier(0.5, 0, 0.9, 0.6) 1 both;
+  animation-delay: var(--delay, 300ms);
+}
+
+@keyframes fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0.15;
+    transform: translateY(var(--fall, 62px)) rotate(var(--rot, 40deg));
+  }
+}
+
+/* 灼伤痕：由中心扩大 */
+.burnMark {
+  transform: scale(1);
+  animation: burn 700ms cubic-bezier(0.16, 1, 0.3, 1) 1 both;
+}
+
+@keyframes burn {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  to {
+    opacity: 0.92;
+    transform: scale(1);
+  }
+}
+
+/* 波纹扩散 */
+.ripple {
+  opacity: 0;
+  animation: ripple 1.4s ease-out infinite;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes ripple {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.25);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+/* 水滴下落 */
+.droplet {
+  animation: droplet 620ms ease-in 1 both;
+}
+
+@keyframes droplet {
+  0% {
+    opacity: 0;
+    transform: translateY(-52px) scale(0.8);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(44px) scale(0.5);
+  }
+}
+
+/* 屏幕爆错闪烁 */
+.blink {
+  animation: blink 260ms steps(2, end) infinite;
+}
+
+@keyframes blink {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.25;
+  }
+}
+
+/* 火花 */
+.spark {
+  transform: translate(var(--dx, 0), var(--dy, 0)) scale(1);
+  animation: spark 700ms ease-out 1 both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes spark {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.2);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx, 0), var(--dy, 0)) scale(1);
+  }
+}
+
+/* 水色污染（fill 过渡特批） */
+.pollute {
+  animation: pollute 1.6s 320ms ease-in-out 1 both;
+}
+
+@keyframes pollute {
+  from {
+    fill: #9fd2ec;
+  }
+  to {
+    fill: #23402c;
+  }
+}
+
+/* ---------------- 降级：只保留静态终态一帧 ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  .layer * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

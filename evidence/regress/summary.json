@@ -1,0 +1,52 @@
+{
+  "steps": [
+    {
+      "name": "门户",
+      "ok": true,
+      "detail": "已加载"
+    },
+    {
+      "name": "登录 → 实验选择",
+      "ok": true,
+      "detail": "/experiments"
+    },
+    {
+      "name": "拖试剂",
+      "ok": true,
+      "detail": "1162ms"
+    },
+    {
+      "name": "成功分支",
+      "ok": true,
+      "detail": "1278ms"
+    },
+    {
+      "name": "失败分支",
+      "ok": true,
+      "detail": "630ms"
+    },
+    {
+      "name": "重做",
+      "ok": true,
+      "detail": "回到本步"
+    },
+    {
+      "name": "结果页",
+      "ok": true,
+      "detail": "/exp/exp09/report"
+    },
+    {
+      "name": "连点/切页/后退/刷新",
+      "ok": true,
+      "detail": "堆 7.9 → 5.5 MB（Δ -2.4）"
+    }
+  ],
+  "blanks": [],
+  "errors": [],
+  "heap": {
+    "before": 7.9,
+    "after": 5.5,
+    "delta": -2.4
+  },
+  "shots": 11
+}

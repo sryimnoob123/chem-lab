@@ -1,0 +1,36 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>字体自检</title>
+<link rel="stylesheet" href="./font-faces.css" />
+<style>
+  body { margin: 0; padding: 36px 44px; background: #f6f7f9; color: #16202c; font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 22px; letter-spacing: .02em; }
+  section { background: #fff; border: 1px solid #dfe3e9; border-radius: 4px; padding: 18px 22px; margin-bottom: 16px; }
+  h2 { margin: 0 0 10px; font-size: 11px; letter-spacing: .14em; color: #5b6472; text-transform: uppercase; font-weight: 500; }
+  .line { font-size: 26px; line-height: 1.55; }
+  .w400 { font-weight: 400; } .w500 { font-weight: 500; } .w700 { font-weight: 700; }
+  .wenkai { font-family: "LXGW WenKai", "KaiTi", serif; font-size: 24px; }
+  .mono { font-family: "IBM Plex Mono", monospace; font-size: 22px; letter-spacing: .01em; }
+  .tick { font-family: "IBM Plex Mono", monospace; font-size: 13px; color: #5b6472; }
+  .ok { color: #1a7f37; } .bad { color: #b42318; }
+</style>
+<h1>字体自检 · chem-lab</h1>
+<section>
+  <h2>Noto Sans SC · 400 / 500 / 700</h2>
+  <div class="line w400">河南大学 无机及分析化学实验 · 滴定操作与终点判断</div>
+  <div class="line w500">河南大学 无机及分析化学实验 · 滴定操作与终点判断</div>
+  <div class="line w700">河南大学 无机及分析化学实验 · 滴定操作与终点判断</div>
+</section>
+<section>
+  <h2>LXGW WenKai 400 · 旁白 / 引文</h2>
+  <div class="wenkai">"将滴定管垂直固定在滴定管夹上，读数时视线与凹液面最低点相平。"</div>
+</section>
+<section>
+  <h2>IBM Plex Mono · 读数 / 数据表</h2>
+  <div class="mono">V(NaOH) = 20.05 mL · m = 0.2500 g · pH = 4.72</div>
+  <div class="tick">0 5 10 15 20 25 30 35 40 45 50</div>
+</section>
+<section>
+  <h2>加载自检</h2>
+  <div id="checks" class="mono"></div>
+</section>

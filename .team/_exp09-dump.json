@@ -1,0 +1,727 @@
+[
+ {
+  "index": 1,
+  "title": "称 NaOH 配约 0.1 mol/L 溶液 500 mL",
+  "scene": "天平台 + 配液台",
+  "demoId": "exp09-step1-naoh",
+  "tolerance": {
+   "paramKey": "volume",
+   "expected": 500,
+   "unit": "mL",
+   "tolerance": 5
+  },
+  "choices": [
+   {
+    "choiceId": "step1-weigh",
+    "type": "weigh",
+    "role": "correct",
+    "label": "戴丁腈手套，用药匙在 100 mL 烧杯中快速称取 2.0 g NaOH",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "称取 NaOH 2.0 g（托盘天平，感量 0.1 g）",
+     "value": 2
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step1-dissolve",
+    "type": "dissolve",
+    "role": "correct",
+    "label": "加约 200 mL 蒸馏水，玻璃棒搅拌至固体全部溶解",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "固体全部溶解，溶液澄清、无悬浮物",
+     "value": 200
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step1-transfer",
+    "type": "transfer",
+    "role": "correct",
+    "label": "冷却至室温后转入 500 mL 聚乙烯瓶，补蒸馏水至刻度，盖紧摇匀并贴标签",
+    "completesStep": true,
+    "feedback": {
+     "severity": "info",
+     "title": "配液完成：聚乙烯瓶 + 标签",
+     "refs": [
+      "S003",
+      "S008"
+     ]
+    },
+    "observation": {
+     "text": "定容至 500 mL，转入聚乙烯瓶并贴标签（NaOH ≈ 0.1 mol/L，含日期/姓名）",
+     "value": 500
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step1-bare-hands-naoh",
+    "type": "weigh",
+    "role": "trap",
+    "label": "徒手抓取 NaOH 固体，或称在称量纸上再倒入量筒",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L3",
+     "terminate": false,
+     "fx": "burn",
+     "ruleId": "exp09-H2",
+     "feedback": {
+      "severity": "danger",
+      "title": "NaOH 潮解皂化皮肤，滑腻灼痛",
+      "why": "NaOH 强吸湿，遇皮肤表面水分即溶解并皂化脂肪、同时放热，碱液向深层渗透持续损伤。",
+      "correct": "药匙取用、戴丁腈手套、在烧杯中称量，称后立即密封试剂瓶。",
+      "refs": [
+       "S003"
+      ]
+     }
+    }
+   },
+   {
+    "choiceId": "step1-glass-stopper",
+    "type": "transfer",
+    "role": "trap",
+    "label": "把配好的 NaOH 溶液装玻璃细口瓶并塞玻璃磨口塞",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L2",
+     "terminate": false,
+     "fx": null,
+     "ruleId": "exp09-H10",
+     "feedback": {
+      "severity": "warn",
+      "title": "磨口被腐蚀黏结、瓶塞打不开，试剂报废",
+      "why": "NaOH 与玻璃中 SiO₂ 缓慢反应生成硅酸钠，磨口处黏结；长期存放还引入硅酸盐。",
+      "correct": "存于聚乙烯瓶，橡胶塞/塑料螺纹盖，贴标签并注明日期。",
+      "refs": [
+       "S004",
+       "S008"
+      ]
+     }
+    }
+   },
+   {
+    "choiceId": "step1-hot-dissolve",
+    "type": "dilute",
+    "role": "trap",
+    "label": "用热水加速溶解，未冷却即定容至刻度",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L2",
+     "terminate": false,
+     "fx": null,
+     "ruleId": "exp09-H9",
+     "feedback": {
+      "severity": "warn",
+      "title": "热液冷却后体积收缩，c 偏低约 1%",
+      "why": "水的体膨胀系数约 2×10⁻⁴ K⁻¹，20→60 ℃ 体积增大约 1.6%，冷却后液面低于刻度。",
+      "correct": "冷却至室温后再定容（可水浴冷却烧杯外壁，不骤冷）。",
+      "refs": [
+       "S004"
+      ]
+     }
+    }
+   }
+  ]
+ },
+ {
+  "index": 2,
+  "title": "量浓盐酸配约 0.1 mol/L 溶液 500 mL",
+  "scene": "通风橱内",
+  "demoId": "exp09-step2-hcl",
+  "tolerance": {
+   "paramKey": "volume",
+   "expected": 500,
+   "unit": "mL",
+   "tolerance": 5
+  },
+  "choices": [
+   {
+    "choiceId": "step2-add-water",
+    "type": "observe",
+    "role": "correct",
+    "label": "戴护目镜 + 丁腈手套，在通风橱内先向 400 mL 烧杯加约 300 mL 蒸馏水",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "通风橱内，400 mL 烧杯已加约 300 mL 蒸馏水",
+     "value": 300
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step2-measure-acid",
+    "type": "readInstrument",
+    "role": "correct",
+    "label": "用 10 mL 量筒量取 4.2 mL 浓盐酸，抄录瓶标 ρ=1.19 g/mL、w=37%",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "量取浓盐酸 4.2 mL（瓶标 ρ=1.19 g/mL，w=37%，c≈12 mol/L）",
+     "value": 4.2
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step2-add-acid",
+    "type": "dilute",
+    "role": "correct",
+    "label": "沿烧杯内壁缓缓将浓盐酸注入水中，边加边搅拌",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "酸沿壁注入水中并搅拌，无酸雾逸出，液温 ≤40 ℃",
+     "value": 40
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step2-transfer",
+    "type": "transfer",
+    "role": "correct",
+    "label": "冷却至室温后转入 500 mL 聚乙烯瓶，补蒸馏水至 500 mL，摇匀贴标签",
+    "completesStep": true,
+    "feedback": {
+     "severity": "info",
+     "title": "配酸完成：酸入水 + 通风橱 + 聚乙烯瓶",
+     "refs": [
+      "S003"
+     ]
+    },
+    "observation": {
+     "text": "定容至 500 mL，转入聚乙烯瓶并贴标签（HCl ≈ 0.1 mol/L）",
+     "value": 500
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step2-water-into-acid",
+    "type": "dilute",
+    "role": "trap",
+    "label": "把水沿烧杯内壁缓缓倒入盛有浓盐酸的烧杯，并俯身观察",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L4",
+     "terminate": true,
+     "fx": "boil-over",
+     "ruleId": "exp09-H1",
+     "feedback": {
+      "severity": "danger",
+      "title": "水入酸：溶解热集中使局部过热，酸雾与热液喷溅",
+      "why": "浓盐酸 ρ=1.19 g/mL > 水，水浮于酸面；HCl 溶解热约 −75 kJ/mol 集中在水层，局部瞬间过热并促使 HCl 急剧逸出；俯身使高浓度酸雾直冲面部。",
+      "correct": "通风橱内、护目镜 + 手套，先加水后加酸，酸沿壁缓缓注入水中并搅拌，冷却后再转移。",
+      "refs": [
+       "S003",
+       "S010"
+      ]
+     }
+    }
+   }
+  ]
+ },
+ {
+  "index": 3,
+  "title": "滴定管检漏、洗涤与润洗",
+  "scene": "滴定台",
+  "demoId": "exp09-step3-wash",
+  "tolerance": null,
+  "choices": [
+   {
+    "choiceId": "step3-inspect",
+    "type": "observe",
+    "role": "correct",
+    "label": "对光检查管壁与尖嘴有无裂纹，试转活塞、捏放玻璃珠看是否灵活漏液",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "管壁与尖嘴无裂纹，活塞/玻璃珠灵活不漏液"
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step3-wash",
+    "type": "wash",
+    "role": "correct",
+    "label": "洗洁精刷洗 → 自来水冲净 → 蒸馏水淋洗 3 次",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "内壁不挂水珠，蒸馏水淋洗 3 次完成"
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step3-rinse",
+    "type": "wash",
+    "role": "correct",
+    "label": "用待装液润洗 3 次、每次约 5 mL，转动全润湿后由管尖放出",
+    "completesStep": true,
+    "feedback": null,
+    "observation": {
+     "text": "待装液润洗 3 次完成，内壁水膜均匀",
+     "value": 15
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step3-tap-water-only",
+    "type": "wash",
+    "role": "trap",
+    "label": "只用自来水冲一遍即装液，不作润洗",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L2",
+     "terminate": false,
+     "fx": null,
+     "ruleId": "exp09-H5",
+     "feedback": {
+      "severity": "warn",
+      "title": "内壁残留水膜稀释溶液，消耗体积偏大 0.3%~0.8%",
+      "why": "残留水膜稀释装入的溶液，实际浓度低于标称值，三次数据同时作废。",
+      "correct": "洗洁精 + 自来水 → 蒸馏水淋洗 3 次 → 待装液润洗 3 次（每次约 5 mL）。",
+      "refs": [
+       "S004"
+      ]
+     }
+    }
+   }
+  ]
+ },
+ {
+  "index": 4,
+  "title": "装液、排气泡、调零",
+  "scene": "滴定台",
+  "demoId": "exp09-step4-fill",
+  "tolerance": {
+   "paramKey": "initialReading",
+   "expected": 0,
+   "unit": "mL",
+   "tolerance": 0.02
+  },
+  "choices": [
+   {
+    "choiceId": "step4-clamp",
+    "type": "assemble",
+    "role": "correct",
+    "label": "滴定管垂直夹于铁架台，管尖伸入锥形瓶口内 2~3 cm",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "滴定管垂直稳固夹持，管尖伸入瓶口 2~3 cm"
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step4-fill",
+    "type": "titrate",
+    "role": "correct",
+    "label": "装液至零刻度上方，管尖朝下快速放液冲出尖嘴气泡",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "尖嘴气泡已排尽，液面在零刻度上方"
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step4-zero",
+    "type": "readInstrument",
+    "role": "correct",
+    "label": "调液面至 0.00 mL 并读初读数，记到 0.01 mL",
+    "completesStep": true,
+    "feedback": null,
+    "observation": {
+     "text": "初读数 0.00 mL（估读到 0.01 mL，两位小数）",
+     "value": 0
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step4-skip-bubble",
+    "type": "titrate",
+    "role": "trap",
+    "label": "气泡未排尽就调零开始滴定",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L2",
+     "terminate": false,
+     "fx": null,
+     "ruleId": "exp09-H6",
+     "feedback": {
+      "severity": "warn",
+      "title": "气泡逸出致液面突降，读数跳变 0.05~0.3 mL",
+      "why": "气泡占据刻度体积，滴定中逸出使液面突降，终读数与真实放液量不符，该次数据不可用。",
+      "correct": "装液至零刻度上方，管尖朝下快速放液冲出气泡，再调至 0.00 mL。",
+      "refs": [
+       "S004"
+      ]
+     }
+    }
+   },
+   {
+    "choiceId": "step4-naoh-in-acid-burette",
+    "type": "assemble",
+    "role": "trap",
+    "label": "把 NaOH 溶液装入酸式（玻璃活塞）滴定管，活塞发涩后强行扭转",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L3",
+     "terminate": false,
+     "fx": "glass-break",
+     "ruleId": "exp09-H3",
+     "feedback": {
+      "severity": "danger",
+      "title": "磨口被碱腐蚀黏结，强拧致活塞折断、管身崩裂",
+      "why": "2NaOH + SiO₂ → Na₂SiO₃ + H₂O，磨口玻璃被腐蚀生成硅酸钠而黏结；强行扭转使活塞柄折断、管身应力集中崩裂。",
+      "correct": "碱液一律用碱式滴定管（橡胶管 + 玻璃珠），酸液用酸式滴定管；活塞发涩先查明原因不硬拧。",
+      "refs": [
+       "S004"
+      ]
+     }
+    }
+   },
+   {
+    "choiceId": "step4-hold-burette-tilted",
+    "type": "assemble",
+    "role": "trap",
+    "label": "手持滴定管倾斜排气泡，或管夹未夹紧",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L3",
+     "terminate": false,
+     "fx": "device-accident",
+     "ruleId": "exp09-H4",
+     "feedback": {
+      "severity": "danger",
+      "title": "滴定管跌落，试液与玻璃碎片飞溅",
+      "why": "50 mL 滴定管装液后重心高、管壁薄，一旦脱手即自由落体。",
+      "correct": "滴定管垂直夹在铁架台，管尖伸入瓶口 2~3 cm，全程不手持操作。",
+      "refs": [
+       "S004",
+       "S009"
+      ]
+     }
+    }
+   }
+  ]
+ },
+ {
+  "index": 5,
+  "title": "移取 HCl 并加指示剂",
+  "scene": "滴定台",
+  "demoId": "exp09-step5-pipette",
+  "tolerance": {
+   "paramKey": "volume",
+   "expected": 25,
+   "unit": "mL",
+   "tolerance": 0.03
+  },
+  "choices": [
+   {
+    "choiceId": "step5-rinse-pipette",
+    "type": "wash",
+    "role": "correct",
+    "label": "移液管用蒸馏水洗净后，用待移取 HCl 润洗 3 次",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "移液管已用待移取 HCl 润洗 3 次"
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step5-pipette",
+    "type": "transfer",
+    "role": "correct",
+    "label": "洗耳球吸液至刻度上方，调至凹液面与 25.00 mL 相切，管尖靠瓶内壁自然流下、停留 15 s",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "移取 HCl 25.00 mL，自然流尽并停留 15 s",
+     "value": 25
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step5-indicator",
+    "type": "addDrops",
+    "role": "correct",
+    "label": "加 2 滴酚酞，轻摇锥形瓶使混匀",
+    "completesStep": true,
+    "feedback": null,
+    "observation": {
+     "text": "加入 2 滴酚酞（约 0.05~0.1 mL），溶液无色透明",
+     "value": 2
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step5-skip-rinse",
+    "type": "transfer",
+    "role": "trap",
+    "label": "不润洗直接用，或把管尖残液吹入锥形瓶",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L2",
+     "terminate": false,
+     "fx": null,
+     "ruleId": "exp09-H7",
+     "feedback": {
+      "severity": "warn",
+      "title": "移取体积偏差 0.1%~0.2%，c(HCl) 偏低",
+      "why": "不润洗时残留水稀释试液使 c 偏低；吹残液则多放出 0.02~0.05 mL（A 级移液管已按“自然流尽”校准）。",
+      "correct": "润洗 3 次；自然流尽后停留 15 s 取出，绝不吹。",
+      "refs": [
+       "S007"
+      ]
+     }
+    }
+   },
+   {
+    "choiceId": "step5-excess-indicator",
+    "type": "addDrops",
+    "role": "trap",
+    "label": "加 5~6 滴酚酞使颜色明显加深",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L1",
+     "terminate": false,
+     "fx": null,
+     "ruleId": "exp09-H11",
+     "feedback": {
+      "severity": "warn",
+      "title": "指示剂耗碱且色深，终点提前 0.02~0.05 mL",
+      "why": "指示剂本身是弱酸、消耗少量碱；且颜色过深使终点变色不敏锐。",
+      "correct": "2 滴（约 0.05~0.1 mL）即可，颜色过深须重取。",
+      "refs": [
+       "S005"
+      ]
+     }
+    }
+   }
+  ]
+ },
+ {
+  "index": 6,
+  "title": "滴定至终点",
+  "scene": "滴定台",
+  "demoId": "exp09-step6-titrate",
+  "tolerance": {
+   "paramKey": "volume",
+   "expected": 25.2,
+   "unit": "mL",
+   "tolerance": 0.13
+  },
+  "choices": [
+   {
+    "choiceId": "step6-titrate-fast",
+    "type": "titrate",
+    "role": "correct",
+    "label": "左手控制活塞或捏放玻璃珠，右手旋摇锥形瓶，先快后慢，近终点逐滴加入",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "滴定至近终点，锥形瓶内呈浅粉色（尚可褪去）"
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step6-half-drop",
+    "type": "addDrops",
+    "role": "correct",
+    "label": "终点前改用半滴：管尖靠瓶内壁，用洗瓶吹下，摇匀",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "半滴加入并吹下摇匀，颜色转为浅粉红",
+     "value": 0.5
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step6-read-end",
+    "type": "readInstrument",
+    "role": "correct",
+    "label": "粉红色 30 s 不褪即为终点，立即读终读数并记到 0.01 mL",
+    "completesStep": true,
+    "feedback": null,
+    "observation": {
+     "text": "终点读数 25.18 mL，浅粉红保持 30 s 不褪",
+     "value": 25.18
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step6-line-flow",
+    "type": "titrate",
+    "role": "trap",
+    "label": "开大流量成线流，摇动跟不上",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L1",
+     "terminate": false,
+     "fx": null,
+     "ruleId": "exp09-H12",
+     "feedback": {
+      "severity": "warn",
+      "title": "局部过量致提前变色，读数偏高 0.05~0.2 mL",
+      "why": "局部 NaOH 过量使 pH 骤升、指示剂提前变色，摇匀后又褪去，终点反复、判断困难。",
+      "correct": "先快后慢，近终点逐滴、半滴加入，边加边旋摇。",
+      "refs": [
+       "S005"
+      ]
+     }
+    }
+   },
+   {
+    "choiceId": "step6-over-titrate",
+    "type": "titrate",
+    "role": "trap",
+    "label": "溶液已呈深红色仍继续滴加",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L2",
+     "terminate": false,
+     "fx": null,
+     "ruleId": "exp09-H8",
+     "feedback": {
+      "severity": "warn",
+      "title": "滴定过量，V(NaOH) 偏大 ≥0.1 mL，本次数据作废",
+      "why": "超过化学计量点后过量 NaOH 使酚酞深度显色，V(NaOH) 系统性偏大。",
+      "correct": "近终点半滴/四分之一滴加入，摇匀至浅粉红 30 s 不褪即停。",
+      "refs": [
+       "S005"
+      ]
+     }
+    }
+   }
+  ]
+ },
+ {
+  "index": 7,
+  "title": "平行测定与浓度比计算",
+  "scene": "滴定台 + 计算台",
+  "demoId": "exp09-step7-compute",
+  "tolerance": {
+   "paramKey": "relativeRange",
+   "expected": 0,
+   "unit": "%",
+   "tolerance": 0.2
+  },
+  "choices": [
+   {
+    "choiceId": "step7-repeat",
+    "type": "titrate",
+    "role": "correct",
+    "label": "重复步 5~6 共 3 次，每次如实记录初/终读数",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "三次平行滴定完成（消耗 25.18 / 25.22 / 25.20 mL）",
+     "value": 3
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step7-record",
+    "type": "readInstrument",
+    "role": "correct",
+    "label": "如实记录三次初/终读数，平均消耗体积与极差",
+    "completesStep": false,
+    "feedback": null,
+    "observation": {
+     "text": "平均消耗 V̄(NaOH)=25.20 mL，极差 0.04 mL，相对极差 0.16%",
+     "value": 25.2
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step7-compute",
+    "type": "compute",
+    "role": "correct",
+    "label": "按 c(NaOH)/c(HCl) = V(HCl)/V(NaOH) 求浓度比，并算平均体积与相对极差",
+    "completesStep": true,
+    "feedback": null,
+    "observation": {
+     "text": "浓度比 c(NaOH)/c(HCl) = 25.00 ÷ 25.20 = 0.992，相对极差 0.16% ≤0.2%",
+     "value": 0.992
+    },
+    "hazard": null
+   },
+   {
+    "choiceId": "step7-single-trial",
+    "type": "compute",
+    "role": "trap",
+    "label": "只做 1 次平行测定就取平均值",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L1",
+     "terminate": false,
+     "fx": null,
+     "ruleId": "exp09-H13",
+     "feedback": {
+      "severity": "warn",
+      "title": "无法估计随机误差，数据完整性扣分",
+      "why": "单次测定无法估计随机误差，读数偶然误差不可发现。",
+      "correct": "平行测定 3 次，相对极差 ≤0.2%。",
+      "refs": [
+       "S005"
+      ]
+     }
+    }
+   },
+   {
+    "choiceId": "step7-inverted-ratio",
+    "type": "compute",
+    "role": "trap",
+    "label": "把浓度比写成 V(NaOH)/V(HCl)，直接拿体积比当浓度比",
+    "completesStep": false,
+    "feedback": null,
+    "observation": null,
+    "hazard": {
+     "level": "L1",
+     "terminate": false,
+     "fx": null,
+     "ruleId": "exp09-H14",
+     "feedback": {
+      "severity": "warn",
+      "title": "比值取倒数，与参考值差约 1.6%",
+      "why": "由 c(碱)·V(碱) = c(酸)·V(酸) 得 c(碱)/c(酸) = V(酸)/V(碱)，是倒数关系。",
+      "correct": "先写公式再代数，代入后检查“浓度大的那方消耗体积小”是否成立。",
+      "refs": [
+       "S005"
+      ]
+     }
+    }
+   }
+  ]
+ }
+]

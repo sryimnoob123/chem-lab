@@ -1,0 +1,138 @@
+.bar {
+  position: relative;
+  height: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px 0 14px;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+.mark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--river-700);
+}
+
+.bar[data-state="warn"] .mark {
+  background: var(--warn);
+}
+
+.bar[data-state="danger"] .mark {
+  background: var(--danger);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 16px;
+  color: var(--river-700);
+}
+
+.bar[data-state="warn"] .icon {
+  color: var(--warn);
+}
+
+.bar[data-state="danger"] .icon {
+  color: var(--danger);
+}
+
+.text {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-14);
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.bar[data-state="info"] .text {
+  color: var(--river-700);
+}
+
+.bar[data-state="warn"] .text {
+  color: var(--warn);
+}
+
+.bar[data-state="danger"] .text {
+  color: var(--danger);
+}
+
+.hint {
+  flex: 0 0 auto;
+  color: var(--ink-2);
+  font-size: var(--text-14);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.hint kbd {
+  display: inline-block;
+  min-width: 20px;
+  margin-right: 4px;
+  padding: 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--paper-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-14);
+  line-height: 18px;
+  text-align: center;
+}
+
+.countdown {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  flex: 0 0 auto;
+  color: var(--river-700);
+}
+
+.bar[data-state="warn"] .countdown {
+  color: var(--warn);
+}
+
+.bar[data-state="danger"] .countdown {
+  color: var(--danger);
+}
+
+.countdownValue {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.countdownUnit {
+  font-family: var(--font-mono);
+  font-size: var(--text-14);
+  line-height: 1;
+  opacity: 0.8;
+}
+
+@media (max-width: 760px) {
+  .bar {
+    gap: 8px;
+    padding: 0 12px 0 10px;
+  }
+
+  .hint {
+    display: none;
+  }
+
+  .text {
+    font-size: var(--text-14);
+  }
+}

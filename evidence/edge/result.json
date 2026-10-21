@@ -1,0 +1,105 @@
+{
+  "pass": 14,
+  "total": 14,
+  "results": [
+    {
+      "n": 1,
+      "name": "login-empty-no",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\01-login-empty-no.png"
+    },
+    {
+      "n": 2,
+      "name": "login-overlong-no",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\02-login-overlong-no.png"
+    },
+    {
+      "n": 3,
+      "name": "login-chinese-symbol-no",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\03-login-chinese-symbol-no.png"
+    },
+    {
+      "n": 4,
+      "name": "login-empty-name",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\04-login-empty-name.png"
+    },
+    {
+      "n": 5,
+      "name": "login-not-in-roster",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\05-login-not-in-roster.png"
+    },
+    {
+      "n": 6,
+      "name": "unauth-experiments",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\06-unauth-experiments.png"
+    },
+    {
+      "n": 7,
+      "name": "bad-experiment-id",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\07-bad-experiment-id.png"
+    },
+    {
+      "n": 8,
+      "name": "heat-without-reagent",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\08-heat-without-reagent.png"
+    },
+    {
+      "n": 9,
+      "name": "drop-wrong-vessel",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\09-drop-wrong-vessel.png"
+    },
+    {
+      "n": 10,
+      "name": "invalid-runid",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\10-invalid-runid.png"
+    },
+    {
+      "n": 11,
+      "name": "report-no-run",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\11-report-no-run.png"
+    },
+    {
+      "n": 12,
+      "name": "teacher-no-unlock",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\12-teacher-no-unlock.png"
+    },
+    {
+      "n": 13,
+      "name": "teacher-roster-search-none",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\13-teacher-roster-search-none.png"
+    },
+    {
+      "n": 14,
+      "name": "api-runs-bad-payload",
+      "pass": true,
+      "detail": "提示=true 可恢复=true 新错误=0",
+      "file": "evidence\\edge\\14-api-runs-bad-payload.png"
+    }
+  ],
+  "errors": []
+}

@@ -11,9 +11,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
+    "shots": "node scripts/shots.mjs",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:init": "node db/init.mjs"
+    "db:init": "node db/init.mjs",
+    "db:demo": "node db/seed-demo.mjs",
+    "check:encoding": "node scripts/check-encoding.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.10",

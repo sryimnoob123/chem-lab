@@ -1,0 +1,14 @@
+﻿import { chromium } from "@playwright/test";
+const b = await chromium.launch();
+const p = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+const errs = [];
+p.on("pageerror", (e) => errs.push(String(e.message).slice(0, 120)));
+await p.goto("http://localhost:3000/exp/exp09", { waitUntil: "networkidle" });
+const ids = await p.evaluate(() => Array.from(document.querySelectorAll("[data-demo-id]")).map(e => e.getAttribute("data-demo-id")));
+console.log("DEMO IDS:", JSON.stringify(ids));
+const reagents = await p.evaluate(() => Array.from(document.querySelectorAll("[data-reagent-id],[data-demo-id^='demo-scene-reagent']")).map(e => e.getAttribute("data-reagent-id") || e.getAttribute("data-demo-id")));
+console.log("REAGENTS:", JSON.stringify(reagents));
+const vessels = await p.evaluate(() => Array.from(document.querySelectorAll("[data-vessel-id],[data-demo-id^='demo-scene-vessel']")).map(e => e.getAttribute("data-vessel-id") || e.getAttribute("data-demo-id")));
+console.log("VESSELS:", JSON.stringify(vessels));
+console.log("ERRORS:", JSON.stringify(errs));
+await b.close();

@@ -1,0 +1,24 @@
+﻿import { chromium } from "@playwright/test";
+const b = await chromium.launch();
+const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+const p = await ctx.newPage();
+const log = [];
+p.on("pageerror", (e) => log.push("PAGEERROR " + String(e.message).slice(0, 120)));
+const go = async (u) => { const r = await p.goto("http://localhost:3000" + u, { waitUntil: "networkidle" }); log.push(`${u} -> ${r?.status()}`); };
+await go("/");
+await p.click('[data-demo-id="demo-portal-cta"]');
+await p.waitForURL("**/login", { timeout: 8000 }).catch(() => log.push("未跳转到 /login"));
+log.push("login URL: " + p.url());
+await p.fill('[data-demo-id="demo-login-student-no"]', "20250101");
+await p.fill('[data-demo-id="demo-login-student-name"]', "周若曦");
+await p.click('[data-demo-id="demo-login-submit"]');
+await p.waitForURL("**/experiments", { timeout: 10000 }).catch(() => log.push("登录后未跳 /experiments"));
+log.push("after login: " + p.url());
+const rows = await p.locator(".cat-row").count();
+log.push("列表行数: " + rows);
+const open = await p.locator('.cat-row[data-state="open"] .cat-row__link').first();
+if (await open.count()) { await open.click(); await p.waitForLoadState("networkidle"); log.push("进实验: " + p.url()); }
+const stage = await p.locator('[class*="stage"], .workbench, canvas, svg').count();
+log.push("场景元素数: " + stage);
+console.log(log.join("\n"));
+await b.close();

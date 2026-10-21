@@ -1,0 +1,1728 @@
+/* ===== exp-stage：全幅沉浸式实验台 ===== */
+
+.app {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--bench-ink);
+  background-image:
+    linear-gradient(rgba(201, 214, 228, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201, 214, 228, 0.045) 1px, transparent 1px);
+  background-size: 40px 40px;
+  color: var(--bench-text);
+  font-family: var(--font-sans);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------------ 顶条 */
+.topbar {
+  position: relative;
+  flex: 0 0 44px;
+  height: 44px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--bench-line);
+  background: rgba(10, 16, 24, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+.back {
+  flex: 0 0 auto;
+  color: var(--bench-text);
+  font-size: var(--text-12);
+  line-height: 1;
+  text-decoration: none;
+  padding: 8px 6px 8px 0;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.back:hover {
+  color: #fff;
+}
+
+.topName {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.topNo {
+  flex: 0 0 auto;
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  opacity: 0.62;
+}
+
+.topTitle {
+  min-width: 0;
+  max-width: 380px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff;
+  font-size: var(--text-12);
+  font-weight: 500;
+}
+
+.topCenter {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topStep {
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.topTicks {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.topTick {
+  width: 16px;
+  height: 2px;
+  background: var(--bench-line);
+}
+
+.topTick[data-state="done"] {
+  background: var(--jade-600);
+}
+
+.topTick[data-state="current"] {
+  background: var(--river-100);
+}
+
+.topRight {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modeSwitch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--bench-line);
+  background: rgba(10, 16, 24, 0.85);
+}
+
+.modeLabel {
+  padding: 0 5px;
+  color: var(--bench-text);
+  font-size: 9px;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.modeButton {
+  min-height: 24px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--bench-text);
+  font: inherit;
+  font-size: 9px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.modeButton[data-current="true"] {
+  background: var(--river-700);
+  color: #fff;
+}
+
+.modeButton:hover {
+  color: #fff;
+}
+
+.readonlyBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 7px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.1);
+  color: #f5c451;
+  font-size: 9px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.readonlyBadge::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.keyFooter {
+  flex: 0 0 18px;
+  height: 18px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid var(--bench-line);
+  background: rgba(10, 16, 24, 0.94);
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  opacity: 0.62;
+  white-space: nowrap;
+}
+
+.student {
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  opacity: 0.68;
+  white-space: nowrap;
+}
+
+.exit {
+  color: var(--bench-text);
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.exit:hover {
+  color: #fff;
+}
+
+.finishTop {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--jade-600);
+  background: rgba(15, 123, 108, 0.16);
+  color: #b7e3d6;
+  font: inherit;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.finishTop:hover:not(:disabled) {
+  background: rgba(15, 123, 108, 0.28);
+  color: #fff;
+}
+
+.finishTop:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ------------------------------------------------------------------ 工作区 */
+.workspace {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.sceneTodo {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  z-index: 20;
+  margin: 0;
+  padding: 3px 8px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(10, 16, 24, 0.82);
+  color: #d8b36a;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ 场景 */
+.sceneStage {
+  position: absolute;
+  inset: 0;
+}
+
+.rack {
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  z-index: 8;
+  width: 196px;
+  padding: 10px;
+  border: 1px solid var(--bench-line);
+  background: rgba(14, 22, 32, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.rackHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.rackHint {
+  color: var(--bench-text);
+  font-size: 9px;
+  opacity: 0.6;
+}
+
+.pickHint {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  z-index: 12;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--river-100);
+  background: rgba(14, 22, 32, 0.94);
+  color: #fff;
+  font-size: 10px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.pickHintKey {
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  opacity: 0.6;
+}
+
+.rackList {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reagent {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px;
+  border: 1px solid var(--bench-line);
+  background: rgba(26, 37, 49, 0.55);
+  color: var(--bench-text);
+  font: inherit;
+  text-align: left;
+  cursor: grab;
+}
+
+.reagent:hover {
+  border-color: var(--river-100);
+}
+
+.reagent[data-selected="true"] {
+  border-color: var(--river-100);
+  box-shadow: inset 0 0 0 1px var(--river-100);
+}
+
+.reagent[data-dragging="true"] {
+  opacity: 0.6;
+}
+
+.reagentBottle {
+  position: relative;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 28px;
+  border: 1px solid rgba(201, 214, 228, 0.5);
+  border-radius: 1px;
+}
+
+.reagentBottle::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 6px;
+  width: 8px;
+  height: 4px;
+  border: 1px solid rgba(201, 214, 228, 0.5);
+  border-bottom: 0;
+}
+
+.reagentFill {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  height: 55%;
+  opacity: 0.75;
+}
+
+.reagentText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.reagentName {
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.reagentFormula {
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  opacity: 0.62;
+  line-height: 1.2;
+}
+
+.rackNote {
+  margin: 8px 0 0;
+  color: var(--bench-text);
+  font-size: 9px;
+  line-height: 1.4;
+  opacity: 0.55;
+}
+
+.benchArea {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 366px 48px 226px;
+}
+
+.apparatusWrap {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: 50% 78%;
+}
+
+.apparatus {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+
+/* exp08 复用实验台 SVG（分析天平 / 烧杯），只做尺寸适配，不新增图形。 */
+.apparatusWrap[data-bench="true"] {
+  width: 100%;
+}
+
+.benchReuse {
+  width: min(900px, 92%);
+  max-height: 82%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.benchReuse > div {
+  width: 100%;
+  max-height: 100%;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.benchReuse :global(svg) {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+}
+
+.benchSurface {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 4%;
+  height: 17%;
+  z-index: 0;
+  border-top: 1px solid var(--bench-line);
+  background: rgba(26, 37, 49, 0.32);
+}
+
+.flaskTarget {
+  position: absolute;
+  left: 50%;
+  bottom: 5%;
+  transform: translateX(-50%);
+  width: 34%;
+  min-width: 128px;
+  height: 27%;
+  border: 1px dashed transparent;
+  background: transparent;
+  color: var(--bench-text);
+  cursor: pointer;
+  z-index: 3;
+}
+
+.flaskTarget[data-active="true"] {
+  border-color: rgba(201, 214, 228, 0.45);
+}
+
+/* 投放热区本身有 translateX(-50%) 定位，交互缩放要保留它。 */
+.flaskTarget.ix:hover {
+  transform: translateX(-50%) translateY(-1px) scale(var(--scale-up));
+}
+
+.flaskTarget.ix:active {
+  transform: translateX(-50%) scale(var(--scale-down));
+}
+
+.flaskTarget[data-over="true"] {
+  border-color: var(--river-100);
+  background: rgba(140, 180, 220, 0.08);
+}
+
+.dropLabel {
+  position: absolute;
+  left: 50%;
+  top: -18px;
+  transform: translateX(-50%);
+  color: var(--bench-text);
+  font-size: 9px;
+  opacity: 0;
+  white-space: nowrap;
+}
+
+.flaskTarget[data-active="true"] .dropLabel {
+  opacity: 0.72;
+}
+
+.stageCaption {
+  position: absolute;
+  left: 20px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--bench-text);
+  font-size: 10px;
+  line-height: 1.4;
+  opacity: 0.55;
+}
+
+.captionMark {
+  width: 12px;
+  height: 1px;
+  background: var(--bench-text);
+}
+
+.fxSlot {
+  position: absolute;
+  inset: 0 360px 0 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.fxSlot :global(svg) {
+  width: min(520px, 70vw) !important;
+  height: auto !important;
+  max-height: 78%;
+}
+
+/* FX 资产按亮色场景绘制；暗场里去掉它自带的浅色台面，只留事故图形。 */
+.fxSlot :global([class*="benchStrip"]) {
+  background: transparent !important;
+  border-top-color: var(--bench-line) !important;
+}
+
+.fxSlot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(14, 22, 32, 0.28);
+}
+
+/* 失败时先让器皿抖完，再露出事故特效；时长/缓动取 motion token。 */
+.fxSlot[data-feedback="failure"] {
+  animation: ix-enter var(--enter) var(--ease-out) var(--shake) both;
+}
+
+/* 四角坐标刻度 */
+.coordTl,
+.coordTr,
+.coordBl,
+.coordBr {
+  position: absolute;
+  z-index: 6;
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.coordTl {
+  left: 8px;
+  top: 6px;
+}
+
+.coordTr {
+  right: 8px;
+  top: 6px;
+}
+
+.coordBl {
+  left: 8px;
+  bottom: 6px;
+}
+
+.coordBr {
+  right: 8px;
+  bottom: 6px;
+}
+
+/* ------------------------------------------------------------------ 右侧浮层 */
+.rail {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10;
+  width: 344px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--bench-line);
+  background: rgba(14, 22, 32, 0.72);
+  backdrop-filter: blur(8px);
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bench-line) transparent;
+}
+
+.railHead {
+  flex: 0 0 auto;
+}
+
+.railKicker {
+  display: block;
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+
+.railTitle {
+  margin: 3px 0 0;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.railJudge {
+  margin: 4px 0 0;
+  color: var(--bench-text);
+  font-size: 10px;
+  line-height: 1.5;
+  opacity: 0.82;
+}
+
+.railJudge span {
+  display: inline-block;
+  margin-right: 5px;
+  padding: 0 4px;
+  border: 1px solid var(--bench-line);
+  font-size: 9px;
+  opacity: 0.8;
+}
+
+/* 步骤台账 */
+.ledger {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 5px 0;
+  border-top: 1px solid var(--bench-line);
+  border-bottom: 1px solid var(--bench-line);
+  list-style: none;
+}
+
+.ledger li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--bench-text);
+  opacity: 0.5;
+}
+
+.ledger li[data-state="done"] {
+  opacity: 0.72;
+}
+
+.ledger li[data-state="current"] {
+  opacity: 1;
+  color: #fff;
+}
+
+.ledgerNo {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.ledgerName {
+  display: none;
+}
+
+.ledgerDot {
+  width: 4px;
+  height: 4px;
+  background: var(--bench-line);
+}
+
+.ledger li[data-state="done"] .ledgerDot {
+  background: var(--jade-600);
+}
+
+.ledger li[data-state="current"] .ledgerDot {
+  background: var(--river-100);
+}
+
+/* 参数卡 */
+.params {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.param {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 8px;
+  border: 1px solid var(--bench-line);
+  background: rgba(26, 37, 49, 0.5);
+}
+
+.param[data-tone="warn"] {
+  border-color: var(--warn);
+}
+
+.paramLabel {
+  color: var(--bench-text);
+  font-size: 9px;
+  line-height: 1.3;
+  opacity: 0.68;
+}
+
+.paramValue {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.paramValue em {
+  color: var(--bench-text);
+  font-size: 9px;
+  font-style: normal;
+  opacity: 0.7;
+}
+
+.swatch {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 1px solid var(--bench-line);
+  align-self: center;
+}
+
+.paramNote {
+  color: var(--bench-text);
+  font-size: 9px;
+  line-height: 1.3;
+  opacity: 0.55;
+}
+
+/* 提示 */
+.hintBox {
+  flex: 0 0 auto;
+  padding-top: 7px;
+  border-top: 1px solid var(--bench-line);
+}
+
+.hintHead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.hintTitle {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.hintLevel {
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  opacity: 0.65;
+}
+
+.hintMeter {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.hintTick {
+  width: 12px;
+  height: 2px;
+  background: var(--bench-line);
+}
+
+.hintTick[data-active="true"] {
+  background: var(--river-100);
+}
+
+.hintTick[data-warn="true"][data-active="true"] {
+  background: var(--warn);
+}
+
+.hintButton {
+  min-height: 32px;
+  margin-left: auto;
+  padding: 0 8px;
+  border: 1px solid var(--bench-line);
+  background: transparent;
+  color: var(--bench-text);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.hintButton:hover {
+  border-color: var(--river-100);
+  color: #fff;
+}
+
+.hintText {
+  margin: 6px 0 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--river-100);
+  color: var(--bench-text);
+  font-family: var(--font-kai);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.hintLead {
+  margin: 4px 0 0;
+  color: var(--bench-text);
+  font-size: 9px;
+  line-height: 1.45;
+  opacity: 0.55;
+}
+
+.hintWarn {
+  margin: 5px 0 0;
+  padding-left: 6px;
+  border-left: 2px solid var(--warn);
+  color: var(--warn);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+/* 反馈 / 事故卡 */
+.feedback {
+  flex: 0 0 auto;
+  padding: 8px 9px;
+  border: 1px solid var(--bench-line);
+  border-left: 3px solid var(--river-100);
+  background: rgba(26, 37, 49, 0.55);
+}
+
+.feedback[data-severity="warn"] {
+  border-left-color: var(--warn);
+}
+
+.feedback[data-severity="danger"] {
+  border-left-color: var(--danger);
+}
+
+.feedbackHead {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.feedbackLevel {
+  flex: 0 0 auto;
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  opacity: 0.65;
+}
+
+.feedback[data-severity="warn"] .feedbackLevel {
+  color: var(--warn);
+  opacity: 1;
+}
+
+.feedback[data-severity="danger"] .feedbackLevel {
+  color: var(--danger);
+  opacity: 1;
+}
+
+.feedbackTitle {
+  min-width: 0;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.deduct {
+  margin-left: auto;
+  flex: 0 0 auto;
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.feedbackText {
+  margin: 4px 0 0;
+  color: var(--bench-text);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.feedbackText span {
+  color: #fff;
+}
+
+.terminate {
+  margin: 6px 0 0;
+  padding: 3px 6px;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+/* 动作 */
+.actions {
+  flex: 0 0 auto;
+  padding-top: 7px;
+  border-top: 1px solid var(--bench-line);
+}
+
+.actionsHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.actionsHead h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.actionsHead span {
+  color: var(--bench-text);
+  font-size: 9px;
+  opacity: 0.55;
+}
+
+.actionList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.action {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--bench-line);
+  background: rgba(26, 37, 49, 0.5);
+  color: var(--bench-text);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.action:hover:not(:disabled) {
+  border-color: var(--river-100);
+  background: rgba(47, 66, 86, 0.6);
+  color: #fff;
+}
+
+.action:active:not(:disabled) {
+  transform: scale(0.97);
+  border-color: var(--river-100);
+}
+
+.action:disabled {
+  cursor: default;
+  opacity: 0.34;
+}
+
+.actionText {
+  flex: 1 1 100%;
+}
+
+.actionMeta {
+  flex: 0 0 100%;
+  color: var(--bench-text);
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* 交卷 */
+.finish {
+  flex: 0 0 auto;
+  padding-top: 7px;
+  border-top: 1px solid var(--bench-line);
+}
+
+.finishKicker {
+  margin: 0;
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  opacity: 0.65;
+}
+
+.finishScore {
+  margin: 2px 0 0;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.finishScore span {
+  color: var(--bench-text);
+  font-family: var(--font-sans);
+  font-size: 9px;
+  letter-spacing: 0;
+  opacity: 0.7;
+}
+
+.finishMeta {
+  margin: 4px 0 0;
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+.finishActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 7px;
+  flex-wrap: wrap;
+}
+
+.resetButton {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--bench-line);
+  background: transparent;
+  color: var(--bench-text);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.resetButton:hover {
+  border-color: var(--river-100);
+  color: #fff;
+}
+
+.reportLink {
+  color: var(--river-100);
+  font-size: 10px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.reportLink:hover {
+  color: #fff;
+}
+
+.note {
+  flex: 0 0 auto;
+  margin: 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--river-700);
+  color: var(--bench-text);
+  font-family: var(--font-kai);
+  font-size: 10px;
+  line-height: 1.6;
+  opacity: 0.72;
+}
+
+.note span {
+  color: #fff;
+  font-family: var(--font-sans);
+}
+
+/* ------------------------------------------------------------------ 底部事件条 */
+.eventBar {
+  position: relative;
+  flex: 0 0 56px;
+  height: 56px;
+  z-index: 26;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px 0 16px;
+  border-top: 1px solid var(--bench-line);
+  background: rgba(10, 16, 24, 0.96);
+  color: var(--bench-text);
+  overflow: hidden;
+}
+
+.eventMark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--river-100);
+}
+
+.eventBar[data-state="success"] .eventMark {
+  background: var(--jade-600);
+}
+
+.eventBar[data-state="warn"] .eventMark {
+  background: var(--warn);
+}
+
+.eventBar[data-state="danger"] .eventMark {
+  background: var(--danger);
+}
+
+.eventIcon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: var(--river-100);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.eventBar[data-state="success"] .eventIcon {
+  color: var(--jade-600);
+}
+
+.eventBar[data-state="warn"] .eventIcon {
+  color: var(--warn);
+}
+
+.eventBar[data-state="danger"] .eventIcon {
+  color: var(--danger);
+}
+
+.eventText {
+  margin: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.eventLine1,
+.eventLine2 {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eventLine1 {
+  color: var(--bench-text);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.eventBar[data-state="success"] .eventLine1 {
+  color: #b7e3d6;
+}
+
+.eventBar[data-state="warn"] .eventLine1 {
+  color: var(--warn);
+}
+
+.eventBar[data-state="danger"] .eventLine1 {
+  color: var(--danger);
+}
+
+.eventLine2 {
+  color: var(--bench-text);
+  font-size: 10px;
+  line-height: 1.3;
+  opacity: 0.62;
+}
+
+.eventHint {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--bench-text);
+  font-size: 9px;
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
+.eventBadge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 2px 6px;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.retryButton {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.retryButton:hover {
+  background: rgba(192, 57, 43, 0.16);
+  color: #fff;
+}
+
+.retryButton:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
+/* 反馈组合：动作按钮上组合抖动与光晕，时长/缓动取 motion token。 */
+.actionOk {
+  animation: ix-pulse-ok var(--pulse) var(--ease-snap);
+}
+
+.actionFail {
+  animation:
+    ix-shake var(--shake) var(--ease-press),
+    ix-pulse-fail var(--pulse) var(--ease-snap);
+}
+
+/* ------------------------------------------------------------------ 实验切换坞 */
+.dock {
+  flex: 0 0 52px;
+  height: 52px;
+  z-index: 27;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-top: 1px solid var(--bench-line);
+  background: rgba(10, 16, 24, 0.96);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.dock::-webkit-scrollbar {
+  display: none;
+}
+
+.dockLabel {
+  flex: 0 0 auto;
+  color: var(--bench-text);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  opacity: 0.55;
+}
+
+.dockList {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dockItem {
+  position: relative;
+  min-width: 102px;
+  height: 38px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 5px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border: 1px solid var(--bench-line);
+  background: transparent;
+  color: var(--bench-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  opacity: 0.5;
+}
+
+.dockItem[data-open="true"] {
+  opacity: 0.9;
+}
+
+.dockItem[data-active="true"] {
+  opacity: 1;
+  border-color: var(--river-700);
+  background: rgba(26, 37, 49, 0.72);
+  box-shadow: inset 2px 0 0 var(--river-700);
+}
+
+.dockItem:hover {
+  opacity: 1;
+  border-color: var(--river-100);
+}
+
+.dockNo {
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.dockName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.dockDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--bench-line);
+}
+
+.dockItem[data-open="true"] .dockDot {
+  background: var(--jade-600);
+}
+
+.dockItem[data-active="true"] .dockDot {
+  background: var(--river-100);
+}
+
+/* ------------------------------------------------------------------ 窄屏 */
+@media (max-width: 1180px) {
+  .rail {
+    width: 320px;
+  }
+
+  .benchArea {
+    padding-right: 338px;
+    padding-left: 206px;
+  }
+
+  .rack {
+    width: 180px;
+  }
+
+  .fxSlot {
+    right: 338px;
+  }
+}
+
+@media (max-width: 900px) {
+  .app {
+    position: fixed;
+  }
+
+  .modeSwitch {
+    position: absolute;
+    top: 46px;
+    left: 8px;
+    right: 8px;
+    z-index: 40;
+    justify-content: center;
+    background: rgba(10, 16, 24, 0.94);
+  }
+
+  .modeLabel {
+    display: none;
+  }
+
+  .modeButton {
+    min-height: 28px;
+    flex: 1 1 0;
+    font-size: 10px;
+  }
+
+  .readonlyBadge {
+    position: absolute;
+    top: 80px;
+    right: 8px;
+    z-index: 41;
+    height: 20px;
+    background: rgba(10, 16, 24, 0.94);
+  }
+
+  .keyFooter {
+    font-size: 8px;
+  }
+
+  .topbar {
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .topTitle {
+    display: none;
+  }
+
+  .topCenter {
+    position: static;
+    transform: none;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .topTicks {
+    display: none;
+  }
+
+  .student {
+    display: none;
+  }
+
+  .workspace {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stage {
+    position: relative;
+    flex: 0 0 55vh;
+    min-height: 0;
+    border-bottom: 1px solid var(--bench-line);
+  }
+
+  .rail {
+    position: static;
+    width: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--bench-line);
+    background: rgba(14, 22, 32, 0.55);
+    backdrop-filter: none;
+    padding: 9px 12px 12px;
+    gap: 7px;
+  }
+
+  .rack {
+    left: 8px;
+    right: 8px;
+    top: auto;
+    bottom: 8px;
+    width: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px;
+    height: 62px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .rackHead,
+  .rackNote {
+    display: none;
+  }
+
+  .rackList {
+    flex-direction: row;
+    flex: 1 1 auto;
+    gap: 4px;
+  }
+
+  .rackList > li {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .reagent {
+    min-height: 50px;
+    height: 50px;
+    gap: 4px;
+    padding: 3px 4px;
+  }
+
+  .reagentBottle {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 20px;
+  }
+
+  .reagentName {
+    font-size: 9px;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .reagentFormula {
+    display: none;
+  }
+
+  .benchArea {
+    padding: 4px 10px 74px;
+  }
+
+  .apparatus {
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .flaskTarget {
+    width: 38%;
+    min-width: 116px;
+    height: 26%;
+    bottom: 7%;
+  }
+
+  .stageCaption {
+    display: none;
+  }
+
+  .fxSlot {
+    right: 0;
+  }
+
+  .coordTl,
+  .coordTr,
+  .coordBl,
+  .coordBr {
+    display: none;
+  }
+
+  .railTitle {
+    font-size: 15px;
+  }
+
+  .railHead {
+    order: 1;
+  }
+
+  .railJudge {
+    display: none;
+  }
+
+  .actions {
+    order: 2;
+  }
+
+  .feedback {
+    order: 3;
+  }
+
+  .hintBox {
+    order: 4;
+  }
+
+  .params {
+    order: 5;
+  }
+
+  .ledger {
+    order: 6;
+  }
+
+  .note {
+    order: 7;
+  }
+
+  .finish {
+    order: 2;
+  }
+
+  .ledger {
+    flex-direction: row;
+    gap: 4px;
+    padding: 4px 0;
+  }
+
+  .ledger li {
+    flex: 0 0 auto;
+    height: 16px;
+  }
+
+  .ledgerNo {
+    flex: 0 0 auto;
+    font-size: 9px;
+  }
+
+  .ledgerName,
+  .ledgerDot {
+    display: none;
+  }
+
+  .params {
+    display: flex;
+    overflow-x: auto;
+    gap: 5px;
+    padding-bottom: 3px;
+    scrollbar-width: thin;
+  }
+
+  .param {
+    flex: 0 0 148px;
+  }
+
+  .hintButton {
+    min-height: 40px;
+  }
+
+  .eventBar {
+    padding: 0 10px;
+    gap: 6px;
+  }
+
+  .eventHint {
+    display: none;
+  }
+
+  .eventText {
+    font-size: 11px;
+  }
+
+  .dock {
+    padding: 0 8px;
+    gap: 6px;
+  }
+
+  .dockLabel {
+    display: none;
+  }
+
+  .dockItem {
+    min-width: 88px;
+    height: 38px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reagent,
+  .action,
+  .hintButton,
+  .dockItem {
+    transition: none;
+  }
+
+  .apparatusWrap[data-feedback="success"],
+  .apparatusWrap[data-feedback="failure"],
+  .paramValue[data-pop="true"],
+  .fxSlot[data-feedback="failure"],
+  .actionOk,
+  .actionFail {
+    animation: none;
+  }}

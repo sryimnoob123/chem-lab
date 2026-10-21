@@ -1,0 +1,22 @@
+{
+  "before": {
+    "url": "http://localhost:3000/exp/exp09/report?runId=d4ddba9c-1a0c-4b10-947d-4a0c2f1f0e1b",
+    "dropRows": 0,
+    "timeline": [
+      "第 01 步\n戴丁腈手套，用药匙在 100 mL 烧杯中快速称取 2.0 g NaOH\n通过\n2026/10/21 05:36"
+    ]
+  },
+  "after": {
+    "url": "http://localhost:3000/exp/exp09/report?runId=007fdf9e-7150-4b2e-afd9-83fd55769266",
+    "dropRows": 1,
+    "timeline": [
+      "第 01 步\n戴丁腈手套，用药匙在 100 mL 烧杯中快速称取 2.0 g NaOH\n通过\n2026/10/21 05:36",
+      "第 01 步\n投放 氢氧化钠 → 锥形瓶 · NaOH 逐滴加入锥形瓶：局部出现浅粉红又褪去，说明还在终点前；继续半滴、摇匀。\n已投放\n2026/10/21 05:36"
+    ]
+  },
+  "dropResponse": {
+    "status": 200,
+    "url": "http://localhost:3000/api/runs/007fdf9e-7150-4b2e-afd9-83fd55769266/drops"
+  },
+  "errors": []
+}

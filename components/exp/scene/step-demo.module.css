@@ -1,0 +1,331 @@
+/* 分支步骤演示（asset-pipeline）——只动 transform / opacity，颜色变化允许 transition */
+
+.card {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 20px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+}
+
+@media (max-width: 720px) {
+  .card {
+    grid-template-columns: 1fr;
+  }
+}
+
+.visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 200px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.vessel {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.shake {
+  animation: stepShake var(--shake) linear both;
+}
+
+.pulse {
+  fill: none;
+  stroke: var(--jade-600);
+  stroke-width: 2;
+  opacity: 0;
+  animation: stepPulse 360ms var(--ease-press) both;
+}
+
+.failFlash {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 2;
+  opacity: 0;
+  animation: failFlash 420ms linear both;
+}
+
+.liquid {
+  transform-box: fill-box;
+  transform-origin: top;
+  transition: transform 180ms var(--ease-press);
+}
+
+.filled .liquid {
+  transform: scaleY(1);
+}
+
+.unfilled .liquid {
+  transform: scaleY(0.02);
+}
+
+.powder {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    transform 260ms var(--ease-pop),
+    opacity 260ms linear;
+}
+
+.filled .powder {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.stepTitle {
+  margin: 0;
+  font-size: var(--text-16);
+  font-weight: 700;
+}
+
+.prompt {
+  margin: 0;
+  font-size: var(--text-13);
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+  color: var(--ink);
+  font-size: var(--text-13);
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    transform var(--press-out) var(--ease-press),
+    border-color var(--press-in) linear,
+    box-shadow var(--press-out) var(--ease-press);
+}
+
+.option:hover {
+  border-color: var(--river-700);
+  transform: scale(1.01);
+}
+
+.option[data-pressed="true"] {
+  transform: scale(0.97);
+  box-shadow: inset 0 0 0 1px rgba(22, 32, 44, 0.24);
+}
+
+.option:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.option[data-picked="true"] {
+  border-color: var(--river-700);
+  box-shadow: inset 0 0 0 1px var(--river-700);
+}
+
+.reading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--paper);
+}
+
+.readingLabel {
+  font-size: var(--text-12);
+  color: var(--ink-2);
+}
+
+.readingValue {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.readingUnit {
+  font-size: var(--text-12);
+  color: var(--ink-2);
+}
+
+.pop {
+  animation: numPop 180ms var(--ease-pop) both;
+}
+
+.branch {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--line);
+  border-radius: 2px;
+  background: var(--paper);
+}
+
+.branchOk {
+  border-left-color: var(--jade-600);
+}
+
+.branchFail {
+  border-left-color: var(--danger);
+}
+
+.branchLine1 {
+  font-size: var(--text-13);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.branchLine2 {
+  font-size: var(--text-12);
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--river-700);
+  border-radius: 2px;
+  background: #fff;
+  color: var(--river-700);
+  font-size: var(--text-13);
+  font-weight: 500;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform var(--press-out) var(--ease-press);
+}
+
+.button[data-primary="true"] {
+  background: var(--river-700);
+  color: #fff;
+}
+
+.button[data-pressed="true"] {
+  transform: scale(0.97);
+}
+
+.badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  padding: 2px 8px;
+  border-radius: 2px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--text-12);
+  color: var(--ink-2);
+}
+
+@keyframes stepPulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes stepShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-6px);
+  }
+  35% {
+    transform: translateX(5px);
+  }
+  55% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+@keyframes failFlash {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+@keyframes numPop {
+  0% {
+    transform: scale(1.14);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option,
+  .button,
+  .liquid,
+  .powder {
+    transition: none;
+  }
+
+  .shake,
+  .pulse,
+  .failFlash,
+  .pop,
+  .option[data-pressed="true"],
+  .option:hover,
+  .button[data-pressed="true"] {
+    animation: none;
+    transform: none;
+  }
+
+  /* 信息不丢：仍然给颜色/描边 */
+  .branchFail {
+    border-left-color: var(--danger);
+  }
+}

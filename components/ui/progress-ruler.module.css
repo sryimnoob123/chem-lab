@@ -1,0 +1,97 @@
+.root {
+  min-width: 0;
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+}
+
+.label {
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-14);
+  line-height: 1.3;
+}
+
+.value {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-14);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+.track {
+  position: relative;
+  height: 12px;
+  border-bottom: 1px solid var(--line);
+  background: repeating-linear-gradient(
+    to right,
+    var(--line) 0 1px,
+    transparent 1px 6px
+  );
+  background-size: 100% 8px;
+  background-position: left bottom;
+  background-repeat: repeat-x;
+}
+
+.fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 12px;
+  border-bottom: 1px solid var(--river-700);
+  background: repeating-linear-gradient(
+    to right,
+    var(--river-700) 0 1px,
+    transparent 1px 6px
+  );
+  background-size: 100% 8px;
+  background-position: left bottom;
+  background-repeat: repeat-x;
+  opacity: 0.9;
+}
+
+.head {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 12px;
+  background: var(--river-700);
+  transform: translateX(-0.5px);
+}
+
+.dark .label {
+  color: var(--bench-text);
+  opacity: 0.8;
+}
+
+.dark .value {
+  color: #fff;
+}
+
+.dark .track {
+  border-bottom-color: var(--bench-line);
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--bench-line) 0 1px,
+    transparent 1px 6px
+  );
+}
+
+.dark .fill {
+  border-bottom-color: var(--river-100);
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--river-100) 0 1px,
+    transparent 1px 6px
+  );
+}
+
+.dark .head {
+  background: var(--river-100);
+}

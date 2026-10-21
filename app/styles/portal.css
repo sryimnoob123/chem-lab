@@ -1,0 +1,709 @@
+/* ===================================================================
+   门户（/）与实验目录（/experiments）专用样式
+   —— 由 app/layout.tsx 作为全局样式引入；类名全部带 portal-/cat-/deck- 前缀，不污染其它页面
+   =================================================================== */
+
+/* ---------------- 门户顶栏 ---------------- */
+.portal-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 58px;
+  padding: 0 clamp(16px, 4vw, 40px);
+  background: var(--bench-ink);
+  color: #fff;
+}
+
+.portal-bar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.portal-bar__name {
+  font-size: var(--text-14);
+  font-weight: 500;
+}
+
+.portal-bar__sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(201, 214, 228, 0.35);
+}
+
+.portal-bar__course {
+  font-size: var(--text-12);
+  color: var(--bench-text);
+}
+
+.portal-bar__nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: var(--text-13);
+  color: var(--bench-text);
+}
+
+.portal-bar__nav a:hover {
+  color: #fff;
+}
+
+/* ---------------- 第一屏：主张 + 视觉 ---------------- */
+.portal-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 500px);
+  align-items: center;
+  gap: clamp(24px, 5vw, 72px);
+  max-width: 1280px;
+  min-height: calc(100vh - 58px);
+  margin: 0 auto;
+  padding: 56px clamp(16px, 4vw, 40px);
+}
+
+.portal-hero__rule {
+  display: block;
+  width: 44px;
+  height: 3px;
+  background: var(--river-700);
+}
+
+.portal-hero__eyebrow {
+  margin: 18px 0 0;
+  font-size: var(--text-12);
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+}
+
+.portal-hero__title {
+  margin: 14px 0 0;
+  font-size: clamp(34px, 4.2vw, 58px);
+  line-height: 1.18;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.portal-hero__title mark {
+  background: var(--river-700);
+  color: #fff;
+  padding: 0 0.14em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.portal-hero__sub {
+  margin: 22px 0 0;
+  font-size: var(--text-16);
+  line-height: 1.9;
+  color: var(--ink-2);
+}
+
+.portal-hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin-top: 34px;
+}
+
+.portal-hero__cta {
+  height: 48px;
+  padding: 0 30px;
+  font-size: var(--text-16);
+}
+
+.portal-hero__link {
+  font-size: var(--text-14);
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 2px;
+}
+
+.portal-hero__link:hover {
+  color: var(--river-700);
+  border-color: var(--river-700);
+}
+
+/* 右侧暗场视觉卡 */
+.portal-visual {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  margin: 0;
+  padding: 22px 24px 20px;
+  background: radial-gradient(120% 90% at 30% 0%, #16202f 0%, var(--bench-ink) 62%, #0b121a 100%);
+  color: var(--bench-text);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.portal-visual__top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: rgba(201, 214, 228, 0.6);
+}
+
+.portal-visual__readout {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.portal-visual__readout .readout {
+  font-size: clamp(40px, 4vw, 54px);
+  line-height: 1;
+  color: #fff;
+}
+
+.portal-visual__unit {
+  font-size: var(--text-16);
+  color: rgba(201, 214, 228, 0.7);
+}
+
+.portal-visual__glass {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.portal-visual__burette {
+  height: min(300px, 42vh);
+  width: auto;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
+}
+
+.portal-visual__drop {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 7px;
+  height: 11px;
+  margin-left: -3px;
+  background: var(--jade-600);
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  animation: portal-drip 2.6s var(--ease-in-out) infinite;
+}
+
+@keyframes portal-drip {
+  0% {
+    transform: translateY(-8px) scaleY(0.6);
+    opacity: 0;
+  }
+  16% {
+    opacity: 1;
+  }
+  68% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(46px) scaleY(1.1);
+    opacity: 0;
+  }
+}
+
+.portal-visual__telemetry {
+  margin: 0;
+  font-size: 11px;
+  color: rgba(201, 214, 228, 0.55);
+  text-align: right;
+}
+
+.portal-visual__corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(58, 75, 168, 0.7);
+}
+
+.portal-visual__corner[data-pos="tl"] {
+  top: 12px;
+  left: 12px;
+  border-right: 0;
+  border-bottom: 0;
+}
+.portal-visual__corner[data-pos="tr"] {
+  top: 12px;
+  right: 12px;
+  border-left: 0;
+  border-bottom: 0;
+}
+.portal-visual__corner[data-pos="bl"] {
+  bottom: 12px;
+  left: 12px;
+  border-right: 0;
+  border-top: 0;
+}
+.portal-visual__corner[data-pos="br"] {
+  bottom: 12px;
+  right: 12px;
+  border-left: 0;
+  border-top: 0;
+}
+
+/* ---------------- 第二屏：四个环节（暗场） ---------------- */
+.portal-flow {
+  padding: clamp(56px, 8vw, 100px) clamp(16px, 4vw, 40px);
+  background: var(--bench-ink);
+  color: var(--bench-text);
+}
+
+.portal-flow__head {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.portal-flow__rule {
+  display: block;
+  width: 32px;
+  height: 3px;
+  background: var(--river-500);
+}
+
+.portal-flow__head h2 {
+  margin: 16px 0 0;
+  font-size: clamp(24px, 2.6vw, 32px);
+  color: #fff;
+  font-weight: 700;
+}
+
+.portal-flow__head p {
+  margin: 10px 0 0;
+  font-size: var(--text-13);
+  color: rgba(201, 214, 228, 0.65);
+}
+
+.portal-flow__list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 1200px;
+  margin: 44px auto 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portal-flow__item {
+  padding: 4px 24px;
+  border-left: 1px solid var(--bench-line);
+}
+
+.portal-flow__no {
+  font-size: 11px;
+  color: rgba(201, 214, 228, 0.45);
+  letter-spacing: 0.1em;
+}
+
+.portal-flow__item h3 {
+  margin: 12px 0 0;
+  font-size: var(--text-16);
+  color: #fff;
+  font-weight: 500;
+}
+
+.portal-flow__item p {
+  margin: 8px 0 0;
+  font-size: var(--text-13);
+  line-height: 1.8;
+  color: rgba(201, 214, 228, 0.62);
+}
+
+/* ---------------- 第三屏：入口 ---------------- */
+.portal-entry {
+  padding: clamp(56px, 8vw, 100px) clamp(16px, 4vw, 40px);
+}
+
+.portal-entry__head {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.portal-entry__head h2 {
+  margin: 16px 0 0;
+  font-size: clamp(24px, 2.6vw, 32px);
+  font-weight: 700;
+}
+
+.portal-entry__head p {
+  margin: 10px 0 0;
+  font-size: var(--text-13);
+  color: var(--ink-2);
+}
+
+.portal-entry__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  max-width: 1200px;
+  margin: 40px auto 0;
+}
+
+.portal-entry__item a {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "no title arrow" "no body arrow";
+  align-items: center;
+  gap: 2px 14px;
+  min-height: 96px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  background: #fff;
+  transition: transform 180ms var(--ease-out), border-color 180ms ease;
+}
+
+.portal-entry__item a:hover {
+  transform: translateY(-2px);
+  border-color: var(--river-500);
+}
+
+.portal-entry__item a[data-primary="true"] {
+  border-color: var(--river-700);
+}
+
+.portal-entry__no {
+  grid-area: no;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.portal-entry__title {
+  grid-area: title;
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+.portal-entry__body {
+  grid-area: body;
+  font-size: var(--text-12);
+  color: var(--ink-2);
+}
+
+.portal-entry__arrow {
+  grid-area: arrow;
+  color: var(--river-700);
+}
+
+.portal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px clamp(16px, 4vw, 40px) 26px;
+  font-size: var(--text-12);
+  color: var(--ink-2);
+  border-top: 1px solid var(--line);
+}
+
+.portal-footer .site-footer__meta {
+  display: flex;
+  gap: 16px;
+}
+
+/* ---------------- 右侧分屏刻度 ---------------- */
+.deck-rail {
+  position: fixed;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 15;
+}
+
+.deck-rail__dot {
+  width: 30px;
+  height: 24px;
+  border: 0;
+  background: transparent;
+  color: rgba(74, 87, 104, 0.45);
+  font-size: 10px;
+  cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.deck-rail__dot:hover {
+  color: var(--ink-2);
+}
+
+.deck-rail__dot[data-active="true"] {
+  color: var(--river-700);
+  background: var(--river-100);
+}
+
+/* ---------------- 入场动效（滑动感来源） ---------------- */
+[data-reveal="out"] {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+[data-reveal="in"] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 640ms var(--ease-out),
+    transform 640ms var(--ease-out);
+  transition-delay: calc(var(--reveal-i, 0) * 80ms);
+}
+
+/* ---------------- 实验目录 ---------------- */
+.cat-head {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 0 8px;
+}
+
+.cat-head__rule {
+  display: block;
+  width: 32px;
+  height: 3px;
+  background: var(--river-700);
+}
+
+.cat-head h1 {
+  margin: 14px 0 0;
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.cat-head p {
+  margin: 10px 0 0;
+  font-size: var(--text-13);
+  color: var(--ink-2);
+}
+
+.cat-group {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 30px 0 6px;
+}
+
+.cat-group__head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding-bottom: 12px;
+}
+
+.cat-group__head h2 {
+  margin: 0;
+  font-size: var(--text-16);
+  font-weight: 500;
+  padding-left: 12px;
+  border-left: 3px solid var(--river-700);
+  line-height: 1.2;
+}
+
+.cat-group__head p {
+  margin: 0;
+  font-size: var(--text-12);
+  color: var(--ink-2);
+}
+
+.cat-group__sep {
+  display: block;
+  height: 1px;
+  background: var(--line);
+  margin-top: 22px;
+}
+
+.cat-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cat-row__link {
+  display: grid;
+  grid-template-columns: 54px 30px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 74px;
+  padding: 12px 18px 12px 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  transition: transform 160ms var(--ease-out), border-color 160ms ease;
+}
+
+.cat-row[data-state="open"] .cat-row__link {
+  border-left-color: var(--jade-600);
+}
+
+.cat-row[data-state="open"] .cat-row__link:hover {
+  transform: translateX(2px);
+  border-color: var(--river-500);
+  border-left-color: var(--jade-600);
+}
+
+.cat-row[data-state="locked"] .cat-row__link {
+  background: var(--paper-2);
+}
+
+.cat-row[data-state="locked"] .cat-row__title {
+  color: var(--ink-2);
+}
+
+.cat-row__no {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--line);
+  letter-spacing: -0.02em;
+}
+
+.cat-row[data-state="open"] .cat-row__no {
+  color: var(--river-700);
+}
+
+.cat-row__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: var(--ink-2);
+}
+
+.cat-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cat-row__title {
+  font-size: var(--text-16);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.cat-row__desc {
+  font-size: var(--text-12);
+  color: var(--ink-2);
+}
+
+.cat-row__meta {
+  font-size: var(--text-12);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.cat-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+.cat-state[data-kind="open"] {
+  color: var(--jade-600);
+}
+
+.cat-state[data-kind="locked"] {
+  color: var(--ink-2);
+}
+
+/* ---------------- 响应式 ---------------- */
+@media (max-width: 900px) {
+  .portal-hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    padding-top: 32px;
+  }
+
+  .portal-visual {
+    order: -1;
+    min-height: 300px;
+  }
+
+  .portal-visual__burette {
+    height: 150px;
+  }
+
+  .portal-flow__list {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 0;
+    margin-top: 32px;
+  }
+
+  .portal-entry__list {
+    grid-template-columns: 1fr;
+    margin-top: 28px;
+  }
+
+  .deck-rail {
+    display: none;
+  }
+
+  .cat-row__link {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .cat-row__icon,
+  .cat-row__meta {
+    display: none;
+  }
+
+  .cat-row__no {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  .portal-bar__course,
+  .portal-bar__sep {
+    display: none;
+  }
+
+  .portal-bar__nav {
+    gap: 14px;
+  }
+
+  .portal-flow__list {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-flow__item {
+    border-left: 0;
+    border-top: 1px solid var(--bench-line);
+    padding: 16px 0 0;
+  }
+
+  .cat-row__link {
+    min-height: 66px;
+    padding: 10px 12px;
+  }
+
+  .cat-row__title {
+    font-size: var(--text-14);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-visual__drop {
+    animation: none;
+    opacity: 0;
+  }
+
+  [data-reveal="out"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  [data-reveal="in"] {
+    transition: none;
+  }
+}

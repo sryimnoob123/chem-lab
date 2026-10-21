@@ -1,0 +1,231 @@
+/* 演示模式：右上角按钮 + 全屏浮层 */
+
+.demo-launch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(246, 247, 245, 0.24);
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    border-color var(--hover, 80ms) var(--ease-press, ease),
+    background-color var(--hover, 80ms) var(--ease-press, ease);
+}
+
+.demo-launch:hover {
+  border-color: rgba(246, 247, 245, 0.5);
+  background: rgba(246, 247, 245, 0.06);
+}
+
+.demo-launch__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0f7b6c;
+  box-shadow: 0 0 0 0 rgba(15, 123, 108, 0.6);
+  animation: demo-launch-dot 2.4s ease-out infinite;
+}
+
+@keyframes demo-launch-dot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(15, 123, 108, 0.55);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px rgba(15, 123, 108, 0);
+  }
+}
+
+/* 浅色封面上的深色按钮 */
+.cover .demo-launch,
+.page-shell .demo-launch {
+  border-color: rgba(22, 32, 44, 0.18);
+  color: #16202c;
+}
+
+.cover .demo-launch:hover,
+.page-shell .demo-launch:hover {
+  border-color: rgba(35, 48, 127, 0.45);
+  background: rgba(35, 48, 127, 0.05);
+}
+
+/* ---------------- 浮层 ---------------- */
+.demo-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 2.4vh, 28px);
+  background: rgba(10, 16, 24, 0.82);
+  backdrop-filter: blur(2px);
+  animation: demo-overlay-in 200ms var(--ease-snap, ease-out);
+}
+
+@keyframes demo-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.demo-overlay__frame {
+  position: relative;
+  width: min(1240px, 100%);
+  max-height: calc(100% - 18px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 3px;
+  background: #0e1620;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.demo-overlay__hint {
+  position: absolute;
+  top: -26px;
+  left: 2px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: rgba(246, 247, 245, 0.62);
+}
+
+.demo-overlay__frame .demo-shell {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.demo-overlay__frame .demo-frame {
+  height: min(52vh, 500px);
+  flex: 0 0 auto;
+}
+
+.demo-overlay__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding-top: 2px;
+}
+
+/* 浮层里不露出"脚本选择器"这类调试控件，演示时只留暂停/重播 */
+.demo-overlay .demo-bar__select {
+  display: none;
+}
+
+/* ---- 浮层内的深色主题覆盖（页面本身是浅色的） ---- */
+.demo-overlay .demo-bar {
+  background: #16202c;
+  color: #f6f7f5;
+  border-bottom: 1px solid rgba(246, 247, 245, 0.1);
+}
+
+.demo-overlay .demo-bar__label,
+.demo-overlay .demo-bar__state {
+  color: rgba(246, 247, 245, 0.66);
+}
+
+.demo-overlay .demo-caption {
+  background: #16202c;
+  color: #f6f7f5;
+  border-top: 1px solid rgba(246, 247, 245, 0.1);
+}
+
+.demo-overlay .demo-caption__step {
+  color: rgba(246, 247, 245, 0.5);
+}
+
+/* 浮层顶部工具条里的按钮（暂停 / 重播） */
+.demo-overlay .demo-bar .btn {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  line-height: 1;
+  font-size: 13px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.demo-overlay .demo-bar .btn--primary {
+  background: #23307f;
+  color: #f6f7f5;
+  border: 1px solid #23307f;
+}
+
+.demo-overlay .demo-bar .btn--secondary {
+  background: #1b2735;
+  color: #f6f7f5;
+  border: 1px solid rgba(246, 247, 245, 0.32);
+}
+
+.demo-overlay .demo-bar .btn--secondary:hover {
+  border-color: rgba(246, 247, 245, 0.6);
+  background: #22303f;
+}
+
+/* 深色底上的按钮：显式给高度与行高，避免文字被裁 */
+.demo-overlay__actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 18px;
+  line-height: 1;
+  font-size: 13.5px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.demo-overlay__actions .btn--secondary {
+  background: transparent;
+  color: #f6f7f5;
+  border: 1px solid rgba(246, 247, 245, 0.3);
+}
+
+.demo-overlay__actions .btn--secondary:hover {
+  border-color: rgba(246, 247, 245, 0.62);
+  background: rgba(246, 247, 245, 0.07);
+}
+
+.demo-overlay__actions .btn--primary {
+  background: #23307f;
+  color: #f6f7f5;
+  border: 1px solid #23307f;
+}
+
+.demo-overlay__actions .btn--primary:hover {
+  background: #2b3a99;
+}
+
+/* 小屏：浮层铺满 */
+@media (max-width: 720px) {
+  .demo-overlay__frame .demo-frame {
+    height: 58vh;
+  }
+
+  .demo-overlay__hint {
+    position: static;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-launch__dot {
+    animation: none;
+  }
+
+  .demo-overlay {
+    animation: none;
+  }
+}

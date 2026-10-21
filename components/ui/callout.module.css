@@ -1,0 +1,51 @@
+.callout {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-14);
+  line-height: 1.35;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.callout[data-tone="dark"] {
+  color: var(--bench-text);
+}
+
+.callout[data-side="right"] {
+  flex-direction: row;
+}
+
+.callout[data-side="left"] {
+  flex-direction: row-reverse;
+}
+
+.dot {
+  width: 3px;
+  height: 3px;
+  flex: 0 0 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.line {
+  display: block;
+  width: 26px;
+  height: 1px;
+  flex: 0 0 26px;
+  background: currentColor;
+  opacity: 0.75;
+}
+
+.label {
+  display: block;
+}
+
+@media (max-width: 760px) {
+  .callout {
+    display: none;
+  }
+}
