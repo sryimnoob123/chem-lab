@@ -212,10 +212,11 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
             <p className={styles.summaryLine} id="report-summary">
               {summary.headline}
             </p>
-            {incidents.length === 0 ? (
+            {incidents.length === 0 || hintCount === 0 ? (
               <span className={styles.badgeRow} data-demo-id="demo-report-badges">
-                <span className={styles.badge}>零事故</span>
-                <span className={styles.badge}>零提示</span>
+                {/* 两个徽章各自独立判断：有提示但没事故时不能再显示「零提示」 */}
+                {incidents.length === 0 ? <span className={styles.badge}>零事故</span> : null}
+                {hintCount === 0 ? <span className={styles.badge}>零提示</span> : null}
               </span>
             ) : null}
           </div>

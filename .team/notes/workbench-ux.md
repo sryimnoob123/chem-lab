@@ -133,3 +133,12 @@
   查证构建时间：`.next/BUILD_ID` **04:42:40**、`standalone/server.js` **04:42:43**、CSS chunk **04:42:35**、node pid 1668 启动 **04:43:08**
   → **:3001 仍是 04:42 旧构建，Lead 说的新 build 没落到这台机器的 `.next`**。已请 Lead 重新 `npm run build` + `restart-prod.ps1`；
   起来后用同一脚本复测，验收口径 = Network 里没有 `/api/session`。
+
+## 2026-10-22 04:58 · 401 清零确认（收工）
+- Lead 重建（`BUILD_ID` **04:55:55**，含我 04:54:32 的注释清理）后复测：
+  - `?force=1&play=demo`：`demo state {"readonly":true,"badgeText":"演示模式 · 不记录"}`、**`4xx: none`** ✅
+  - 根因修法（比客户端跳过请求更正确）：`GET /api/session` 匿名从 `401` 改 `200 {ok:false}`；Dev Dock 判断从 `res.ok` 改 `body.ok`，
+    避免把 200 误判成“已登录”。
+  - 回归（同一 build）：hint L1 `H1 1/3` → L3 `H3`+`已用完`+disabled 正常；拖拽 `mid-drag` = `opacity .92 + matrix(0.98)`、`data-over=true`；pageerror 0。
+  - 仅剩的 4xx：**匿名且非 demo** 打开实验时 `POST /api/runs` 401（未登录没有 run 可建，按设计；从 /login 进则无）。如需清零可照 session 改成 200+`ok:false`，属后端 owner。
+- 结论：task-7 全部验收项通过，`.team/handoff/workbench-ux.md` 已是最新，收工。
