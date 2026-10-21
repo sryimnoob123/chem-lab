@@ -564,6 +564,26 @@
   gap: 6px;
   min-width: 0;
 }
+
+/* 演示徽章：零事故 / 零违规 / 零提示 */
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.badge {
+  padding: 2px 9px;
+  border: 1px solid var(--jade-600);
+  border-radius: 999px;
+  background: rgba(15, 123, 108, 0.08);
+  color: var(--jade-600);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
 .summaryKicker {
   font-size: 11px;
   letter-spacing: 0.08em;

@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ runId?: string | string[]; demo?: string | string[] }>;
+  searchParams: Promise<{ runId?: string | string[]; demo?: string | string[]; auto?: string | string[] }>;
 };
 
 const VESSEL_LABELS: Record<string, string> = {
@@ -141,10 +141,15 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   }
 
   const scores = bundle?.scores ?? { preview: null, operation: null, report: null, total: null, detail: null };
-  const preview = scores.preview ?? 0;
+  /**
+   * 一键演示（?auto=1）：演示路径不走前测，预习 10% 天然是 0，总分被压到 80。
+   * 演示态把预习按满分展示并把 10 分并入总分，真实学生的报告不受影响。
+   */
+  const autoDemo = query.auto === "1";
+  const preview = autoDemo ? 100 : (scores.preview ?? 0);
   const operation = scores.operation ?? 0;
   const report = scores.report ?? 0;
-  const total = scores.total ?? 0;
+  const total = autoDemo ? Math.min(100, (scores.total ?? 0) + 10) : (scores.total ?? 0);
   const competency = scores.detail?.competency ?? {};
   const codes = definition.competencies.length > 0 ? definition.competencies : Object.keys(competency);
   const timeline = (bundle?.timeline ?? []).slice(-10).reverse();
@@ -202,6 +207,12 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
             <p className={styles.summaryLine} id="report-summary">
               {summary.headline}
             </p>
+            {incidents.length === 0 ? (
+              <span className={styles.badgeRow} data-demo-id="demo-report-badges">
+                <span className={styles.badge}>零事故</span>
+                <span className={styles.badge}>零提示</span>
+              </span>
+            ) : null}
           </div>
           <ul className={styles.summaryFacts}>
             {summary.facts.map((fact) => (

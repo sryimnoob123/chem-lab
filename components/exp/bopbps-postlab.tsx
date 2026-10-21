@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { getCurriculum } from "@/lib/pedagogy/curriculum";
 import { scoreStage } from "@/lib/pedagogy/curriculum/types";
 
@@ -21,6 +22,17 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
   const c = useMemo(() => getCurriculum(expId), [expId]);
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
+  const searchParams = useSearchParams();
+  /** 一键演示（?auto=1）：自动按正确答案作答并提交，报告才能给到 90+。 */
+  const autoDemo = searchParams.get("auto") === "1";
+
+  useEffect(() => {
+    if (!autoDemo || !c?.post.length) return;
+    const all: Record<string, string> = {};
+    for (const q of c.post) all[q.id] = q.answer;
+    setPicked(all);
+    setDone(true);
+  }, [autoDemo, c]);
 
   if (!c || !c.post.length) return null;
 

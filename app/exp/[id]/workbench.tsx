@@ -8,6 +8,7 @@ import type { Action, FxKey as EngineFxKey } from "@/lib/engine.types";
 import { FxByKey } from "@/components/exp/scene/fx";
 import { ScoreOdometer, StreakPill } from "@/components/exp/feedback";
 import { MissionBoard, type MissionParam } from "@/components/exp/guide/mission-board";
+import { stepVerb } from "@/components/exp/guide/step-verb";
 import { NextActionCard } from "@/components/exp/guide/NextActionCard";
 import { ResultBar } from "@/components/exp/guide/ResultBar";
 import {
@@ -674,13 +675,43 @@ export function Workbench({
     } finally {
       finishingRef.current = false;
       setFinishing(false);
+      // 一键演示结束要把交互方式复位，否则下一场手动打开还是"自动"，
+      // 会在没人操作时自己往下跑（用户 2026-10-21 要求）。
+      try {
+        window.localStorage.removeItem("chem-lab:input-mode");
+      } catch {
+        /* 隐私模式下 setItem/removeItem 会抛，忽略 */
+      }
       router.push(
         runId && finishedOk
-          ? `/exp/${expId}/report?runId=${runId}`
-          : `/exp/${expId}/report`,
+          ? `/exp/${expId}/report?runId=${runId}${mode === "auto" ? "&auto=1" : ""}`
+          : `/exp/${expId}/report${mode === "auto" ? "?auto=1" : ""}`,
       );
     }
-  }, [demoReadonly, expId, router]);
+  }, [demoReadonly, expId, mode, router]);
+
+  // 一键演示：auto 模式下最后一步做完就自动交卷并落到报告页，
+  // 不再停在"交卷并查看报告"让评委多点一下（用户 2026-10-21 要求）。
+  useEffect(() => {
+    if (mode !== "auto" || demoReadonly || finishingRef.current) return;
+    if (ui.exp.stepIndex < total - 1) return;
+    const stillActionable = step.choices.some(
+      (item) =>
+        item.role !== "trap" &&
+        !performed.has(item.choiceId) &&
+        !(item.requires ?? []).some((id) => !performed.has(id)),
+    );
+    if (!stillActionable) {
+      void finish();
+      return;
+    }
+    // 最后一步常挂着"观察/读数"这类可选动作，auto 不会去点它们（没有推进效果）。
+    // 等 8 秒还没往下走就直接交卷，否则一键演示会停在台面上。
+    const timer = window.setTimeout(() => {
+      if (!finishingRef.current) void finish();
+    }, 8000);
+    return () => window.clearTimeout(timer);
+  }, [mode, demoReadonly, finish, performed, step, total, ui.exp.stepIndex]);
 
   useEffect(() => {
     // 放进 setTimeout(0)：Next 16 的 react-hooks/set-state-in-effect 不允许在 effect 里同步 setState
@@ -748,17 +779,18 @@ export function Workbench({
     // 先在"明确正确"的动作里找；观察类步骤（如"看水平泡是否居中"）没有 role=correct，
     // 这里会退化到看板推荐动作（＝按 1），否则 auto 会静默卡死在该步，
     // 学生此时交卷 → 报告出现"步骤有遗漏 50 分"（红队 2026-10-21 实测停在 2/7）。
+    // 一键演示要稳定拿高分：优先跟看板"按 1"的建议动作（那是系统认定的正确路径），
+    // 再看 role=correct，最后才退到"任意非 trap"。原来先找 correct，观察类步骤会退到
+    // 非最优动作，同一实验有时 80 有时 86，分数不稳定（用户 2026-10-21 验收线 85）。
     const choice =
+      (suggested && !performed.has(suggested.choiceId) ? suggested : undefined) ??
       step.choices.find(
         (item) =>
           item.role === "correct" &&
           !performed.has(item.choiceId) &&
           !(item.requires ?? []).some((id) => !performed.has(id)),
       ) ??
-      (suggested && !performed.has(suggested.choiceId) ? suggested : undefined) ??
-      // 第三层兜底：任意"非错误、未执行、前置已满足"的动作。
-      // 观察/校准这类步骤既没有 role=correct，也可能不是当前建议动作，
-      // 只靠前两层会让 auto 卡住，报告因此变成"步骤有遗漏"。
+      // 第三层兜底：任意"非 trap、未执行、前置已满足"的动作。
       step.choices.find(
         (item) =>
           item.role !== "trap" &&
@@ -863,7 +895,7 @@ export function Workbench({
               expNo={expNo.padStart(2, "0")}
               title={definition.title}
               goal={missionGoal(expId, definition.title, total)}
-              progress={missionProgress(stepNo, total, ACTION_VERB[suggested.type])}
+              progress={missionProgress(stepNo, total, stepVerb(step.title, suggested.type, ACTION_VERB))}
               guide={boardGuide}
               dots={dots}
               steps={definition.steps.map((item) => ({ index: item.index, title: item.title }))}
