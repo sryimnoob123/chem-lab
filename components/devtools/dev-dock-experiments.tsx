@@ -62,6 +62,16 @@ export function DevDockExperiments({
               </Link>
               <Link
                 className={styles.miniLink}
+                href={`/exp/${exp.id}?force=1&autodemo=1`}
+                data-dev="dock-oneclick-demo"
+                data-exp={exp.id}
+                onClick={onNavigate}
+                title="自动跑完全部步骤 → 自动交卷 → 落报告页"
+              >
+                一键演示
+              </Link>
+              <Link
+                className={styles.miniLink}
                 href={`/exp/${exp.id}/report`}
                 data-dev="dock-open-report"
                 onClick={onNavigate}

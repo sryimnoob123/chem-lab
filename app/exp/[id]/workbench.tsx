@@ -80,15 +80,15 @@ const PARAM_NAMES: Record<string, string> = {
   washes: "洗涤次数",
 };
 
+/** 主工具栏只保留三种正常交互（红队 2026-10-22：「自动」属于 Dev Dock，不该和它们并排）。 */
 const INPUT_MODES = [
   { id: "drag", label: "拖拽" },
   { id: "click", label: "点选" },
   { id: "key", label: "键盘" },
-  { id: "event", label: "事件" },
-  { id: "auto", label: "自动" },
 ] as const;
 
-type InputMode = (typeof INPUT_MODES)[number]["id"];
+/** auto 不进主栏，但仍要能作为模式值存在（Dev Dock 一键演示 / ?autodemo=1）。 */
+type InputMode = (typeof INPUT_MODES)[number]["id"] | "event" | "auto";
 
 type DropAudit = {
   kind: "drop";
@@ -265,6 +265,16 @@ export function Workbench({
   }, [mode]);
 
   useEffect(() => {
+    // Dev Dock 的一键演示：?autodemo=1 直接进 auto 模式，跑完自动交卷并落报告页。
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("autodemo") === "1") {
+      const timer = window.setTimeout(() => {
+        setMode("auto");
+        setAutoTick((tick) => tick + 1);
+        modeReadyRef.current = true;
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
     const saved = window.localStorage.getItem("chem-lab:input-mode");
     if (saved !== "drag" && saved !== "click" && saved !== "key" && saved !== "event" && saved !== "auto") {
       modeReadyRef.current = true;

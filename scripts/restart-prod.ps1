@@ -40,6 +40,9 @@ New-Item -ItemType Directory -Force -Path "logs" | Out-Null
 $env:PORT = "3001"
 $env:HOSTNAME = "127.0.0.1"
 $env:PGLITE_DIR = (Join-Path $root ".pgdata-prod2")
+# 演示构建要能看到 Dev Dock（一键演示的兜底入口）：默认只在 NODE_ENV != production 时开，
+# 生产构建必须显式给 DEVTOOLS=1（红队 2026-10-22 报 production 下 [data-dev] 为 0、/dev 404）。
+$env:DEVTOOLS = "1"
 $proc = Start-Process -FilePath "node" -ArgumentList ".next\standalone\server.js" `
   -WorkingDirectory $root `
   -RedirectStandardOutput "logs\server.log" `
