@@ -728,10 +728,10 @@ const step7: StepDefinition = {
       "step7-repeat",
       "titrate",
       // 这一步是「平行测定」：把滴定重复到 3 次，不是回到第 5 步。
-      // 原文案「重复步 5~6 共 3 次」读起来像在描述别的步骤（红队 2026-10-22 报）。
-      // 再改一次（用户 2026-10-22）：只写「再滴定 2 次」和第 7 步标题「平行测定与浓度比计算」对不上，
-      // 补上「补齐 3 次平行」这个目的，并点明后面还要记录与计算。
-      "补齐 3 次平行滴定（当前 1 次），每次记初/终读数",
+      // 多次返工（红队/用户 2026-10-22）：文案必须写"这一步实际点什么控件"，
+      // 不能复用第 5/6 步「滴定到终点」的说法——第 7 步是数据台，按钮就是「再滴定」。
+      // 注意 NextActionCard 的 name 限 18 字，超了会被 clip 掉。
+      "点「再滴定」补齐 3 行读数",
       "demo-op-step7-repeat",
       "K2",
       { ...P({ trials: 3 }), observation: { text: "三次平行滴定完成（消耗 25.18 / 25.22 / 25.20 mL）", value: 3 } },
@@ -739,7 +739,7 @@ const step7: StepDefinition = {
     correct(
       "step7-record",
       "readInstrument",
-      "如实记录三次初/终读数，平均消耗体积与极差",
+      "点「记录读数」记进数据台",
       "demo-op-step7-record",
       "K2",
       {
@@ -750,7 +750,7 @@ const step7: StepDefinition = {
     correct(
       "step7-compute",
       "compute",
-      "按 c(NaOH)/c(HCl) = V(HCl)/V(NaOH) 求浓度比，并算平均体积与相对极差",
+      "点「算浓度比」代入 25.00/25.20",
       "demo-op-step7-compute",
       "K1",
       {
