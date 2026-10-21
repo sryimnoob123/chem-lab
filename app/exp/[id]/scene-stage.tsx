@@ -201,6 +201,12 @@ export function SceneStage({
     (item): item is NonNullable<typeof item> => Boolean(item),
   );
 
+  /**
+   * 指针拖拽的临时状态（用户 2026-10-22 口径：演示与手操都走 pointerdown/move/up）。
+   * 只有移动超过阈值才算"拖"，原地按下松手仍按普通点击处理（点选模式）。
+   */
+  const pointerDragRef = useRef<{ id: string; pointerId: number; moved: boolean } | null>(null);
+
   const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
     event.preventDefault();
     const id = flow.draggingId ?? event.dataTransfer.getData("text/plain");
@@ -257,13 +263,53 @@ export function SceneStage({
               <button
                 type="button"
                 className={`${styles.reagent} ix`}
-                draggable
                 data-demo-id={reagent.demoId}
                 data-selected={selectedId === reagent.id ? "true" : "false"}
                 data-dragging={flow.draggingId === reagent.id ? "true" : "false"}
                 data-next={reagent.id === nextReagent ? "true" : "false"}
                 aria-pressed={selectedId === reagent.id}
                 aria-label={`${reagent.name} ${reagent.formula}，${selectedId === reagent.id ? "已选中" : "可拖动"}`}
+                onPointerDown={(event) => {
+                  // 真实指针拖拽（段 1 抓取）：左键按下即进入抓取态并接管后续 move/up。
+                  if (event.button !== 0) return;
+                  try {
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                  } catch {
+                    /* 合成事件（演示脚本）没有真实指针，捕获失败不影响后续 dispatch */
+                  }
+                  pointerDragRef.current = { id: reagent.id, pointerId: event.pointerId, moved: false };
+                  flow.beginDrag(reagent.id);
+                  setSelectedId(reagent.id);
+                  onCaption(null);
+                }}
+                onPointerMove={(event) => {
+                  // 段 2 移动：超过阈值才算出拖，实时高亮落区（锥形瓶）。
+                  const drag = pointerDragRef.current;
+                  if (!drag || drag.pointerId !== event.pointerId) return;
+                  if (!drag.moved) {
+                    if (Math.abs(event.movementX) + Math.abs(event.movementY) < 3) return;
+                    drag.moved = true;
+                  }
+                  const hit = document.elementFromPoint(event.clientX, event.clientY);
+                  flow.setOverFlask(Boolean(hit?.closest('[data-demo-id="demo-scene-drop-flask"]')));
+                }}
+                onPointerUp={(event) => {
+                  // 段 3 落位：用松手坐标提交，吸附/倾倒/回弹都由 useDropFlow 播。
+                  const drag = pointerDragRef.current;
+                  if (!drag || drag.pointerId !== event.pointerId) return;
+                  pointerDragRef.current = null;
+                  event.currentTarget.releasePointerCapture?.(event.pointerId);
+                  flow.setOverFlask(false);
+                  if (!drag.moved) {
+                    flow.endDrag();
+                    return;
+                  }
+                  flow.drop(drag.id, { x: event.clientX, y: event.clientY });
+                }}
+                onPointerCancel={() => {
+                  pointerDragRef.current = null;
+                  flow.endDrag();
+                }}
                 onClick={() => {
                   setSelectedId((current) => (current === reagent.id ? null : reagent.id));
                   onCaption(null);
@@ -274,13 +320,6 @@ export function SceneStage({
                     onCaption(null);
                   }
                 }}
-                onDragStart={(event) => {
-                  event.dataTransfer.setData("text/plain", reagent.id);
-                  event.dataTransfer.effectAllowed = "copy";
-                  flow.beginDrag(reagent.id);
-                  setSelectedId(reagent.id);
-                }}
-                onDragEnd={() => flow.endDrag()}
               >
                 <span className={styles.reagentBottle} aria-hidden="true">
                   <span
