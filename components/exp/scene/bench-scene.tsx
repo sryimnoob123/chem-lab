@@ -121,7 +121,7 @@ export function BenchScene({
         onClearSelection();
       }}
     >
-      <svg className={styles.benchSvg} viewBox="28 78 900 332" role="img" aria-label="实验台：玻璃器皿与分析天平">
+      <svg className={styles.benchSvg} viewBox="0 50 940 340" role="img" aria-label="实验台：玻璃器皿与分析天平">
         {/* 台面与铁架台 */}
         <g aria-hidden="true">
           <rect x="0" y="340" width="940" height="80" fill="var(--bench)" />
@@ -146,10 +146,10 @@ export function BenchScene({
           <ellipse cx="66" cy="34" rx="30" ry="6" fill="#DCE9F2" fillOpacity="0.7" stroke="#16202C" strokeOpacity="0.45" strokeWidth="1" />
           {/* 显示屏 */}
           <rect x="20" y="56" width="92" height="26" rx="2" fill="#16202C" opacity="0.85" />
-          <text x="66" y="74" textAnchor="middle" fill="#8FE3CF" fontSize="13" fontFamily="ui-monospace, monospace">
+          <text x="66" y="74" textAnchor="middle" fill="#8FE3CF" fontSize="19" fontFamily="ui-monospace, monospace">
             0.0000 g
           </text>
-          <text x="66" y="100" textAnchor="middle" fill="#4A5768" fontSize="8">
+          <text x="66" y="100" textAnchor="middle" fill="#4A5768" fontSize="14">
             分析天平 · 0.1 mg
           </text>
         </g>
@@ -164,10 +164,10 @@ export function BenchScene({
           {/* 主机 */}
           <rect x="8" y="70" width="124" height="70" rx="4" fill="#fff" fillOpacity="0.9" stroke="#16202C" strokeOpacity="0.7" strokeWidth="1.4" />
           <rect x="18" y="80" width="104" height="30" rx="2" fill="#16202C" opacity="0.85" />
-          <text x="70" y="101" textAnchor="middle" fill="#8FE3CF" fontSize="14" fontFamily="ui-monospace, monospace">
+          <text x="70" y="101" textAnchor="middle" fill="#8FE3CF" fontSize="20" fontFamily="ui-monospace, monospace">
             7.00
           </text>
-          <text x="70" y="128" textAnchor="middle" fill="#4A5768" fontSize="8">
+          <text x="70" y="128" textAnchor="middle" fill="#4A5768" fontSize="14">
             pH 计 · 0.01
           </text>
         </g>

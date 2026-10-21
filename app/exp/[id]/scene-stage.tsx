@@ -209,7 +209,9 @@ export function SceneStage({
       <aside className={styles.rack} aria-label="试剂架">
         <div className={styles.rackHead}>
           <span>试剂架</span>
-          <span className={styles.rackHint}>拖到锥形瓶</span>
+          <span className={styles.rackHint}>
+            {isBenchScene ? "拖到烧杯 / 容量瓶" : "拖到锥形瓶"}
+          </span>
         </div>
         <ul className={styles.rackList}>
           {reagents.map((reagent) => (
@@ -257,7 +259,9 @@ export function SceneStage({
           ))}
         </ul>
         <p className={styles.rackNote}>
-          {expId === "exp02"
+          {expId === "exp01"
+            ? "台上：分析天平 200 g / 0.1 mg · 称量瓶 · 烧杯 · 容量瓶 100 mL · Na₂CO₃"
+            : expId === "exp02"
             ? "台上：分析天平 200 g / 0.1 mg · 烧杯 · 容量瓶 · Na₂CO₃ / 蒸馏水"
             : expId === "exp03"
               ? "台上：pH 计 · 烧杯 · 容量瓶 · 蒸馏水"

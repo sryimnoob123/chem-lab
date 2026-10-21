@@ -861,7 +861,7 @@ export function Workbench({
           </div>
 
           {/* 新手教学：首次进任一实验自动弹 4 步（localStorage 记"看过"），看完即可上手 */}
-          <ExperimentOnboarding />
+          <ExperimentOnboarding expId={expId} />
           <SceneStage
             expId={expId}
             onCaption={handleSceneCaption}

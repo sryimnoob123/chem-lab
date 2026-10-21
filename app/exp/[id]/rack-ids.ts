@@ -10,12 +10,14 @@ type RackIds = readonly string[];
 /** exp09 那套四瓶（也是未登记实验的默认）。 */
 export const DEFAULT_RACK_IDS: RackIds = ["naoh", "hcl", "phenolphthalein", "methylOrange"];
 const RACK_IDS = DEFAULT_RACK_IDS;
+const EXP01_RACK_IDS: RackIds = ["na2co3-solid", "water"];
 const EXP02_RACK_IDS: RackIds = ["na2co3-solid", "water"];
 const EXP03_RACK_IDS: RackIds = ["water"];
 const EXP04_RACK_IDS: RackIds = ["na2co3-solid", "water"];
 const EXP08_RACK_IDS: RackIds = ["na2co3-solid"];
 
 const BY_EXP: Readonly<Record<string, RackIds>> = {
+  exp01: EXP01_RACK_IDS,
   exp02: EXP02_RACK_IDS,
   exp03: EXP03_RACK_IDS,
   exp04: EXP04_RACK_IDS,

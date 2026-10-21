@@ -246,7 +246,7 @@ export function VesselArt({ vessel, contents, outcome, fxKey, liquidOverride }: 
           <path d={VOLUMETRIC_BODY} {...GLASS} stroke={INK} strokeOpacity={0.7} strokeWidth={1.4} />
           <path d="M66 10 H94 V18 H66 Z" {...GLASS} stroke={INK} strokeOpacity={0.7} strokeWidth={1.4} />
           <line x1="66" y1="40" x2="94" y2="40" stroke={INK} strokeOpacity={0.75} strokeWidth={1.6} />
-          <text x="98" y="43" fill={INK} fillOpacity="0.6" fontSize="8">
+          <text x="98" y="43" fill={INK} fillOpacity="0.6" fontSize="12">
             100
           </text>
           <line x1="74" y1="26" x2="74" y2="60" stroke="#fff" strokeOpacity="0.35" strokeWidth="2" strokeLinecap="round" />

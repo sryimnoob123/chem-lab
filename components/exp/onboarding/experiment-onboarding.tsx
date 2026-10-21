@@ -60,28 +60,40 @@ const ICONS = {
   ),
 } as const;
 
-const STEPS: readonly OnboardingStep[] = [
-  {
-    title: "把试剂拖到锥形瓶上",
-    desc: "左边试剂架上的瓶子可以直接拖。松手之后先看动画，再听结果。",
-    icon: ICONS.drag,
-  },
-  {
-    title: "看结果条，不用猜",
-    desc: "绿条 = 这步对了，会自己往下走；红条 = 这步不对，会告诉你为什么。",
-    icon: ICONS.play,
-  },
-  {
-    title: "错了就重做，不扣已得的分",
-    desc: "按提示重做这一步即可。事故会记一笔，但后面的步骤照常继续。",
-    icon: ICONS.retry,
-  },
-  {
-    title: "不知道干什么，看左上角",
-    desc: "左上角看板写着「现在该做什么」；还是不懂就按 H 取一条提示。",
-    icon: ICONS.board,
-  },
-];
+/** 台面类实验（秤/烧杯/容量瓶/pH 计）：拖到器皿上，而不是"锥形瓶"。 */
+const BENCH_LABS = new Set(["exp01", "exp02", "exp03", "exp04", "exp08"]);
+
+/**
+ * 第 1 步按实验换文案：exp09 是滴定（锥形瓶），exp01/03 是台面（烧杯/容量瓶/pH 计）。
+ * 之前一律写"拖到锥形瓶上"，在 pH 计场景里对不上（用户 2026-10-21 报）。
+ */
+function buildSteps(expId?: string): readonly OnboardingStep[] {
+  const bench = expId ? BENCH_LABS.has(expId) : false;
+  return [
+    {
+      title: bench ? "把试剂拖到台面器皿上" : "把试剂拖到锥形瓶上",
+      desc: bench
+        ? "左边试剂架上的瓶子拖到烧杯 / 容量瓶 / 试管上。松手之后先看动画，再听结果。"
+        : "左边试剂架上的瓶子可以直接拖。松手之后先看动画，再听结果。",
+      icon: ICONS.drag,
+    },
+    {
+      title: "看结果条，不用猜",
+      desc: "绿条 = 这步对了，会自己往下走；红条 = 这步不对，会告诉你为什么。",
+      icon: ICONS.play,
+    },
+    {
+      title: "错了就重做，不扣已得的分",
+      desc: "按提示重做这一步即可。事故会记一笔，但后面的步骤照常继续。",
+      icon: ICONS.retry,
+    },
+    {
+      title: "不知道干什么，看左上角",
+      desc: "左上角看板写着「现在该做什么」；还是不懂就按 H 取一条提示。",
+      icon: ICONS.board,
+    },
+  ];
+}
 
 export type ExperimentOnboardingProps = {
   /** 受控显隐；不传则按 localStorage 自动决定 */
@@ -90,6 +102,8 @@ export type ExperimentOnboardingProps = {
   onDone?: () => void;
   /** 自定义存储键（多实验分别记忆时用） */
   storageKey?: string;
+  /** 当前实验 id：决定第 1 步说"锥形瓶"还是"台面器皿" */
+  expId?: string;
 };
 
 function readStorage(): OnboardingStorage | null {
@@ -104,7 +118,9 @@ export function ExperimentOnboarding({
   open,
   onDone,
   storageKey = ONBOARDING_KEY,
+  expId,
 }: ExperimentOnboardingProps) {
+  const STEPS = buildSteps(expId);
   const [visible, setVisible] = useState(false);
   const [index, setIndex] = useState(0);
   const cardRef = useRef<HTMLDivElement>(null);

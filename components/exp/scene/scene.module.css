@@ -177,7 +177,7 @@
 
 .benchMark {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 14px;
   letter-spacing: 0.08em;
   fill: var(--ink-2);
   opacity: 0.65;
@@ -185,14 +185,14 @@
 
 .vesselName {
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 500;
   fill: var(--ink);
 }
 
 .vesselContents {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 14px;
   fill: var(--ink-2);
 }
 
