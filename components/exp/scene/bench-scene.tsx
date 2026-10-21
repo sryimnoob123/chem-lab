@@ -21,12 +21,13 @@ const FX_MS: Record<SceneFx, number> = {
 export type BenchReaction = { vesselId: string; outcome: SceneOutcome; key: number };
 
 const LABEL_POSITION: Readonly<Record<string, { y: number; contentY: number }>> = {
-  /* 名称 16px + 内容 14px：间距 12 会叠字（"容量瓶 100 mL" 压住"空"），拉到 26 */
-  burette: { y: 358, contentY: 384 },
-  flask: { y: 358, contentY: 384 },
-  beaker: { y: 358, contentY: 384 },
-  "tube-a": { y: 358, contentY: 384 },
-  "tube-b": { y: 358, contentY: 384 },
+  /* 名称 16px + 内容 14px。svg 改成填满容器后纵向被拉伸，原来 358/384 会让"空"
+     贴到瓶底上；整体上移到 350/378 留出视觉间隙。 */
+  burette: { y: 350, contentY: 378 },
+  flask: { y: 350, contentY: 378 },
+  beaker: { y: 350, contentY: 378 },
+  "tube-a": { y: 350, contentY: 378 },
+  "tube-b": { y: 350, contentY: 378 },
 };
 
 /** 一次投放的即时手感：成功弹一下（+ 光环）/ 拒收抖一下。 */

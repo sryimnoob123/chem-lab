@@ -185,14 +185,15 @@
 
 .vesselName {
   font-family: var(--font-sans);
-  font-size: 16px;
+  /* 16 -> 14：svg 改成填满容器后整体放大，"容量瓶 100 mL" 会压到相邻器皿的"空"字 */
+  font-size: 14px;
   font-weight: 500;
   fill: var(--ink);
 }
 
 .vesselContents {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 12px;
   fill: var(--ink-2);
 }
 

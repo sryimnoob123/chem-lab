@@ -148,13 +148,14 @@
 }
 
 .modeButton {
-  min-height: 24px;
-  padding: 0 6px;
+  /* 30x24 -> 36 高：投影时指针精度不够，点"自动"很容易点到"事件"（红队 2026-10-21 实测） */
+  min-height: 36px;
+  padding: 0 10px;
   border: 0;
   background: transparent;
   color: var(--bench-text);
   font: inherit;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1;
   white-space: nowrap;
 }
@@ -228,8 +229,9 @@
 }
 
 .finishTop {
-  min-height: 30px;
-  padding: 0 10px;
+  /* 41x30 -> 36 高（含"跳过实验"复用同一条样式） */
+  min-height: 36px;
+  padding: 0 12px;
   border: 1px solid var(--jade-600);
   background: rgba(15, 123, 108, 0.12);
   color: #0f7b6c;
@@ -533,9 +535,11 @@
 }
 
 .benchReuse {
-  /* 台面要占满工作区主体：之前 900px + 70vh 上限，器皿看着像缩略图 */
+  /* 台面要占满工作区主体：之前 900px + 70vh 上限，器皿看着像缩略图。
+     这里用固定 height 而不是 max-height——svg 的 height:100% 需要一个确定的父高度，
+     否则会退回按 viewBox 比例算（1920 下算出 801px，比容器还高，撑破布局）。 */
   width: 100%;
-  max-height: 92%;
+  height: 92%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -553,12 +557,22 @@
 .benchReuse :global([class*="stage"]) {
   border: 0 !important;
   background: transparent !important;
+  /* 这一层也要定高：否则它被 svg 的内容高度撑开，svg 的 height:100% 就没有参照，
+     会退回按 viewBox 比例算，1920 下算出 801px 超过容器 786px（红队实测）。 */
+  height: 100% !important;
+  max-height: 100% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .benchReuse :global(svg) {
-  width: 100%;
-  height: auto;
-  max-height: none;
+  /* preserveAspectRatio 默认 xMidYMid meet：等比缩放居中，不变形。
+     必须 !important：scene.module.css 的 .benchSvg 是 height:auto，特异性压不过它，
+     结果 svg 按 viewBox 算出 801px，比 786 的容器还高（红队实测溢出）。 */
+  width: 100% !important;
+  height: 100% !important;
+  max-height: none !important;
 }
 
 .benchSurface {
@@ -1543,9 +1557,9 @@
   }
 
   .modeButton {
-    min-height: 28px;
+    min-height: 36px;
     flex: 1 1 0;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .readonlyBadge {
