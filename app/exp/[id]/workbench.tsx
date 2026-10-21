@@ -1072,8 +1072,13 @@ export function Workbench({
             />
           </div>
 
-          {/* 新手教学：首次进任一实验自动弹 4 步（localStorage 记"看过"），看完即可上手 */}
-          {autoDemo ? null : <ExperimentOnboarding expId={expId} />}
+          {/*
+            新手教学：只在「真正的第 1 步」弹。
+            之前无条件挂载，刷新恢复到第 7 步时也会弹那 4 张「怎么拖、怎么看结果」的卡，
+            内容说的是开头的事、和当前步对不上（用户 2026-10-22 报）。
+            进度 > 0 说明已经上手过了，直接给看板/建议动作卡的动态引导。
+          */}
+          {autoDemo || ui.exp.stepIndex > 0 ? null : <ExperimentOnboarding expId={expId} />}
           <SceneStage
             expId={expId}
             onCaption={handleSceneCaption}
