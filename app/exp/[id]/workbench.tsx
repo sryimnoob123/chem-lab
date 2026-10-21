@@ -23,6 +23,7 @@ import { missionGoal, missionGuide, missionProgress } from "@/components/exp/gui
 import { nextReagentId, resolveDrop, type DropReject } from "@/components/exp/guide/drop-resolve";
 // 新手教学（Lead 交付）：不传 open = 没看过就自动弹，看过不再打扰。
 import { ExperimentOnboarding } from "@/components/exp/onboarding";
+import { GhostCursor, GHOST_HIDDEN, type GhostState } from "@/components/demo/ghost-cursor";
 import {
   ErrorToast,
   IncidentBanner,
@@ -139,6 +140,8 @@ export function Workbench({
   const [autoDemo, setAutoDemo] = useState(false);
   const [lastInputMode, setLastInputMode] = useState<InputMode | null>(null);
   const [autoTick, setAutoTick] = useState(0);
+  /** 一键演示的虚拟光标（真人化点击）。 */
+  const [ghost, setGhost] = useState<GhostState>(GHOST_HIDDEN);
   /** 拖拽被拒（E1）：+1 让底部结果条重播一次 ✗ 抖动，本步不动。 */
   const [reject, setReject] = useState<{
     seq: number;
@@ -827,11 +830,37 @@ export function Workbench({
     if (!choice) return;
 
     autoBusyRef.current = true;
-    const timer = window.setTimeout(() => {
-      autoBusyRef.current = false;
-      choose(choice.choiceId, "auto");
-    }, 320);
-    return () => window.clearTimeout(timer);
+    const timers: number[] = [];
+    // 真人化：光标先曲线滑到目标按钮（0.4~0.8s），悬停 200~400ms，按下涟漪，再抬起执行。
+    const btn = document.querySelector<HTMLElement>(`[data-demo-id="${choice.demoId}"]`);
+    const rect = btn?.getBoundingClientRect();
+    const tx = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+    const ty = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
+    const moveMs = 400 + Math.round(Math.random() * 400);
+    const hoverMs = 200 + Math.round(Math.random() * 200);
+    // 每步之间停 0.8~1.2s，让评委看清上一步的结果再走下一步
+    const pauseMs = 800 + Math.round(Math.random() * 400);
+
+    timers.push(
+      window.setTimeout(() => {
+        setGhost((g) => ({ ...g, visible: true, x: tx, y: ty, moveMs, pressed: false }));
+      }, pauseMs),
+    );
+    timers.push(
+      window.setTimeout(() => {
+        setGhost((g) => ({ ...g, pressed: true, rippleKey: g.rippleKey + 1 }));
+      }, pauseMs + moveMs + hoverMs),
+    );
+    timers.push(
+      window.setTimeout(() => {
+        setGhost((g) => ({ ...g, pressed: false }));
+        autoBusyRef.current = false;
+        choose(choice.choiceId, "auto");
+      }, pauseMs + moveMs + hoverMs + 200),
+    );
+    return () => {
+      timers.forEach((id) => window.clearTimeout(id));
+    };
   }, [autoTick, choose, mode, performed, step, suggested, ui.exp.done, ui.exp.stepIndex]);
 
   return (
@@ -1202,6 +1231,9 @@ export function Workbench({
         onDismiss={() => setSystemError(null)}
         demoId="demo-error-toast"
       />
+
+      {/* 一键演示的虚拟光标：只在 auto 模式出现，pointer-events 永远 none */}
+      {mode === "auto" ? <GhostCursor state={ghost} /> : null}
     </div>
   );
 }

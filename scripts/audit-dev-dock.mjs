@@ -41,7 +41,7 @@ if (hasLink) {
   await link.first().click();
   const t0 = Date.now();
   let reachedReport = false;
-  for (let i = 0; i < 45; i++) {
+  for (let i = 0; i < 140; i++) {
     await page.waitForTimeout(1000);
     if (page.url().includes("/report")) {
       reachedReport = true;

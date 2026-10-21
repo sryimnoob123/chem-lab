@@ -1,0 +1,80 @@
+/**
+ * ghost-cursor.module.css —— 演示用的虚拟光标。
+ * 只动 transform / opacity，符合 AGENTS.md §1；按下 scale(.97) 同款手感。
+ */
+
+.stage {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  width: 22px;
+  height: 24px;
+  pointer-events: none;
+  opacity: 0;
+  transition-property: transform, opacity;
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0.22, 1);
+  will-change: transform;
+}
+
+.stage[data-visible="true"] {
+  opacity: 1;
+}
+
+.arrow {
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(16, 24, 40, 0.28));
+  transform-origin: 2px 2px;
+  transition: transform 120ms ease;
+}
+
+.stage[data-pressed="true"] .arrow {
+  transform: scale(0.9);
+}
+
+.halo {
+  position: absolute;
+  left: -10px;
+  top: -10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(29, 78, 137, 0.16) 0%, rgba(29, 78, 137, 0) 70%);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.stage[data-visible="true"] .halo {
+  opacity: 1;
+}
+
+.ripple {
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid rgba(29, 78, 137, 0.55);
+  animation: ghost-ripple 420ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+@keyframes ghost-ripple {
+  0% {
+    transform: scale(0.35);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage,
+  .arrow,
+  .ripple {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}
