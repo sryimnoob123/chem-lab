@@ -741,16 +741,30 @@ export function Workbench({
 
   useEffect(() => {
     if (mode !== "auto" || ui.exp.done || autoBusyRef.current || finishingRef.current) return;
-    const target = autoTargetRef.current ?? ui.exp.stepIndex;
-    autoTargetRef.current = target;
-    if (ui.exp.stepIndex !== target) return;
+    // target 必须跟着当前步骤走：原来只在切换模式时设一次，
+    // 步骤推进后 stepIndex !== target 直接 return，auto 就永远停在第 2 步（红队 2026-10-21 实测）。
+    autoTargetRef.current = ui.exp.stepIndex;
 
-    const choice = step.choices.find(
-      (item) =>
-        item.role === "correct" &&
-        !performed.has(item.choiceId) &&
-        !(item.requires ?? []).some((id) => !performed.has(id)),
-    );
+    // 先在"明确正确"的动作里找；观察类步骤（如"看水平泡是否居中"）没有 role=correct，
+    // 这里会退化到看板推荐动作（＝按 1），否则 auto 会静默卡死在该步，
+    // 学生此时交卷 → 报告出现"步骤有遗漏 50 分"（红队 2026-10-21 实测停在 2/7）。
+    const choice =
+      step.choices.find(
+        (item) =>
+          item.role === "correct" &&
+          !performed.has(item.choiceId) &&
+          !(item.requires ?? []).some((id) => !performed.has(id)),
+      ) ??
+      (suggested && !performed.has(suggested.choiceId) ? suggested : undefined) ??
+      // 第三层兜底：任意"非错误、未执行、前置已满足"的动作。
+      // 观察/校准这类步骤既没有 role=correct，也可能不是当前建议动作，
+      // 只靠前两层会让 auto 卡住，报告因此变成"步骤有遗漏"。
+      step.choices.find(
+        (item) =>
+          item.role !== "trap" &&
+          !performed.has(item.choiceId) &&
+          !(item.requires ?? []).some((id) => !performed.has(id)),
+      );
     if (!choice) return;
 
     autoBusyRef.current = true;
@@ -759,7 +773,7 @@ export function Workbench({
       choose(choice.choiceId, "auto");
     }, 320);
     return () => window.clearTimeout(timer);
-  }, [autoTick, choose, mode, performed, step, ui.exp.done, ui.exp.stepIndex]);
+  }, [autoTick, choose, mode, performed, step, suggested, ui.exp.done, ui.exp.stepIndex]);
 
   return (
     <div className={`${styles.app} ix-fade-in`} data-input-mode={lastInputMode ?? undefined}>
