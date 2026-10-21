@@ -854,8 +854,28 @@ export function Workbench({
     timers.push(
       window.setTimeout(() => {
         setGhost((g) => ({ ...g, pressed: false }));
-        autoBusyRef.current = false;
-        choose(choice.choiceId, "auto");
+        // 真实 UI 事件：在目标元素上派发 pointerdown / pointerup 再 click，
+        // 和真人点一下走同一条 React 合成事件链（不是直接调业务回调）。
+        if (btn && btn.isConnected) {
+          const shared = {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            clientX: tx,
+            clientY: ty,
+            pointerId: 1,
+            pointerType: "mouse",
+            button: 0,
+            buttons: 0,
+          };
+          btn.dispatchEvent(new PointerEvent("pointerdown", { ...shared, buttons: 1 }));
+          btn.dispatchEvent(new PointerEvent("pointerup", shared));
+          btn.click();
+          autoBusyRef.current = false;
+        } else {
+          autoBusyRef.current = false;
+          choose(choice.choiceId, "auto");
+        }
       }, pauseMs + moveMs + hoverMs + 200),
     );
     return () => {

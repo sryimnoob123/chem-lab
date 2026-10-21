@@ -170,7 +170,6 @@ export default function LoginPage() {
                   inputMode="numeric"
                   autoComplete="username"
                   placeholder="如 20250101"
-                  required
                   data-demo-id="demo-login-student-no"
                 />
               </label>
@@ -180,7 +179,6 @@ export default function LoginPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoComplete="name"
-                  required
                   data-demo-id="demo-login-student-name"
                 />
               </label>
@@ -188,13 +186,12 @@ export default function LoginPage() {
           ) : (
             <>
               <label>
-                <span>教师口令</span>
+                <span>教师口令（可留空）</span>
                 <input
                   type="password"
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   autoComplete="current-password"
-                  required
                   data-demo-id="demo-login-teacher-passcode"
                 />
               </label>

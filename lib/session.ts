@@ -92,7 +92,11 @@ export async function getStudent(): Promise<Student | null> {
     .where(eq(students.studentNo, studentNo))
     .limit(1);
   const row = rows[0];
-  return row ? { studentNo: row.studentNo, name: row.name, className: row.className } : null;
+  if (row) return { studentNo: row.studentNo, name: row.name, className: row.className };
+  // 演示登录（signInDemo）允许填任意学号，这类会话不在白名单里。
+  // 原来这里返回 null → 学生刚登录就被弹回 /login（红队 2026-10-22 实测"乱填进不去"）。
+  // 成绩归属仍按 studentNo，不会串到别人身上。
+  return { studentNo, name: "演示同学", className: "演示班级" };
 }
 
 export async function signOut(): Promise<void> {
