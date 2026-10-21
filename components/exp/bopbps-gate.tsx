@@ -189,7 +189,18 @@ export function BopbpsGate({
   const [hint, setHint] = useState("");
 
   useEffect(() => {
-    const next = loadPassed(expId) || !c ? "lab" : "pre";
+    // ?fresh=1 / ?reset=1：清掉本地预习记录，强制回到问卷（排查"看不到最新界面"用）
+    let forced = false;
+    try {
+      const qs = new URLSearchParams(window.location.search);
+      if (qs.get("fresh") === "1" || qs.get("reset") === "1") {
+        clearPassed(expId);
+        forced = true;
+      }
+    } catch {
+      /* 忽略 */
+    }
+    const next = forced ? "pre" : loadPassed(expId) || !c ? "lab" : "pre";
     queueMicrotask(() => setStage(next));
   }, [expId, c]);
 
