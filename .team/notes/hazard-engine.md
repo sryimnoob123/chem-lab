@@ -53,6 +53,45 @@
   - 校验：`POST /api/design/validate` 入参 `{pieces: string[], params?: Record<string,string|number|boolean>}` → `toApiResult(validate(plan))`；未知块用 `unknownPieces()` 报 400。
   - 点评：`POST /api/design/assess` 入参同上（或 `{planId}` 由服务端取回方案）→ `await assess(plan)`，返回 `{text, offline}`，**永不抛错**。
   - UI 直接可用：`byRule`（21 盏灯）、`issues[].hint`（违规项下方修复提示）、`REFERENCE_PLAN`（"载入示例方案"按钮）。
-- 待核：规则文案里的数值（270~300 ℃/1 h、≤0.3% 相对平均偏差、≤0.2% 极差、20~35 mL 消耗体积）沿用 `docs/实验库/exp10.md` 的「待老师核」口径，老师改口径只改 `rules.ts` 的 label/hint 与阈值。
+- 待核：规则文案里的数值（270–300 ℃/1 h、≤0.3% 相对平均偏差、≤0.2% 极差、20~35 mL 消耗体积）沿用 `docs/实验库/exp10.md` 的「待老师核」口径，老师改口径只改 `rules.ts` 的 label/hint 与阈值。
+
+## 2026-10-21 12:50 · 回归脚本适配「引导式操作台」+ 全链路重跑
+- 做了什么（只动 `scripts/**`，未改产品代码）：
+  - 新增 `scripts/lib/click-op.mjs`（共用 helper，189 行）：
+    `expandOtherWays()`（展开 `details[data-demo-id="demo-other-ways"]`，等 open 落位 + 160ms 动画）、
+    `ensureOpVisible()`、`clickOp()/clickOpById()`（不可见先展开，disabled 直接跳过不卡 30s）、
+    `countVisibleOps()/countAllOps()`（引导式下可见动作=1）、
+    `waitForFeedback()`（200ms 结果条，替代硬等 900ms）、`waitForNextLine()`（600ms 第二段）、
+    `waitForReactReady()/loginStudent()`（修 dev 首帧 hydration 竞态：填完就被 React 重置 → 400 MISSING_CREDENTIALS，实测必现，重试即绿）、
+    `clickRetry()`（点「重做本步」，被浮泡遮挡时回落键盘 R）、`passPreTest()`（前测门禁全对解锁）。
+  - 改用 helper 的脚本（共 18 个）：`exp-chain`、`exp01/02/03/04/08-chain`、`flow-chain`、`l4-check`、`walk-steps`、`samescreen-check`、`bopbps-all`、`shot-bopbps`、`soak-20`、`stability-check`、`final-regression`、`prod-accept`、`shots`、`patch-exp02-trap`（后者是要写回 exp02 的补丁脚本，字符串同步成 `clickOp` 形式）。
+  - 新增门禁处理：`exp-chain`/`exp03/04`/`flow-chain`/`l4-check` 进台前用 curriculum 答案过前测（`?force=1` 反而是强制显示前测，不能用来跳过）。
+  - 陷阱候选顺序修：引导式下 `nth(0)` 是建议动作、陷阱都在折叠区，且定义文件把「可恢复 trap」放最后 → 候选从 `cnt-1` 起（原脚本从 `cnt-2` 起，exp03/04/06/07 因此找不到可恢复 trap）。
+  - `l4-check` 推进第 1 步的方式改为点 `button[data-guide='next']`（exp10 的正确动作 demoId 是 `exp10-step1-*`，只有陷阱才是 `demo-op-*`，旧的「遍历 demo-op」永远推进不了）。
+- 证据（dev server 跑在 **3010**，当前源码；3001 是旧构建、按要求未重启，也未能起第二个 dev server —— 同目录已有 3002 在跑锁住 `.next`，故在 `E:\_tmp_chemlab-dev17` 起隔离副本 + `.pgdata-dev18`，用 Turbopack；webpack 会因产品 CSS `:global(body.fx-impact-1)` 报「不纯选择器」阻断编译，属产品侧问题已记录）：
+  - 10 实验链路：**10/10 通过**（exp01~exp10 各自：进台 → 前测解锁 → 动作 4~6 个 → 可恢复陷阱 → 两行教学解释 → 重做 → 成功分支 → 报告出分；pageerror=0）。
+    首轮 6/10（03/04/06/07 因候选顺序失败），改候选顺序后重跑 4/4 通过。
+  - `flow-chain` exp01/exp08/exp09：**各 10/10 步通过**。
+  - `l4-check`（exp10 活塞硬拧）：**通过**（L4 终止提示 + 报告含事故记录）。
+  - `samescreen-check`：**通过**（同屏占位 / 解锁不跳转 / 抽屉可展开）。
+  - `bopbps-all`：**10/10**（10 个实验前测全对解锁，可见动作=1，pageerror=0）。
+  - e2e：`E2E_BASE_URL=http://localhost:3010 npx playwright test` → **4 passed**（chromium+mobile × 2 条；`e2e/` 里只有 smoke，本来就不点 demo-op，无需改动）。**没有对 3001 跑**：3001 是引导式改造前的旧构建。
+  - `node --check` 全部 18 个改动脚本通过；`npx eslint` 这些脚本 0 error。
+  - 残留裸点：**0 处**（`grep` 只剩 build-preview/preview-page 解析源码计数的正则，不是点击）。
+- 产品侧问题（已报 Lead，未改产品代码）：
+  1. 「重做本步」被浮动「预习 0/3」入口遮挡（1440×900 elementFromPoint 命中 `bopbps-drawer-toggle`）→ Lead 已改 `guide.module.css` `.resultBar` 右内边距 132px；
+  2. 复测（Lead 修后 + 我同步该文件到隔离副本）：1440/1024/390 三档 `elementFromPoint` 均命中 `demo-retry-1` 自身且可点，**无残留遮挡**；
+  3. webpack 构建下 `components/exp/scene/fx/fx.module.css:428` `:global(body.fx-impact-1)` 报「选择器不纯」→ 仅 webpack 复现，Turbopack 正常；若 CI 用 webpack 需产品侧加局部类包一层。
+- 环境遗留：隔离副本 `E:\_tmp_chemlab-dev17` 与 `.pgdata-dev18`（10 实验 + 40 演示学生，可复用）；`C:\...\Temp\chemlab-dev17` 与坏副本 `.pgdata-dev17` 已清理。
+
+## 2026-10-21 12:58 · 追加：3001 新构建复验（Lead 已统一 build + 提交 6517fc0）
+- 3001 于 12:46 重启为新构建（standalone，含引导式操作台与 Lead 的 `.resultBar` 右内边距修复）。
+- 证据：
+  - `E2E_BASE_URL=http://localhost:3001 npx playwright test` → **4 passed**（chromium+mobile × 2）。
+  - `BASE_URL=http://localhost:3001 EXP_ID=exp09|exp10 node scripts/exp-chain.mjs` → **两条全绿**（进台/前测解锁/6 或 5 个动作/陷阱/两行解释/重做/成功/报告出分，pageerror=0）。
+  - 遮挡复验（新构建）：1440×900 与 390×844 下 `elementFromPoint(重做按钮中心)` 均命中 `demo-retry-1` 自身、`clickable=yes` → **无残留遮挡**（窄屏也 OK）。
+  - 工作区仅剩 `public/shots-prod/**` 截图（本次 3001 链路重跑覆盖）与本 notes 的改动，脚本改动已全部在 6517fc0 中。
+
+
 
 
