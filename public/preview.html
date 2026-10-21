@@ -3,151 +3,158 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>chem-lab 预览 · 无机及分析化学实验</title>
+<title>chem-lab · 无机及分析化学实验虚拟仿真</title>
 <style>
   :root{
     --ink:#12233b; --ink-2:#4a5c72; --ink-3:#7b8a9c;
     --blue:#1f5fa8; --blue-2:#2f7fd0; --blue-soft:#eaf2fb;
-    --line:#dbe5f0; --bg:#f5f8fc; --card:#ffffff;
+    --line:#dbe5f0; --bg:#f5f8fc; --card:#fff;
     --ok:#1a7f4b; --ok-soft:#e6f6ed; --todo:#9a6a12; --todo-soft:#fdf3df;
     --shadow:0 1px 2px rgba(18,35,59,.06), 0 8px 24px rgba(18,35,59,.06);
     --radius:14px;
   }
   *{box-sizing:border-box}
   html,body{margin:0}
-  body{
-    font:15px/1.6 "PingFang SC","Microsoft YaHei",-apple-system,"Segoe UI",sans-serif;
-    color:var(--ink); background:var(--bg);
-    -webkit-font-smoothing:antialiased;
-  }
+  body{font:15px/1.6 "PingFang SC","Microsoft YaHei",-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
-  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 64px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 64px}
 
-  .hero{
-    position:relative; overflow:hidden;
-    background:linear-gradient(135deg,#f8fbff 0%,#eaf2fb 60%,#e2eefb 100%);
-    border:1px solid var(--line); border-radius:20px;
-    padding:26px 28px; box-shadow:var(--shadow);
-  }
-  .hero::after{
-    content:""; position:absolute; inset:auto -60px -90px auto;
-    width:320px;height:320px;border-radius:50%;
-    background:radial-gradient(circle at 30% 30%, rgba(47,127,208,.16), transparent 70%);
-  }
-  .brandline{display:flex;align-items:center;gap:10px;color:var(--blue);font-size:13px;letter-spacing:.08em;font-weight:600}
-  .brandline .dot{width:8px;height:8px;border-radius:50%;background:var(--blue-2)}
-  h1{font-size:26px;line-height:1.3;margin:12px 0 6px;letter-spacing:-.01em}
-  .sub{color:var(--ink-2);font-size:14px;margin:0}
-  .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
-  .kpi{
-    background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-width:112px;
-    box-shadow:0 1px 1px rgba(18,35,59,.03)
-  }
-  .kpi b{display:block;font-size:20px;font-variant-numeric:tabular-nums;line-height:1.2}
-  .kpi span{font-size:12px;color:var(--ink-3)}
+  .cover{position:relative;overflow:hidden;background:#0B1219;color:#eaf2fb}
+  .cover__scene{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .cover__scrim{position:absolute;inset:0;background:linear-gradient(96deg,rgba(8,14,20,.96) 0%,rgba(8,14,20,.88) 34%,rgba(8,14,20,.52) 58%,rgba(8,14,20,.10) 82%,rgba(8,14,20,0) 100%)}
+  .cover__inner{position:relative;max-width:1180px;margin:0 auto;padding:56px 20px 48px}
+  .cover{min-height:480px}
+  .tick{position:absolute;width:14px;height:14px;border:1px solid rgba(122,178,230,.5)}
+  .tick[data-pos="tl"]{left:22px;top:22px;border-right:0;border-bottom:0}
+  .tick[data-pos="tr"]{right:22px;top:22px;border-left:0;border-bottom:0}
+  .tick[data-pos="bl"]{left:22px;bottom:22px;border-right:0;border-top:0}
+  .tick[data-pos="br"]{right:22px;bottom:22px;border-left:0;border-top:0}
+  .brandline{display:flex;align-items:center;gap:10px;font-size:12.5px;letter-spacing:.14em;color:#8fb6da;font-weight:600}
+  .brandline .dot{width:7px;height:7px;border-radius:50%;background:#2FBFA6}
+  .cover h1{font-size:clamp(28px,3.4vw,42px);line-height:1.22;margin:16px 0 10px;letter-spacing:-.02em;color:#fff;max-width:780px}
+  .cover h1 em{font-style:normal;color:#5FD3C0}
+  .cover .sub{margin:0;color:#a9c1d6;font-size:14.5px;max-width:680px}
+  .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .kpi{background:rgba(255,255,255,.06);border:1px solid rgba(143,182,218,.28);border-radius:12px;padding:10px 16px;min-width:104px;backdrop-filter:blur(6px)}
+  .kpi b{display:block;font-size:22px;font-variant-numeric:tabular-nums;line-height:1.15;color:#fff}
+  .kpi span{font-size:11.5px;color:#8fb6da}
+  .cover .links{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+  .cover .links a{font-size:13px;font-weight:600;padding:9px 14px;border-radius:9px;border:1px solid rgba(143,182,218,.35);color:#dceaf7;background:rgba(255,255,255,.04)}
+  .cover .links a.solid{background:#2FBFA6;border-color:#2FBFA6;color:#062018}
 
-  .note{
-    display:flex;gap:10px;align-items:flex-start;
-    margin:18px 0 0;padding:12px 14px;border-radius:12px;
-    background:var(--blue-soft);border:1px solid #d3e3f6;color:#1b4a7d;font-size:13px
-  }
-  .note code{background:#fff;border:1px solid #d3e3f6;border-radius:6px;padding:1px 6px;font-size:12px}
+  .nav{position:sticky;top:0;z-index:50;background:rgba(245,248,252,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .nav__inner{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:18px;height:52px}
+  .nav a{font-size:13px;color:var(--ink-2);font-weight:600}
+  .nav a:hover{color:var(--blue)}
+  .nav .spacer{flex:1}
+  .nav .stamp{font-size:11.5px;color:var(--ink-3)}
 
-  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:22px}
+  .sec-title{font-size:18px;margin:36px 0 4px;letter-spacing:-.01em}
+  .sec-sub{margin:0 0 14px;font-size:13px;color:var(--ink-3)}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:16px}
   @media (max-width:860px){.grid{grid-template-columns:1fr}}
 
-  .card{
-    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
-    padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;
-    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-  }
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease}
   .card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(18,35,59,.07),0 14px 32px rgba(18,35,59,.09);border-color:#c8d9ec}
   .card.is-locked{background:#fbfcfe}
   .card-head{display:flex;align-items:flex-start;gap:12px}
-  .no{
-    flex:none;width:40px;height:40px;border-radius:11px;display:grid;place-items:center;
-    background:var(--blue-soft);color:var(--blue);font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;
-  }
+  .no{flex:none;width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:var(--blue-soft);color:var(--blue);font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
   .is-locked .no{background:#eef2f7;color:var(--ink-3)}
   .headtext{flex:1;min-width:0}
-  h2{font-size:16px;margin:1px 0 3px;line-height:1.35}
+  .headtext h3{font-size:15.5px;margin:1px 0 3px;line-height:1.35}
   .meta{margin:0;font-size:12.5px;color:var(--ink-3)}
-  .badge{
-    flex:none;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid transparent;
-    white-space:nowrap
-  }
+  .badge{flex:none;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
   .badge.ok{background:var(--ok-soft);color:var(--ok);border-color:#c9ebd7}
   .badge.todo{background:var(--todo-soft);color:var(--todo);border-color:#f3e2bd}
 
   .stat{display:flex;gap:8px;list-style:none;margin:0;padding:0;flex-wrap:wrap}
-  .stat li{
-    display:flex;align-items:baseline;gap:4px;background:#f7fafd;border:1px solid var(--line);
-    border-radius:9px;padding:5px 9px
-  }
-  .stat b{font-size:15px;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .stat li{display:flex;align-items:baseline;gap:4px;background:#f7fafd;border:1px solid var(--line);border-radius:9px;padding:5px 9px}
+  .stat b{font-size:15px;font-variant-numeric:tabular-nums}
   .stat span{font-size:11.5px;color:var(--ink-3)}
   .stat.muted{font-size:12.5px;color:var(--ink-3)}
 
   .shots{display:flex;flex-direction:column;gap:8px}
   .shot-main{position:relative;display:block;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#fff}
   .shot-main img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;object-position:top center}
-  .shot-tag{
-    position:absolute;left:8px;bottom:8px;background:rgba(18,35,59,.78);color:#fff;
-    font-size:11px;padding:2px 8px;border-radius:6px;letter-spacing:.02em
-  }
+  .shot-tag{position:absolute;left:8px;bottom:8px;background:rgba(18,35,59,.78);color:#fff;font-size:11px;padding:2px 8px;border-radius:6px}
   .shot-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
   .shot-mini{display:block;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
   .shot-mini img{display:block;width:100%;height:44px;object-fit:cover;object-position:top center}
   .shot-count{font-size:11.5px;color:var(--ink-3)}
-  .shots.empty{
-    border:1px dashed var(--line);border-radius:10px;padding:18px;text-align:center;
-    color:var(--ink-3);font-size:12.5px;background:#fafcfe
-  }
+  .shots.empty{border:1px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--ink-3);font-size:12.5px}
 
   .card-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
-  .btn{
-    font-size:13px;font-weight:600;padding:7px 12px;border-radius:9px;border:1px solid transparent;
-    transition:transform .12s ease, background .12s ease, border-color .12s ease
-  }
+  .btn{font-size:13px;font-weight:600;padding:7px 12px;border-radius:9px;border:1px solid transparent;transition:transform .12s ease, background .12s ease}
   .btn:active{transform:scale(.97)}
   .btn.primary{background:var(--blue);color:#fff}
   .btn.primary:hover{background:#1a5393}
   .btn.ghost{background:#fff;border-color:var(--line);color:var(--blue)}
-  .btn.ghost:hover{border-color:#c8d9ec;background:#f9fbfe}
-  .btn.disabled{background:#f1f4f8;color:var(--ink-3);cursor:not-allowed}
+  .btn.disabled{background:#f1f4f8;color:var(--ink-3)}
   .card-foot code{font-size:11.5px;color:var(--ink-3);margin-left:auto}
 
-  .sec-title{font-size:17px;margin:34px 0 0;letter-spacing:-.01em}
-  footer.page{margin-top:28px;color:var(--ink-3);font-size:12px;line-height:1.8}
+  .howto{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+  @media (max-width:860px){.howto{grid-template-columns:1fr}}
+  .howto div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .howto b{display:block;font-size:13.5px;margin-bottom:4px}
+  .howto p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.7}
+  .howto code{background:#f2f6fb;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:11.5px}
+
+  footer.page{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink-3);font-size:12px;line-height:1.9}
   footer.page code{background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <section class="hero">
-    <div class="brandline"><span class="dot"></span>河南大学 · 化学化工学院 · 虚拟仿真</div>
-    <h1>无机及分析化学实验 03600004</h1>
-    <p class="sub">chem-lab 生产态预览 · 过程性评价 100%（预习 10% · 操作 40% · 报告 50%）</p>
+
+<header class="cover">
+  <svg class="cover__scene" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" role="presentation"><defs><linearGradient id="lab-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0B1219"></stop><stop offset="58%" stop-color="#0E1620"></stop><stop offset="100%" stop-color="#0A1017"></stop></linearGradient><linearGradient id="lab-bench" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1C2836"></stop><stop offset="100%" stop-color="#121A24"></stop></linearGradient><linearGradient id="lab-alkali" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2FBFA6" stop-opacity="0.9"></stop><stop offset="100%" stop-color="#0B5D52" stop-opacity="0.95"></stop></linearGradient><linearGradient id="lab-acid" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E8B33A" stop-opacity="0.5"></stop><stop offset="100%" stop-color="#B9862A" stop-opacity="0.6"></stop></linearGradient><radialGradient id="lab-glow" cx="0.52" cy="0.36" r="0.46"><stop offset="0%" stop-color="#3A4BA8" stop-opacity="0.26"></stop><stop offset="100%" stop-color="#3A4BA8" stop-opacity="0"></stop></radialGradient><radialGradient id="lab-lamp" cx="0.5" cy="0.5" r="0.5"><stop offset="0%" stop-color="#C9D6E4" stop-opacity="0.16"></stop><stop offset="100%" stop-color="#C9D6E4" stop-opacity="0"></stop></radialGradient><pattern id="lab-grid" width="56" height="56" patternUnits="userSpaceOnUse"><path d="M56 0H0V56" fill="none" stroke="#C9D6E4" stroke-opacity="0.045" stroke-width="1"></path></pattern><clipPath id="lab-flask-clip"><path d="M30 0h28v52l48 96a15 15 0 0 1-13 22H-5a15 15 0 0 1-13-22L30 52Z"></path></clipPath><linearGradient id="lab-pink" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F2A0A8" stop-opacity="0.55"></stop><stop offset="100%" stop-color="#C4434F" stop-opacity="0.5"></stop></linearGradient></defs><rect width="1440" height="900" fill="url(#lab-sky)"></rect><rect width="1440" height="900" fill="url(#lab-grid)"></rect><rect width="1440" height="900" fill="url(#lab-glow)"></rect><ellipse cx="780" cy="150" rx="360" ry="200" fill="url(#lab-lamp)"></ellipse><rect x="0" y="700" width="1440" height="200" fill="url(#lab-bench)"></rect><line x1="0" y1="700" x2="1440" y2="700" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1.6"></line><line x1="0" y1="707" x2="1440" y2="707" stroke="#C9D6E4" stroke-opacity="0.1" stroke-width="1"></line><ellipse cx="800" cy="704" rx="330" ry="46" fill="#C9D6E4" opacity="0.05"></ellipse><ellipse cx="737" cy="702" rx="22" ry="4" fill="#000" opacity="0.45"></ellipse><ellipse cx="890" cy="702" rx="66" ry="5" fill="#000" opacity="0.5"></ellipse><ellipse cx="992" cy="700" rx="50" ry="4" fill="#000" opacity="0.5"></ellipse><ellipse cx="581" cy="702" rx="30" ry="4" fill="#000" opacity="0.45"></ellipse><ellipse cx="620" cy="702" rx="24" ry="3" fill="#000" opacity="0.45"></ellipse><ellipse cx="1076" cy="702" rx="26" ry="3" fill="#000" opacity="0.4"></ellipse><g stroke="#C9D6E4" stroke-opacity="0.45" stroke-width="3.5" stroke-linecap="round" fill="none"><path d="M636 318v382"></path><path d="M636 700h108"></path><path d="M690 330h62"></path><path d="M690 540h62"></path></g><g transform="translate(724 330)"><rect x="0" y="0" width="26" height="300" rx="3" fill="#FFFFFF" fill-opacity="0.07" stroke="#C9D6E4" stroke-opacity="0.85" stroke-width="1.7"></rect><rect x="3.5" y="104" width="19" height="176" fill="url(#lab-alkali)"></rect><line x1="3.5" y1="104" x2="22.5" y2="104" stroke="#8FF0DE" stroke-width="2"></line><line x1="2" y1="14" x2="24" y2="14" stroke="#C9D6E4" stroke-opacity="0.8" stroke-width="1.5"></line><line x1="10" y1="26" x2="24" y2="26" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="10" y1="38" x2="24" y2="38" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="10" y1="50" x2="24" y2="50" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="10" y1="62" x2="24" y2="62" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="2" y1="74" x2="24" y2="74" stroke="#C9D6E4" stroke-opacity="0.8" stroke-width="1.5"></line><line x1="10" y1="86" x2="24" y2="86" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="10" y1="98" x2="24" y2="98" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="10" y1="110" x2="24" y2="110" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="10" y1="122" x2="24" y2="122" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="2" y1="134" x2="24" y2="134" stroke="#C9D6E4" stroke-opacity="0.8" stroke-width="1.5"></line><line x1="10" y1="146" x2="24" y2="146" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="10" y1="158" x2="24" y2="158" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="10" y1="170" x2="24" y2="170" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="10" y1="182" x2="24" y2="182" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="2" y1="194" x2="24" y2="194" stroke="#C9D6E4" stroke-opacity="0.8" stroke-width="1.5"></line><line x1="10" y1="206" x2="24" y2="206" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="10" y1="218" x2="24" y2="218" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="10" y1="230" x2="24" y2="230" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="10" y1="242" x2="24" y2="242" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><line x1="2" y1="254" x2="24" y2="254" stroke="#C9D6E4" stroke-opacity="0.8" stroke-width="1.5"></line><line x1="10" y1="266" x2="24" y2="266" stroke="#C9D6E4" stroke-opacity="0.4" stroke-width="1"></line><rect x="1" y="296" width="24" height="13" rx="2" fill="#C9D6E4" fill-opacity="0.4" stroke="#C9D6E4" stroke-opacity="0.8" stroke-width="1.4"></rect><path d="M13 309v24l-5 9a3.6 3.6 0 0 0 3 6.4h4a3.6 3.6 0 0 0 3-6.4l-5-9" fill="#FFFFFF" fill-opacity="0.1" stroke="#C9D6E4" stroke-opacity="0.8" stroke-width="1.4"></path></g><ellipse cx="737" cy="400" rx="3.2" ry="4.8" fill="#8FF0DE" opacity="0.85"><animate attributeName="cy" values="392;440;486" dur="2.8s" repeatCount="indefinite"></animate><animate attributeName="opacity" values="0;0.9;0.9;0" dur="2.8s" repeatCount="indefinite"></animate></ellipse><g transform="translate(846 530)"><g clip-path="url(#lab-flask-clip)"><rect x="-40" y="126" width="180" height="60" fill="url(#lab-pink)"></rect></g><path d="M30 0h28v52l48 96a15 15 0 0 1-13 22H-5a15 15 0 0 1-13-22L30 52Z" fill="#FFFFFF" fill-opacity="0.06" stroke="#C9D6E4" stroke-opacity="0.8" stroke-width="1.7"></path><line x1="-11" y1="126" x2="49" y2="126" stroke="#F2A0A8" stroke-opacity="0.8" stroke-width="1.8"></line><line x1="30" y1="0" x2="58" y2="0" stroke="#C9D6E4" stroke-opacity="0.55" stroke-width="1.4"></line></g><g transform="translate(950 604)"><path d="M0 0h84v80a12 12 0 0 1-12 12H12A12 12 0 0 1 0 80Z" fill="#FFFFFF" fill-opacity="0.05" stroke="#C9D6E4" stroke-opacity="0.7" stroke-width="1.5"></path><rect x="2" y="38" width="80" height="54" fill="url(#lab-acid)"></rect><line x1="2" y1="38" x2="82" y2="38" stroke="#F0C96A" stroke-opacity="0.65" stroke-width="1.5"></line><path d="M84 22h12a7 7 0 0 1 0 14H84" fill="none" stroke="#C9D6E4" stroke-opacity="0.7" stroke-width="1.5"></path><line x1="68" y1="52" x2="82" y2="52" stroke="#C9D6E4" stroke-opacity="0.45" stroke-width="1"></line><line x1="68" y1="64" x2="82" y2="64" stroke="#C9D6E4" stroke-opacity="0.45" stroke-width="1"></line><line x1="68" y1="76" x2="82" y2="76" stroke="#C9D6E4" stroke-opacity="0.45" stroke-width="1"></line><line x1="68" y1="88" x2="82" y2="88" stroke="#C9D6E4" stroke-opacity="0.45" stroke-width="1"></line></g><g transform="translate(556 612)"><rect x="0" y="24" width="50" height="64" rx="3" fill="#FFFFFF" fill-opacity="0.05" stroke="#C9D6E4" stroke-opacity="0.62" stroke-width="1.4"></rect><rect x="9" y="4" width="32" height="20" rx="2" fill="#C9D6E4" fill-opacity="0.3" stroke="#C9D6E4" stroke-opacity="0.6" stroke-width="1.2"></rect><rect x="4" y="52" width="42" height="18" fill="#2FBFA6" fill-opacity="0.25"></rect></g><g transform="translate(600 636)"><rect x="0" y="16" width="40" height="52" rx="3" fill="#FFFFFF" fill-opacity="0.04" stroke="#C9D6E4" stroke-opacity="0.5" stroke-width="1.2"></rect><rect x="7" y="0" width="26" height="16" rx="2" fill="#C9D6E4" fill-opacity="0.24" stroke="#C9D6E4" stroke-opacity="0.45" stroke-width="1"></rect></g><g transform="translate(1056 656)" stroke="#C9D6E4" stroke-opacity="0.55" fill="#FFFFFF" fill-opacity="0.05"><path d="M0 22a20 20 0 0 1 40 0v14H0Z" stroke-width="1.4"></path><rect x="14" y="36" width="12" height="14" stroke-width="1.2"></rect></g><ellipse cx="860" cy="712" rx="190" ry="7" fill="#8FF0DE" opacity="0.07"></ellipse><ellipse cx="992" cy="714" rx="90" ry="5" fill="#E8B33A" opacity="0.06"></ellipse></svg>
+  <span class="cover__scrim" aria-hidden="true"></span>
+  <span class="tick" data-pos="tl" aria-hidden="true"></span>
+  <span class="tick" data-pos="tr" aria-hidden="true"></span>
+  <span class="tick" data-pos="bl" aria-hidden="true"></span>
+  <span class="tick" data-pos="br" aria-hidden="true"></span>
+
+  <div class="cover__inner">
+    <div class="brandline"><span class="dot"></span>河南大学 · 化学化工学院 · 虚拟仿真实验</div>
+    <h1>把每一次读数，<br />写进<em>同一本台账</em>。</h1>
+    <p class="sub">无机及分析化学实验 03600004 · 10 个实验 · 36 学时 · 过程性评价 100%（预习 10% · 操作 40% · 报告 50%）</p>
+
     <div class="kpis">
-      <div class="kpi"><b>10</b><span>实验总数</span></div>
-      <div class="kpi"><b>10</b><span>可玩实验</span></div>
+      <div class="kpi"><b>10</b><span>实验</span></div>
+      <div class="kpi"><b>10</b><span>可玩</span></div>
       <div class="kpi"><b>70</b><span>验收截图</span></div>
+      <div class="kpi"><b>116</b><span>分级事故</span></div>
       <div class="kpi"><b>0</b><span>页面报错</span></div>
     </div>
-    <div class="note">
-      <span>ℹ️</span>
-      <span>预览页是静态快照：<b>截图</b>直接看，“打开操作台 / 看报告页”需要本机 <code>localhost:3001</code> 正在运行
-      （<code>start-chem-lab.bat</code> 启动）。未接通的实验点进去是友好提示页，不会 404。</span>
-    </div>
-  </section>
 
-  <main class="grid">
+    <div class="links">
+      <a class="solid" href="/experiments">进入实验列表</a>
+      <a href="#labs">看 10 个实验</a>
+      <a href="/plan">方案设计</a>
+      <a href="/teacher">教师端</a>
+    </div>
+  </div>
+</header>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="#labs">实验</a>
+    <a href="#capability">平台能力</a>
+    <a href="#howto">怎么看</a>
+    <span class="spacer"></span>
+    <span class="stamp">预览快照 · 2026/10/21 10:24:45</span>
+  </div>
+</nav>
+
+<div class="wrap">
+  <h2 class="sec-title" id="labs">10 个实验</h2>
+  <p class="sec-sub">每个实验都有 BOPPPS 前测门禁、分步操作、分级事故与报告出分；点卡片可直接进操作台。</p>
+  <section class="grid">
     
   <article class="card is-playable">
     <header class="card-head">
       <div class="no">01</div>
       <div class="headtext">
-        <h2>仪器的认领、天平使用及溶液配制</h2>
+        <h3>仪器的认领、天平使用及溶液配制</h3>
         <p class="meta">验证实验 · 5 学时 · 洗涤、称量、定容、浓硫酸稀释</p>
       </div>
       <span class="badge ok">可玩</span>
@@ -161,7 +168,7 @@
   </ul>
     <div class="shots">
     <a class="shot-main" href="shots-prod/exp01/03-exp01-initial.png" target="_blank" rel="noreferrer">
-      <img src="shots-prod/exp01/03-exp01-initial.png" alt="仪器的认领、天平使用及溶液配制 首屏截图" loading="lazy" />
+      <img src="shots-prod/exp01/03-exp01-initial.png" alt="仪器的认领、天平使用及溶液配制" loading="lazy" />
       <span class="shot-tag">03-exp01-initial.png</span>
     </a>
     <div class="shot-strip">
@@ -176,8 +183,8 @@
     <div class="shot-count">7 张 · 点击看大图</div>
   </div>
     <footer class="card-foot">
-      <a class="btn primary" href="http://localhost:3001/exp/exp01" target="_blank" rel="noreferrer">打开操作台</a>
-               <a class="btn ghost" href="http://localhost:3001/exp/exp01/report" target="_blank" rel="noreferrer">看报告页</a>
+      <a class="btn primary" href="/exp/exp01" target="_blank" rel="noreferrer">打开操作台</a>
+               <a class="btn ghost" href="/exp/exp01/report" target="_blank" rel="noreferrer">看报告</a>
       <code>/exp/exp01</code>
     </footer>
   </article>
@@ -186,7 +193,7 @@
     <header class="card-head">
       <div class="no">02</div>
       <div class="headtext">
-        <h2>试剂级氯化钠制备</h2>
+        <h3>试剂级氯化钠制备</h3>
         <p class="meta">验证实验 · 5 学时 · 除杂、过滤、蒸发结晶、算产率</p>
       </div>
       <span class="badge ok">可玩</span>
@@ -200,7 +207,7 @@
   </ul>
     <div class="shots">
     <a class="shot-main" href="shots-prod/exp02/03-exp02-initial.png" target="_blank" rel="noreferrer">
-      <img src="shots-prod/exp02/03-exp02-initial.png" alt="试剂级氯化钠制备 首屏截图" loading="lazy" />
+      <img src="shots-prod/exp02/03-exp02-initial.png" alt="试剂级氯化钠制备" loading="lazy" />
       <span class="shot-tag">03-exp02-initial.png</span>
     </a>
     <div class="shot-strip">
@@ -215,8 +222,8 @@
     <div class="shot-count">7 张 · 点击看大图</div>
   </div>
     <footer class="card-foot">
-      <a class="btn primary" href="http://localhost:3001/exp/exp02" target="_blank" rel="noreferrer">打开操作台</a>
-               <a class="btn ghost" href="http://localhost:3001/exp/exp02/report" target="_blank" rel="noreferrer">看报告页</a>
+      <a class="btn primary" href="/exp/exp02" target="_blank" rel="noreferrer">打开操作台</a>
+               <a class="btn ghost" href="/exp/exp02/report" target="_blank" rel="noreferrer">看报告</a>
       <code>/exp/exp02</code>
     </footer>
   </article>
@@ -225,7 +232,7 @@
     <header class="card-head">
       <div class="no">03</div>
       <div class="headtext">
-        <h2>醋酸电离度和电离常数测定</h2>
+        <h3>醋酸电离度和电离常数测定</h3>
         <p class="meta">验证实验 · 3 学时 · 系列稀释、pH 计、Ka 计算</p>
       </div>
       <span class="badge ok">可玩</span>
@@ -239,7 +246,7 @@
   </ul>
     <div class="shots">
     <a class="shot-main" href="shots-prod/exp03/03-exp03-initial.png" target="_blank" rel="noreferrer">
-      <img src="shots-prod/exp03/03-exp03-initial.png" alt="醋酸电离度和电离常数测定 首屏截图" loading="lazy" />
+      <img src="shots-prod/exp03/03-exp03-initial.png" alt="醋酸电离度和电离常数测定" loading="lazy" />
       <span class="shot-tag">03-exp03-initial.png</span>
     </a>
     <div class="shot-strip">
@@ -254,8 +261,8 @@
     <div class="shot-count">7 张 · 点击看大图</div>
   </div>
     <footer class="card-foot">
-      <a class="btn primary" href="http://localhost:3001/exp/exp03" target="_blank" rel="noreferrer">打开操作台</a>
-               <a class="btn ghost" href="http://localhost:3001/exp/exp03/report" target="_blank" rel="noreferrer">看报告页</a>
+      <a class="btn primary" href="/exp/exp03" target="_blank" rel="noreferrer">打开操作台</a>
+               <a class="btn ghost" href="/exp/exp03/report" target="_blank" rel="noreferrer">看报告</a>
       <code>/exp/exp03</code>
     </footer>
   </article>
@@ -264,7 +271,7 @@
     <header class="card-head">
       <div class="no">04</div>
       <div class="headtext">
-        <h2>沉淀的生成与溶解平衡</h2>
+        <h3>沉淀的生成与溶解平衡</h3>
         <p class="meta">综合实验 · 4 学时 · 沉淀制备、离心、分步沉淀、转化</p>
       </div>
       <span class="badge ok">可玩</span>
@@ -278,7 +285,7 @@
   </ul>
     <div class="shots">
     <a class="shot-main" href="shots-prod/exp04/03-exp04-initial.png" target="_blank" rel="noreferrer">
-      <img src="shots-prod/exp04/03-exp04-initial.png" alt="沉淀的生成与溶解平衡 首屏截图" loading="lazy" />
+      <img src="shots-prod/exp04/03-exp04-initial.png" alt="沉淀的生成与溶解平衡" loading="lazy" />
       <span class="shot-tag">03-exp04-initial.png</span>
     </a>
     <div class="shot-strip">
@@ -293,8 +300,8 @@
     <div class="shot-count">7 张 · 点击看大图</div>
   </div>
     <footer class="card-foot">
-      <a class="btn primary" href="http://localhost:3001/exp/exp04" target="_blank" rel="noreferrer">打开操作台</a>
-               <a class="btn ghost" href="http://localhost:3001/exp/exp04/report" target="_blank" rel="noreferrer">看报告页</a>
+      <a class="btn primary" href="/exp/exp04" target="_blank" rel="noreferrer">打开操作台</a>
+               <a class="btn ghost" href="/exp/exp04/report" target="_blank" rel="noreferrer">看报告</a>
       <code>/exp/exp04</code>
     </footer>
   </article>
@@ -303,7 +310,7 @@
     <header class="card-head">
       <div class="no">05</div>
       <div class="headtext">
-        <h2>氧化还原反应和电化学</h2>
+        <h3>氧化还原反应和电化学</h3>
         <p class="meta">验证实验 · 3 学时 · 原电池、盐桥、电动势测定</p>
       </div>
       <span class="badge ok">可玩</span>
@@ -317,7 +324,7 @@
   </ul>
     <div class="shots">
     <a class="shot-main" href="shots-prod/exp05/03-exp05-initial.png" target="_blank" rel="noreferrer">
-      <img src="shots-prod/exp05/03-exp05-initial.png" alt="氧化还原反应和电化学 首屏截图" loading="lazy" />
+      <img src="shots-prod/exp05/03-exp05-initial.png" alt="氧化还原反应和电化学" loading="lazy" />
       <span class="shot-tag">03-exp05-initial.png</span>
     </a>
     <div class="shot-strip">
@@ -332,8 +339,8 @@
     <div class="shot-count">7 张 · 点击看大图</div>
   </div>
     <footer class="card-foot">
-      <a class="btn primary" href="http://localhost:3001/exp/exp05" target="_blank" rel="noreferrer">打开操作台</a>
-               <a class="btn ghost" href="http://localhost:3001/exp/exp05/report" target="_blank" rel="noreferrer">看报告页</a>
+      <a class="btn primary" href="/exp/exp05" target="_blank" rel="noreferrer">打开操作台</a>
+               <a class="btn ghost" href="/exp/exp05/report" target="_blank" rel="noreferrer">看报告</a>
       <code>/exp/exp05</code>
     </footer>
   </article>
@@ -342,7 +349,7 @@
     <header class="card-head">
       <div class="no">06</div>
       <div class="headtext">
-        <h2>配合物的生成和性质</h2>
+        <h3>配合物的生成和性质</h3>
         <p class="meta">综合实验 · 3 学时 · 配位平衡、螯合物、稳定性比较</p>
       </div>
       <span class="badge ok">可玩</span>
@@ -356,7 +363,7 @@
   </ul>
     <div class="shots">
     <a class="shot-main" href="shots-prod/exp06/03-exp06-initial.png" target="_blank" rel="noreferrer">
-      <img src="shots-prod/exp06/03-exp06-initial.png" alt="配合物的生成和性质 首屏截图" loading="lazy" />
+      <img src="shots-prod/exp06/03-exp06-initial.png" alt="配合物的生成和性质" loading="lazy" />
       <span class="shot-tag">03-exp06-initial.png</span>
     </a>
     <div class="shot-strip">
@@ -371,8 +378,8 @@
     <div class="shot-count">7 张 · 点击看大图</div>
   </div>
     <footer class="card-foot">
-      <a class="btn primary" href="http://localhost:3001/exp/exp06" target="_blank" rel="noreferrer">打开操作台</a>
-               <a class="btn ghost" href="http://localhost:3001/exp/exp06/report" target="_blank" rel="noreferrer">看报告页</a>
+      <a class="btn primary" href="/exp/exp06" target="_blank" rel="noreferrer">打开操作台</a>
+               <a class="btn ghost" href="/exp/exp06/report" target="_blank" rel="noreferrer">看报告</a>
       <code>/exp/exp06</code>
     </footer>
   </article>
@@ -381,7 +388,7 @@
     <header class="card-head">
       <div class="no">07</div>
       <div class="headtext">
-        <h2>常见阳离子的分离与鉴定（一）</h2>
+        <h3>常见阳离子的分离与鉴定（一）</h3>
         <p class="meta">验证实验 · 4 学时 · 特征反应、分组分离、排除干扰</p>
       </div>
       <span class="badge ok">可玩</span>
@@ -395,7 +402,7 @@
   </ul>
     <div class="shots">
     <a class="shot-main" href="shots-prod/exp07/03-exp07-initial.png" target="_blank" rel="noreferrer">
-      <img src="shots-prod/exp07/03-exp07-initial.png" alt="常见阳离子的分离与鉴定（一） 首屏截图" loading="lazy" />
+      <img src="shots-prod/exp07/03-exp07-initial.png" alt="常见阳离子的分离与鉴定（一）" loading="lazy" />
       <span class="shot-tag">03-exp07-initial.png</span>
     </a>
     <div class="shot-strip">
@@ -410,8 +417,8 @@
     <div class="shot-count">7 张 · 点击看大图</div>
   </div>
     <footer class="card-foot">
-      <a class="btn primary" href="http://localhost:3001/exp/exp07" target="_blank" rel="noreferrer">打开操作台</a>
-               <a class="btn ghost" href="http://localhost:3001/exp/exp07/report" target="_blank" rel="noreferrer">看报告页</a>
+      <a class="btn primary" href="/exp/exp07" target="_blank" rel="noreferrer">打开操作台</a>
+               <a class="btn ghost" href="/exp/exp07/report" target="_blank" rel="noreferrer">看报告</a>
       <code>/exp/exp07</code>
     </footer>
   </article>
@@ -420,7 +427,7 @@
     <header class="card-head">
       <div class="no">08</div>
       <div class="headtext">
-        <h2>清点仪器，分析天平称量练习</h2>
+        <h3>清点仪器，分析天平称量练习</h3>
         <p class="meta">验证实验 · 3 学时 · 固定质量称量、递减法、记录规范</p>
       </div>
       <span class="badge ok">可玩</span>
@@ -434,7 +441,7 @@
   </ul>
     <div class="shots">
     <a class="shot-main" href="shots-prod/exp08/03-exp08-initial.png" target="_blank" rel="noreferrer">
-      <img src="shots-prod/exp08/03-exp08-initial.png" alt="清点仪器，分析天平称量练习 首屏截图" loading="lazy" />
+      <img src="shots-prod/exp08/03-exp08-initial.png" alt="清点仪器，分析天平称量练习" loading="lazy" />
       <span class="shot-tag">03-exp08-initial.png</span>
     </a>
     <div class="shot-strip">
@@ -449,8 +456,8 @@
     <div class="shot-count">7 张 · 点击看大图</div>
   </div>
     <footer class="card-foot">
-      <a class="btn primary" href="http://localhost:3001/exp/exp08" target="_blank" rel="noreferrer">打开操作台</a>
-               <a class="btn ghost" href="http://localhost:3001/exp/exp08/report" target="_blank" rel="noreferrer">看报告页</a>
+      <a class="btn primary" href="/exp/exp08" target="_blank" rel="noreferrer">打开操作台</a>
+               <a class="btn ghost" href="/exp/exp08/report" target="_blank" rel="noreferrer">看报告</a>
       <code>/exp/exp08</code>
     </footer>
   </article>
@@ -459,7 +466,7 @@
     <header class="card-head">
       <div class="no">09</div>
       <div class="headtext">
-        <h2>酸碱标准溶液的配制与浓度比较</h2>
+        <h3>酸碱标准溶液的配制与浓度比较</h3>
         <p class="meta">验证实验 · 3 学时 · 滴定管洗涤润洗、半滴操作、终点判定</p>
       </div>
       <span class="badge ok">可玩</span>
@@ -473,7 +480,7 @@
   </ul>
     <div class="shots">
     <a class="shot-main" href="shots-prod/exp09/03-exp09-initial.png" target="_blank" rel="noreferrer">
-      <img src="shots-prod/exp09/03-exp09-initial.png" alt="酸碱标准溶液的配制与浓度比较 首屏截图" loading="lazy" />
+      <img src="shots-prod/exp09/03-exp09-initial.png" alt="酸碱标准溶液的配制与浓度比较" loading="lazy" />
       <span class="shot-tag">03-exp09-initial.png</span>
     </a>
     <div class="shot-strip">
@@ -488,8 +495,8 @@
     <div class="shot-count">7 张 · 点击看大图</div>
   </div>
     <footer class="card-foot">
-      <a class="btn primary" href="http://localhost:3001/exp/exp09" target="_blank" rel="noreferrer">打开操作台</a>
-               <a class="btn ghost" href="http://localhost:3001/exp/exp09/report" target="_blank" rel="noreferrer">看报告页</a>
+      <a class="btn primary" href="/exp/exp09" target="_blank" rel="noreferrer">打开操作台</a>
+               <a class="btn ghost" href="/exp/exp09/report" target="_blank" rel="noreferrer">看报告</a>
       <code>/exp/exp09</code>
     </footer>
   </article>
@@ -498,7 +505,7 @@
     <header class="card-head">
       <div class="no">10</div>
       <div class="headtext">
-        <h2>盐酸标准溶液的标定与工业纯碱总碱度的测定</h2>
+        <h3>盐酸标准溶液的标定与工业纯碱总碱度的测定</h3>
         <p class="meta">设计实验 · 3 学时 · 基准物质标定、双指示剂法测总碱度</p>
       </div>
       <span class="badge ok">可玩</span>
@@ -512,7 +519,7 @@
   </ul>
     <div class="shots">
     <a class="shot-main" href="shots-prod/exp10/03-exp10-initial.png" target="_blank" rel="noreferrer">
-      <img src="shots-prod/exp10/03-exp10-initial.png" alt="盐酸标准溶液的标定与工业纯碱总碱度的测定 首屏截图" loading="lazy" />
+      <img src="shots-prod/exp10/03-exp10-initial.png" alt="盐酸标准溶液的标定与工业纯碱总碱度的测定" loading="lazy" />
       <span class="shot-tag">03-exp10-initial.png</span>
     </a>
     <div class="shot-strip">
@@ -527,29 +534,30 @@
     <div class="shot-count">7 张 · 点击看大图</div>
   </div>
     <footer class="card-foot">
-      <a class="btn primary" href="http://localhost:3001/exp/exp10" target="_blank" rel="noreferrer">打开操作台</a>
-               <a class="btn ghost" href="http://localhost:3001/exp/exp10/report" target="_blank" rel="noreferrer">看报告页</a>
+      <a class="btn primary" href="/exp/exp10" target="_blank" rel="noreferrer">打开操作台</a>
+               <a class="btn ghost" href="/exp/exp10/report" target="_blank" rel="noreferrer">看报告</a>
       <code>/exp/exp10</code>
     </footer>
   </article>
-  </main>
+  </section>
 
-  <h2 class="sec-title">平台能力（不止实验台）</h2>
+  <h2 class="sec-title" id="capability">平台能力</h2>
+  <p class="sec-sub">不只是实验台：教学结构、方案设计、教师学情。</p>
   <section class="grid">
     
   <article class="card is-playable">
     <header class="card-head">
       <div class="no">B</div>
       <div class="headtext">
-        <h2>BOPPPS 教学六段</h2>
-        <p class="meta">教学实验 · 0 学时 · 导入 / 目标 / 前测门禁 / 参与式 / 后测 / 总结</p>
+        <h3>BOPPPS 教学六段</h3>
+        <p class="meta">导入 / 目标 / 前测门禁 / 参与式 / 后测 / 总结</p>
       </div>
       <span class="badge ok">可玩</span>
     </header>
-    <div class="stat muted">定义未接通</div>
+    <div class="stat muted">平台能力</div>
     <div class="shots">
     <a class="shot-main" href="shots-prod/bopbps/02-prelab-wrong.png" target="_blank" rel="noreferrer">
-      <img src="shots-prod/bopbps/02-prelab-wrong.png" alt="BOPPPS 教学六段 首屏截图" loading="lazy" />
+      <img src="shots-prod/bopbps/02-prelab-wrong.png" alt="BOPPPS 教学六段" loading="lazy" />
       <span class="shot-tag">02-prelab-wrong.png</span>
     </a>
     <div class="shot-strip">
@@ -561,7 +569,7 @@
     <div class="shot-count">4 张 · 点击看大图</div>
   </div>
     <footer class="card-foot">
-      <a class="btn primary" href="http://localhost:3001/exp/exp01" target="_blank" rel="noreferrer">打开</a>
+      <a class="btn primary" href="/exp/exp01" target="_blank" rel="noreferrer">打开</a>
       
     </footer>
   </article>
@@ -570,15 +578,15 @@
     <header class="card-head">
       <div class="no">P</div>
       <div class="headtext">
-        <h2>拼接式方案设计</h2>
-        <p class="meta">设计实验 · 0 学时 · 31 块素材 · 21 条规则实时校验 · 方案保存</p>
+        <h3>拼接式方案设计</h3>
+        <p class="meta">31 块素材 · 21 条规则实时校验 · 方案保存落库</p>
       </div>
       <span class="badge ok">可玩</span>
     </header>
-    <div class="stat muted">定义未接通</div>
+    <div class="stat muted">平台能力</div>
     <div class="shots">
     <a class="shot-main" href="shots-prod/plan/02-plan-reference.png" target="_blank" rel="noreferrer">
-      <img src="shots-prod/plan/02-plan-reference.png" alt="拼接式方案设计 首屏截图" loading="lazy" />
+      <img src="shots-prod/plan/02-plan-reference.png" alt="拼接式方案设计" loading="lazy" />
       <span class="shot-tag">02-plan-reference.png</span>
     </a>
     <div class="shot-strip">
@@ -592,15 +600,31 @@
     <div class="shot-count">6 张 · 点击看大图</div>
   </div>
     <footer class="card-foot">
-      <a class="btn primary" href="http://localhost:3001/plan" target="_blank" rel="noreferrer">打开</a>
+      <a class="btn primary" href="/plan" target="_blank" rel="noreferrer">打开</a>
       
     </footer>
   </article>
   </section>
 
+  <h2 class="sec-title" id="howto">怎么看这一页</h2>
+  <div class="howto">
+    <div>
+      <b>① 这是静态快照</b>
+      <p>截图直接看；卡片链接指向站内页面，应用跑起来（或部署到 coze 后）点开即用。</p>
+    </div>
+    <div>
+      <b>② 演示账号</b>
+      <p>学生 <code>20250101</code> / 周若曦；教师端口令 <code>2026</code>。用 <code>localhost</code> 打开，别用 <code>127.0.0.1</code>。</p>
+    </div>
+    <div>
+      <b>③ 想看前测</b>
+      <p>进实验先见问卷；做过前测想重看，加 <code>?fresh=1</code>，例如 <code>/exp/exp01?fresh=1</code>。</p>
+    </div>
+  </div>
+
   <footer class="page">
-    <div>生成时间 2026/10/21 10:01:15 · 由 <code>node scripts/build-preview.mjs</code> 从 catalog + definition + 截图目录自动生成</div>
-    <div>验收命令：<code>BASE_URL=http://localhost:3001 node scripts/expNN-chain.mjs</code> · 演示账号 <code>20250101 / 周若曦</code></div>
+    <div>生成本页：<code>node scripts/preview-page.mjs</code>（读 catalog + definition + 截图目录，封面 SVG 取自门户渲染结果）</div>
+    <div>验收命令：<code>BASE_URL=&lt;你的地址&gt; node scripts/exp-chain.mjs &lt;trapId&gt;</code> · <code>node scripts/pg-verify.mjs</code></div>
   </footer>
 </div>
 </body>
