@@ -321,7 +321,7 @@ export function SceneStage({
             <div className={styles.benchReuse} data-demo-id={`${expId}-bench-scene`}>
               <BenchScene
                 vesselIds={
-                  expId === "exp01"
+                  expId === "exp01" || expId === "exp08"
                     ? EXP01_BENCH_VESSELS
                     : expId === "exp03"
                       ? EXP03_BENCH_VESSELS
