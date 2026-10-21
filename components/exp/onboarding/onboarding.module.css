@@ -9,6 +9,13 @@
   padding: 16px;
   background: rgba(22, 32, 44, 0.24);
   animation: ob-fade 200ms var(--ease-snap, cubic-bezier(0.22, 1, 0.36, 1)) both;
+  /* 结构性兜底：遮罩默认不吃指针事件，只有 data-open="true" 时才接管。
+     即使哪天卸载逻辑回归（红队 2026-10-21 报过整页点不动），也不会把实验台锁死。 */
+  pointer-events: none;
+}
+
+.backdrop[data-open="true"] {
+  pointer-events: auto;
 }
 
 .card {

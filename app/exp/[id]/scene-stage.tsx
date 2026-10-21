@@ -20,9 +20,9 @@ import styles from "./workbench.module.css";
  */
 const EXP01_BENCH_VESSELS = ["beaker", "volumetric", "tube-a", "tube-b"];
 const EXP03_BENCH_VESSELS = ["beaker", "volumetric", "tube-a", "tube-b", "flask"];
-/** exp09 前两步（配 500 mL 溶液）也走台面：只要烧杯/容量瓶/试管。
- *  绝不能落回全量——画布已收到 x>=370，滴定管会被排到 x=-426（2026-10-21 回归）。 */
-const EXP09_BENCH_VESSELS = ["beaker", "volumetric", "tube-a", "tube-b"];
+/** exp09 前两步（配 500 mL 溶液）也走台面：只留烧杯 + 容量瓶（称 NaOH / 定容用），
+ *  试管和锥形瓶这两步根本用不到，摆着只会多出可点热区（红队 2026-10-21 报 635×136 大热区）。 */
+const EXP09_BENCH_VESSELS = ["beaker", "volumetric"];
 
 /**
  * 3D 试点（?scene=3d）：three.js 场景只在客户端加载，ssr:false；

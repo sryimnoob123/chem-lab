@@ -203,7 +203,7 @@ export function ExperimentOnboarding({
   const isLast = index === STEPS.length - 1;
 
   return (
-    <div className={styles.backdrop}>
+    <div className={styles.backdrop} data-open="true">
       <div
         ref={cardRef}
         className={styles.card}
