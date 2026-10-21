@@ -74,7 +74,7 @@ export function LoginScene() {
             <line x1="4" y1="10" x2="4" y2="212" stroke="#fff" strokeOpacity="0.35" strokeWidth="2" strokeLinecap="round" />
           </g>
 
-          <g transform="translate(1246 557) scale(0.78)">
+          <g transform="translate(1240 557) scale(0.72)">
             <path d={BEAKER_BODY} {...GLASS} />
             <path d={BEAKER_BODY} fill="none" stroke={INK} strokeOpacity={S} strokeWidth={W} />
             <ellipse cx="80" cy="41" rx="54" ry="7.5" fill="none" stroke={INK} strokeOpacity={S} strokeWidth={W} />
@@ -83,16 +83,16 @@ export function LoginScene() {
           </g>
 
           {/* 漏斗 + 滤纸锥，立在台面上 */}
-          <g transform="translate(1356 616)">
+          <g transform="translate(1348 618) scale(0.82)">
             <path d="M-42 -46 H42 L6 6 H-6 Z" {...GLASS} />
             <path d="M-42 -46 H42 L6 6 H-6 Z" fill="none" stroke={INK} strokeOpacity={S} strokeWidth={W} />
             <path d="M-32 -46 L-3 6 M32 -46 L3 6" fill="none" stroke={INK} strokeOpacity="0.45" strokeWidth="0.9" />
-            <path d="M-4 6 V88 M4 6 V88" fill="none" stroke={INK} strokeOpacity={S} strokeWidth={W} />
+            <path d="M-4 6 V86 M4 6 V86" fill="none" stroke={INK} strokeOpacity={S} strokeWidth={W} />
             <path d="M-36 -42 L-30 -30" stroke="#fff" strokeOpacity="0.35" strokeWidth="2" strokeLinecap="round" />
           </g>
 
-          <circle className={s.bubble} cx="1300" cy="700" r="2.6" fill={BLUE} fillOpacity="0.7" />
-          <circle className={s.bubble} cx="1326" cy="702" r="2" fill={BLUE} fillOpacity="0.6" style={{ animationDelay: "-3.2s" }} />
+          <circle className={s.bubble} cx="1292" cy="700" r="2.6" fill={BLUE} fillOpacity="0.7" />
+          <circle className={s.bubble} cx="1316" cy="702" r="2" fill={BLUE} fillOpacity="0.6" style={{ animationDelay: "-3.2s" }} />
         </g>
 
         {/* 近景：铁架台 + 酸式滴定管 + 250 mL 锥形瓶（酚酞粉红） */}
@@ -137,7 +137,7 @@ export function LoginScene() {
             <circle className={s.bubble} cx="98" cy="170" r="2.4" fill="#fff" fillOpacity={0.8} style={{ animationDelay: "-2.6s" }} />
           </g>
 
-          {/* 滴定管尖嘴落下的粉色液滴，落入锥形瓶 */}
+          {/* 滴定管尖嘴落下的粉色液滴，落入锥形瓶液面 */}
           <circle
             className={s.drop}
             cx="254"
@@ -145,7 +145,7 @@ export function LoginScene() {
             r="3.4"
             fill={PINK}
             fillOpacity="0.9"
-            style={{ "--drip-rise": "46px" } as CSSProperties}
+            style={{ "--drip-rise": "112px" } as CSSProperties}
           />
 
           {/* 称量瓶：矮筒 + 磨口盖 */}
@@ -163,7 +163,7 @@ export function LoginScene() {
           </g>
 
           {/* 洗瓶：瓶身 + 磨口盖 + 弯管 */}
-          <g transform="translate(462 588) scale(0.9)">
+          <g transform="translate(444 627) scale(0.82)">
             <path d="M0 0 V94 H44 V0" {...GLASS} />
             <path d="M0 0 V94 H44 V0" fill="none" stroke={INK} strokeOpacity={S} strokeWidth={W} />
             <path d="M-6 0 H50 V-8 H-6 Z" {...GLASS} />
