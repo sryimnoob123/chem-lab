@@ -1,0 +1,173 @@
+/**
+ * compute-bench.module.css —— exp09 第 7 步的数据台。
+ * 亮场纸白底，和实验台同一套墨线语言；只动 opacity/transform。
+ */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(760px, 82%);
+  margin: auto;
+  padding: 22px 26px 26px;
+  border: 1px solid var(--bench-rule, rgba(74, 87, 104, 0.22));
+  border-radius: 12px;
+  background: var(--bench-ink, #f6f7f5);
+  box-shadow: 0 18px 48px -28px rgba(38, 48, 62, 0.5);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(74, 87, 104, 0.16);
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ink, #1f2a37);
+}
+
+.sub {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-2, rgba(74, 87, 104, 0.75));
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(74, 87, 104, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.block[data-done="true"] {
+  border-color: rgba(31, 122, 98, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(31, 122, 98, 0.12);
+}
+
+.blockHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink, #1f2a37);
+}
+
+.state {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-2, rgba(74, 87, 104, 0.7));
+}
+
+.block[data-done="true"] .state {
+  color: var(--jade-600, #1f7a62);
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1.2fr;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.row:first-child {
+  background: rgba(74, 87, 104, 0.06);
+}
+
+.th {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-2, rgba(74, 87, 104, 0.8));
+}
+
+.td {
+  color: var(--ink, #1f2a37);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink, #1f2a37);
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(74, 87, 104, 0.05);
+}
+
+.metricLabel {
+  font-size: 11.5px;
+  color: var(--ink-2, rgba(74, 87, 104, 0.78));
+}
+
+.metricValue {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink, #1f2a37);
+}
+
+.metricValue small {
+  margin-left: 3px;
+  font-size: 11.5px;
+  font-family: var(--font-sans);
+  color: var(--ink-2, rgba(74, 87, 104, 0.72));
+}
+
+.ok {
+  color: var(--jade-600, #1f7a62);
+}
+
+.formula {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink, #1f2a37);
+}
+
+.formula strong {
+  font-size: 17px;
+  color: var(--river-600, #1d4e89);
+}
+
+.note {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2, rgba(74, 87, 104, 0.82));
+}

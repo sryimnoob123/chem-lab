@@ -81,6 +81,15 @@ const PARAM_NAMES: Record<string, string> = {
 };
 
 /** 主工具栏只保留三种正常交互（红队 2026-10-22：「自动」属于 Dev Dock，不该和它们并排）。 */
+/** 第 7 步（数据处理）建议卡上的"一句为什么"：
+ *  原来直接把判据首句（"三次平行相对极差 ≤0.2%"）塞进 why 位置，
+ *  读起来像验收标准而不是理由（红队 2026-10-22 报"文案跟实际操作对不上"）。 */
+const COMPUTE_WHY: Partial<Record<string, string>> = {
+  titrate: "单次有偶然误差，平行 3 次才看得出",
+  readInstrument: "如实记三次读数，才敢算极差",
+  compute: "c 与 V 成反比，别拿体积比当浓度比",
+};
+
 const INPUT_MODES = [
   { id: "drag", label: "拖拽" },
   { id: "click", label: "点选" },
@@ -528,6 +537,11 @@ export function Workbench({
   const readingNote =
     ui.exp.stepIndex < 4 ? "滴定管尚未装液" : reading === 0 ? "已调零，待滴定" : "凹液面读数";
   const hasAbnormality = ui.exp.incidents.length + ui.exp.violations.length > 0;
+  /** exp09 第 7 步：数据处理，读数已定稿，右栏改报相对极差 / 浓度比。 */
+  const isComputeStep = isExp09 && ui.exp.stepIndex === 6;
+  const observedTexts = ui.exp.observations.map((item) => item.text).join(" ");
+  const observedRange = /相对极差\s*([\d.]+)%/.exec(observedTexts)?.[1] ?? null;
+  const observedRatio = /浓度比[^=]*=\s*([\d.]+)/.exec(observedTexts)?.[1] ?? null;
 
   /**
    * 看板折叠抽屉里的参数格（减法）：右栏只留大字读数 + 允许误差，
@@ -950,6 +964,9 @@ export function Workbench({
             forceBench={isExp09 && ui.exp.stepIndex < 2}
             // 第 1 步称 NaOH 要天平；第 2 步配盐酸不需要，别让台面凭空摆一台
             benchInstrument={isExp09 ? (ui.exp.stepIndex === 0 ? "balance" : "none") : undefined}
+            // 第 7 步是数据处理：场景换成数据台（读数表 / 极差 / 浓度比），不再挂着滴定管
+            computeMode={isExp09 && ui.exp.stepIndex === 6}
+            observations={ui.exp.observations.map((item) => item.text)}
             onQuickAction={() => {
               // 点画面里的天平：和按 1 一样，直接用当前建议动作
               if (suggested && !ui.exp.done) choose(suggested.choiceId);
@@ -962,7 +979,27 @@ export function Workbench({
         <aside className={styles.rail} aria-label="操作面板">
           {/* 大字读数（HUD 灵魂）：exp09 = 滴定管读数；其余实验只在本步有判据时报允许误差
               （没有读数就不摆一张空卡 —— 减法：不给"—"占地方） */}
-          {isExp09 || tolerance ? (
+          {isComputeStep ? (
+            // 第 7 步是数据处理：读数已经定稿在数据台上，这里改报"算到了哪一步"
+            <div className={styles.params} aria-label="实时读数">
+              <div className={styles.param} role="button" tabIndex={0}>
+                <span className={styles.paramLabel}>相对极差</span>
+                <span className={styles.paramValue}>
+                  {observedRange ?? "—"}
+                  <em>%</em>
+                </span>
+                <span className={styles.paramNote}>判据 ≤ 0.2%（三次平行）</span>
+              </div>
+              <div className={styles.param} role="button" tabIndex={0}>
+                <span className={styles.paramLabel}>浓度比</span>
+                <span className={styles.paramValue}>
+                  {observedRatio ?? "—"}
+                  <em>c₁/c₂</em>
+                </span>
+                <span className={styles.paramNote}>参考值 1.000 · 偏差 ≤ 0.5%</span>
+              </div>
+            </div>
+          ) : isExp09 || tolerance ? (
           <div className={styles.params} aria-label="实时读数">
             {isExp09 ? (
               <div
@@ -1012,7 +1049,10 @@ export function Workbench({
           <section ref={actionsRef} className={guide.railLead} tabIndex={-1} aria-label="建议动作">
             <NextActionCard
               name={guideName(suggested.label)}
-              why={whyLine(step.judge.criterion)}
+              why={
+                (isComputeStep ? COMPUTE_WHY[suggested.type] : undefined) ??
+                whyLine(step.judge.criterion)
+              }
               keyHint={suggestedKey ? String(suggestedKey) : undefined}
               demoId={suggested.demoId}
               disabled={ui.exp.done}

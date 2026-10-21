@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "rea
 import { getSceneReagent } from "@/lib/scene/reagents";
 import { DEFAULT_RACK_IDS, rackIdsFor } from "./rack-ids";
 import { BenchScene } from "@/components/exp/scene/bench-scene";
+import { ComputeBench } from "@/components/exp/scene/compute-bench";
 import { PourFX } from "@/components/exp/scene/pour";
 import { EndingFlash, SuccessBurst } from "@/components/exp/feedback";
 import { pourCopy, type DropReject, type DropVerdict } from "@/components/exp/guide/drop-resolve";
@@ -122,6 +123,8 @@ export function SceneStage({
   onQuickAction,
   forceBench,
   benchInstrument,
+  computeMode,
+  observations,
   children,
 }: {
   expId?: string;
@@ -146,6 +149,10 @@ export function SceneStage({
   forceBench?: boolean;
   /** 台面场景摆哪台仪器：balance / ph / none（不传按 expId 走默认）。 */
   benchInstrument?: "balance" | "ph" | "none";
+  /** 数据处理步（exp09 第 7 步）：场景换成数据台，不再显示滴定管/锥形瓶。 */
+  computeMode?: boolean;
+  /** 本步已完成的观察文本，数据台据此点亮读数表 / 极差 / 浓度比。 */
+  observations?: readonly string[];
   children?: ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -383,9 +390,15 @@ export function SceneStage({
                 onReveal={() => undefined}
               />
             </div>
+          ) : computeMode ? (
+            <div className={styles.apparatus} data-demo-id="demo-compute-wrap">
+              <ComputeBench observations={observations ?? []} />
+            </div>
           ) : (
             <LabApparatus className={styles.apparatus} />
           )}
+          {/* 数据处理步没有可投加的容器，别留一个"锥形瓶"热区误导 */}
+          {computeMode ? null : (
           <button
             type="button"
             className={`${styles.flaskTarget} ix`}
@@ -411,6 +424,7 @@ export function SceneStage({
               {flow.overFlask ? "松手加入" : selectedId ? "放到锥形瓶" : "锥形瓶"}
             </span>
           </button>
+          )}
         </div>
         <div className={styles.benchSurface} aria-hidden="true" />
       </div>
