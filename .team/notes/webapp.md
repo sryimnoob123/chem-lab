@@ -293,3 +293,24 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
 - P1 点评：`lib/plan/llm-assess.ts` 统一 `{provider,text,points,questions}`，`PLAN_ASSESS_PROVIDER` 可切 coze/ark，缺省 mock；`POST /api/plan/assess`；/plan 右侧显示片段级要点 + 追问。
 - exp01 动作层已接线（洗涤/搅拌/滴加/转移/称量/观察/加热），用户在最新口径里要求「不在 2D 上继续投入」，故暂停美化，留待 2.5D 一次性改造复用。
 - 检查：tsc 0 error / vitest 547 passed / build 通过；本地提交 ee6ed96，tag `pre-deploy`，**未 push**（需用户点头）。
+
+## 2026-10-22 22:2x · t_41be1217 画法统一（2.5D drag-pour）
+
+做了什么
+- 器皿/试剂瓶/天平/pH 计/洗涤槽统一成 drag-pour 的纸白 + 淡墨线稿：恒定 1.6px 外轮廓、极淡玻璃面、内壁虚光、瓶口椭圆、接地影；液体＝矩形＋同色液面椭圆，两层都由主体 clipPath 裁；液位只挪矩形上沿。
+- 倾倒从 HTML 层搬进实验台 SVG（新建 bench-pour.tsx）：瓶口按器皿几何算，瓶身绕瓶口旋转，液柱三条细流从瓶口竖直到液面；以前拖拽是直接完成、没有动画，现在 flow.pourThen() 先演完再 dispatch。
+- 液位记账改成「倒了几次」（每次 +0.22，落地后才 +1），不会再先跳后回。
+- 顺手修：不是加试剂的那一步不演倒液（reagentDrop）。
+
+证据（都是本地 dev 3000 实测）
+- 七步 1→7 到报告页 86/100、7/7 步、零事故零提示；逐步截图 exp01-final/s1..s8-report.png。
+- 液面数字：烧杯 0 → y=156.52/h=29.48；容量瓶 0 → y=161.12/h=22.88。
+- 倒液定格帧（800ms）：3 条细流、瓶口压在容器口中轴（exp01-final/s4-pour-frozen.png、exp03-pour2.png）。
+- 跟手：拖动中 6 次采样，影子与指针偏差恒定 (-30.5,-1.8)px（无抖动/滞后）。
+- 回归：exp03 倒液、exp09 滴定台、/scene-preview 均正常；三页 console 零 error。
+- tsc 0 error；ESLint 0 error（19 条预存 warning）；vitest 41 文件 561 条全过；next build 通过（cpus=4）。
+- 提交：03e638b + 3dc26d9 已推 main。
+
+下一步（可选）
+- /scene-preview 的试剂架仍是旧方瓶（reagent-rack.tsx，只有预览页用），要统一就换成 reagent-bottle.tsx。
+- exp09 的 LabApparatus 倒液（pour.tsx）还是 CSS 方块瓶，未搬 2.5D。
