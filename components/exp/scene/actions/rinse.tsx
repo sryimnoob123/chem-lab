@@ -16,12 +16,17 @@ import { EASE_IN_OUT, EASE_OUT, type Beat } from "./timeline";
 
 export type RinseVariant = "wash" | "dilute";
 
+/** 时间线回调：事故演出在 at 毫秒处「炸」（唯一入口用它出声 / 定格） */
+export type SceneCue = { at: number; kind: "impact" | "settle" };
+
 export type ActionScene = {
   node: ReactNode;
   beats: Beat[];
   ms: number;
   /** 天平/仪器读数：动作期间数字从 0 滚到 to（小数位 decimals）。 */
   readout?: { to: number; decimals: number };
+  /** 时间线中途的回调点（事故段用：正常路径在中间某帧切进事故分支） */
+  cues?: readonly SceneCue[];
 };
 
 const WATER = "var(--scene-water)";

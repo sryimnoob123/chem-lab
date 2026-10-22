@@ -29,6 +29,7 @@ import { canPourAction, nextReagentId, resolveDrop, type DropReject } from "@/co
  */
 const REAGENT_TYPES: ReadonlySet<string> = new Set(["dilute", "dissolve", "addDrops", "titrate", "heat", "evaporate", "transfer"]);
 import type { SceneAction, SceneActionApi } from "@/components/exp/scene/actions/action-layer";
+import { planIncident, type IncidentPlan } from "@/components/exp/scene/actions/incident-plan";
 import { actionForChoice } from "@/components/exp/scene/actions/for-choice";
 import {
   HINT_DEDUCT,
@@ -103,6 +104,9 @@ const FX_MAP: Record<EngineFxKey, SceneFxKey> = {
   "heavy-metal": "heavyMetal",
   "device-accident": "deviceAccident",
 };
+
+/** 只在覆盖层上成立的事故：仪器损坏（天平/仪器本体）与重金属废液（流进洗涤槽）。 */
+const OVERLAY_FX: ReadonlySet<SceneFxKey> = new Set<SceneFxKey>(["deviceAccident", "heavyMetal"]);
 
 const PARAM_NAMES: Record<string, string> = {
   volume: "体积",
@@ -257,6 +261,8 @@ const ACTION_CAPTION: Readonly<Record<SceneAction["kind"], string>> = {
   read: "读数中…",
   observe: "观察现象…",
   heat: "加热升温…",
+  // 事故段的台词由 incident-plan 的 caption 给（这里只是兜底，正常不会用到）
+  incident: "操作出错了…",
 };
 
 export function Workbench({
@@ -788,37 +794,44 @@ export function Workbench({
     : undefined;
 
   /**
-   * 错误演示（右上角面板）点出来的那次「事故预览」：只出画面与文案，**不动实验状态**。
+   * 事故演出的两半（用户 2026-10-23：「事故在动画中途炸…炸完再出说明」）：
+   * - `trapFx`：**不在器皿上**发生的事故（仪器损坏 / 重金属污染）仍用覆盖层特效；
+   * - `incidentNote`：炸完之后才出现的那 1~2 行说明（原因 + 正确做法），不自动消失。
    *
-   * 用户口径（2026-10-22）：面板是给每一步做介绍用的，点了要有反应，
-   * 但不能因此让人重做实验、也不能把分数扣掉 —— 所以这里不走 choose()，
-   * 直接拿定义里那条 trap 的 hazard 渲染同一套事故条 + 特效。
+   * 演示与真操作都不在这里分叉：两边都调 `runIncident()`，差别只有 commit。
    */
-  const [trapDemo, setTrapDemo] = useState<{
+  type IncidentNote = {
     seq: number;
     level: IncidentLevel;
     deduction: number;
     title: string;
-    lines: readonly [string, string, string];
-    fx?: SceneFxKey;
-  } | null>(null);
+    why: string;
+    correct: string;
+  };
+  const [incidentNote, setIncidentNote] = useState<IncidentNote | null>(null);
+  const [trapFx, setTrapFx] = useState<{ seq: number; level: IncidentLevel; fx: SceneFxKey } | null>(null);
+  /** 事故动画播放中：挡住重复触发（不触发 React 重渲染，只在回调里读） */
+  const incidentBusyRef = useRef(false);
 
-  const fx =
-    // L2 及以上都播：L2 的「烘箱烤失效」「不洗涤」这类事故本身有物理后果（刻度报废、浓度偏低），
-    // 原来只在 L3/L4 播，学生做了 L2 的错只看到一行扣分，等于没有后果（用户 2026-10-22）。
-    ui.event?.incident &&
-    ui.event.fx &&
-    (ui.event.level === "L2" || ui.event.level === "L3" || ui.event.level === "L4") ? (
-      <FxByKey
-        key={`${ui.event.fxSeq ?? 0}-${ui.event.fx}`}
-        fx={FX_MAP[ui.event.fx]}
-        level={ui.event.level}
-        active
-        scale="inline"
-      />
-    ) : trapDemo?.fx ? (
-      <FxByKey key={`trap-${trapDemo.seq}`} fx={trapDemo.fx} level={trapDemo.level} active scale="inline" />
-    ) : null;
+  /**
+   * 覆盖层事故特效：只剩**不在器皿上**发生的那两种（仪器损坏 / 重金属污染）。
+   * 器皿上的事故（裂 / 炸 / 暴沸 / 起火 / 灼伤 / 毒气）全部在台面 SVG 里演
+   * （见 actions/incident.ts），同一件事绝不再叠一个覆盖层小场景。
+   */
+  const eventFxKey = ui.event?.incident && ui.event.fx ? FX_MAP[ui.event.fx] : null;
+  const fx = trapFx ? (
+    <FxByKey key={`trap-${trapFx.seq}`} fx={trapFx.fx} level={trapFx.level} active scale="inline" />
+  ) : eventFxKey &&
+    OVERLAY_FX.has(eventFxKey) &&
+    (ui.event?.level === "L2" || ui.event?.level === "L3" || ui.event?.level === "L4") ? (
+    <FxByKey
+      key={`${ui.event?.fxSeq ?? 0}-${eventFxKey}`}
+      fx={eventFxKey}
+      level={ui.event?.level ?? "L2"}
+      active
+      scale="inline"
+    />
+  ) : null;
 
   /** E2：违规/事故都出事故条；级别由 level 决定视觉（L1 提醒 / L2 扣分 / L3 严重 / L4 终止） */
   const incidentEvent = ui.event?.level ? ui.event : null;
@@ -848,6 +861,41 @@ export function Workbench({
       armNextPhase();
     },
     [armNextPhase, mode, sendAction],
+  );
+
+  /**
+   * 事故演出的**唯一入口**（用户 2026-10-23 第 4 条：两条路径合一）。
+   *
+   * 真操作与错误演示都走这里：
+   *   1. 先在台面上播同一条事故时间线（起手错操作 → 中途炸 → 余波），画面先行；
+   *   2. 播完再 `commit()` —— 真操作在这里才 dispatch（扣分/事故条/重做），
+   *      演示不传 commit，所以实验状态一个字节都不动；
+   *   3. 说明（`note`）也是播完才挂出来，绝不提前弹面板遮住画面。
+   */
+  const runIncident = useCallback(
+    async (
+      plan: IncidentPlan | null,
+      opts: { commit?: () => void; note?: IncidentNote } = {},
+    ) => {
+      const api = sceneApiRef.current;
+      if (plan && api && !incidentBusyRef.current) {
+        incidentBusyRef.current = true;
+        setIncidentNote(null);
+        setTrapFx(null);
+        setNotice(null);
+        setSceneCaption(plan.caption);
+        try {
+          await api.playIncident(plan);
+        } finally {
+          incidentBusyRef.current = false;
+          setSceneCaption(null);
+        }
+      }
+      opts.commit?.();
+      if (opts.note) setIncidentNote(opts.note);
+    },
+    // setState 函数是稳定引用；列出来是为了让 React Compiler 能保留这份 memoization
+    [setIncidentNote, setSceneCaption, setTrapFx, setNotice],
   );
 
   /**
@@ -1353,6 +1401,10 @@ export function Workbench({
               cueVesselRef.current = id;
             }}
             actionApiRef={sceneApiRef}
+            onIncidentCue={(kind) => {
+              // 事故在时间线中途「炸」的那一帧：只出声，不出字（说明等播完才出）
+              if (kind === "impact") playSound("fail-incident");
+            }}
             layoutKey={ui.exp.stepIndex}
             onQuickAction={(vesselId) => {
               // 点画面里的天平 / 器皿：和按 1 一样，直接用当前建议动作
@@ -1403,6 +1455,21 @@ export function Workbench({
               const violation = TOOL_VIOLATION[tool]?.[vesselId];
               if (violation && !ui.exp.done) {
                 setActiveTool(null);
+                /**
+                 * 真操作触发的事故与错误演示走**同一条**演出（用户 2026-10-23 第 4 条）：
+                 * 先在台面上把这次错操作演到一半再炸，播完才 dispatch（扣分/事故条/重做）。
+                 */
+                const violationChoice = step.choices.find((item) => item.choiceId === violation);
+                const plan = planIncident({
+                  choice: violationChoice,
+                  vessels: SCENE_VESSELS,
+                  vesselId,
+                  fromVesselId: lastVesselRef.current,
+                });
+                if (plan) {
+                  void runIncident(plan, { commit: () => choose(violation) });
+                  return;
+                }
                 choose(violation);
                 return;
               }
@@ -1509,43 +1576,59 @@ export function Workbench({
               demoId="demo-incident-banner"
             />
           ) : null}
-          {/* 错误演示的事故条：只讲解、不判罚（没有 onRetry，所以不会出现「重做本步」） */}
-          {trapDemo ? (
+          {/* 错误演示的说明：**炸完才出**，2 行（原因 + 正确做法），不自动消失（用户 2026-10-23） */}
+          {incidentNote ? (
             <IncidentBanner
               open
-              level={trapDemo.level}
-              title={trapDemo.title}
-              lines={trapDemo.lines}
-              deduction={trapDemo.deduction}
-              onDismiss={() => setTrapDemo(null)}
+              compact
+              level={incidentNote.level}
+              title={incidentNote.title}
+              lines={[incidentNote.title, incidentNote.why, incidentNote.correct]}
+              deduction={incidentNote.deduction}
+              autoHideMs={0}
+              onDismiss={() => setIncidentNote(null)}
               demoId="demo-trap-incident"
             />
           ) : null}
-          {/* 右上角「错误演示」：当前步骤定义里的 trap，点了走真实判定链路（事故 / 扣分 / 特效） */}
+          {/*
+            右上角「错误演示」：只是**触发器**。
+            器皿上的事故在台面 SVG 里演（同一套器皿 / 液体 / token），说明等炸完才出；
+            不在器皿上的事故（仪器损坏 / 重金属）仍用覆盖层特效。
+          */}
           <TrapPanel
             traps={step.choices
               .filter((item) => item.role === "trap")
               .map((item) => ({ choiceId: item.choiceId, label: item.label, level: item.hazard?.level }))}
             disabled={ui.exp.done || finishing}
             onPick={(choiceId) => {
-              // 只在界面上演一遍：不 dispatch、不扣分、不重做本步（用户 2026-10-22）
+              // 演示：只演画面，不 dispatch、不扣分、不重做本步
               const choice = step.choices.find((item) => item.choiceId === choiceId);
               const hazard = choice?.hazard;
-              if (!hazard) return;
+              if (!choice || !hazard) return;
               ensureAudio();
               playSound("error-system");
-              setTrapDemo({
+              const note: IncidentNote = {
                 seq: Date.now(),
                 level: hazard.level,
-                deduction: hazard.deduct,
+                deduction: 0, // 演示不扣分
                 title: hazard.feedback.title,
-                lines: [
-                  hazard.feedback.title,
-                  hazard.feedback.why ?? "这一步不该这么做。",
-                  hazard.feedback.correct ?? "按场景里亮起的目标再来一遍。",
-                ],
-                fx: hazard.fx ? FX_MAP[hazard.fx] : undefined,
+                why: hazard.feedback.why ?? "这一步不该这么做。",
+                correct: hazard.feedback.correct ?? "按场景里亮起的目标再来一遍。",
+              };
+              const plan = planIncident({
+                choice,
+                vessels: SCENE_VESSELS,
+                cueVesselId: cueVesselRef.current ?? cueVesselId,
+                fromVesselId: lastVesselRef.current,
               });
+              if (plan) {
+                void runIncident(plan, { note });
+                return;
+              }
+              // 没有可演的台面动画：说明照出，仪器/废液类事故补上覆盖层特效
+              const overlay = hazard.fx ? FX_MAP[hazard.fx] : null;
+              setTrapFx(overlay && OVERLAY_FX.has(overlay) ? { seq: Date.now(), level: hazard.level, fx: overlay } : null);
+              setIncidentNote(note);
             }}
           />
 

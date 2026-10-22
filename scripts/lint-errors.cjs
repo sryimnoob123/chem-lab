@@ -1,4 +1,5 @@
 // 临时诊断脚本：只打印 eslint 的 error（severity=2），避免终端聚合把明细吞掉
+/* eslint-disable @typescript-eslint/no-require-imports -- .cjs 脚本只能用 require */
 const { ESLint } = require("eslint");
 
 (async () => {

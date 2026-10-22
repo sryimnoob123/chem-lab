@@ -154,13 +154,27 @@ const FX_BY_TRAP: Readonly<Record<string, FxKey>> = {
   "step7-no-goggles": "burn",
 };
 
+/**
+ * 事故演出：这条错操作**怎么做的**（决定事故动画的起手式）。
+ * 用户 2026-10-23：「事故在动画中途炸」—— 所以每条有特效的陷阱都要说清楚是
+ * 倒液倒到一半 / 加热到一半 / 搅拌到一半 / 用玻璃棒捅洗时出的事。
+ * 没列的（如用嘴吸液、不戴护目镜）不在器皿上发生，仍走覆盖层特效。
+ */
+const OP_BY_TRAP: Readonly<Record<string, "pour" | "heat" | "stir" | "poke">> = {
+  "step1-oven": "heat",
+  "step1-poke": "poke",
+  "step4-hot": "pour",
+  "step7-water-into-acid": "pour",
+};
+
 function withFx(step: StepDefinition): StepDefinition {
   return {
     ...step,
     choices: step.choices.map((choice) => {
       const fx = FX_BY_TRAP[choice.choiceId];
       if (!fx || !choice.hazard) return choice;
-      return { ...choice, hazard: { ...choice.hazard, fx } };
+      const op = OP_BY_TRAP[choice.choiceId];
+      return { ...choice, hazard: { ...choice.hazard, fx, ...(op ? { op } : {}) } };
     }),
   };
 }

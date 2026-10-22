@@ -99,6 +99,8 @@ type BenchSceneProps = {
   action?: SceneAction | null;
   /** 动作播完（或跳过）后回调，工作台这时才 dispatch。 */
   onActionDone?: () => void;
+  /** 动作时间线中途的回调（事故在「炸」的那一帧：出声 / 定格） */
+  onActionCue?: (kind: "impact" | "settle") => void;
   /** 一次倾倒（画在本 SVG 里，坐标就是 viewBox 单位）。 */
   pour?: BenchPourIntent | null;
 
@@ -137,6 +139,7 @@ export function BenchScene({
   onReveal,
   action = null,
   onActionDone,
+  onActionCue,
   pour = null,
   layoutKey,
   children,
@@ -899,7 +902,13 @@ export function BenchScene({
         />
 
         {/* 动作层：洗涤 / 搅拌 / 转移 / 称量等动作统一在这里播（可复用底层） */}
-        <ActionLayer action={action} offsets={offsets} onDone={onActionDone ?? noop} />
+        <ActionLayer
+          action={action}
+          offsets={offsets}
+          baseLevelOf={baseLevelOf}
+          onCue={onActionCue}
+          onDone={onActionDone ?? noop}
+        />
       </svg>
 
       {/* 事故特效层挂载点：绝对定位在舞台内 */}

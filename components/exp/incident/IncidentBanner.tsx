@@ -21,6 +21,9 @@ import { sanitizeForStudents } from "./messages";
 import { useCountUp } from "./use-count-up";
 
 const ROW_KEYS = ["错在哪", "为什么", "怎么办"] as const;
+/** 完整三行（真事故）；compact 只出后两行（错误演示：画面已经交代了「错在哪」） */
+const FULL_ROWS: readonly (0 | 1 | 2)[] = [0, 1, 2];
+const COMPACT_ROWS: readonly (0 | 1 | 2)[] = [1, 2];
 
 export type IncidentLevel = "L1" | "L2" | "L3" | "L4";
 
@@ -29,6 +32,15 @@ const LEVEL_TAG: Record<IncidentLevel, string> = {
   L2: "L2 · 扣分",
   L3: "L3 · 严重",
   L4: "L4 · 终止",
+};
+
+/** 演示（compact）用的等级标签：只说严重程度，不说「扣分 / 终止」——
+ *  演示不动实验状态，写「扣分」等于骗人。 */
+const DEMO_LEVEL_TAG: Record<IncidentLevel, string> = {
+  L1: "L1 · 提醒",
+  L2: "L2 · 数据作废",
+  L3: "L3 · 严重事故",
+  L4: "L4 · 危险事故",
 };
 
 /** 默认自动收起时长（L3/L4 需要学生看清，常驻到手动关闭）。
@@ -55,6 +67,11 @@ export interface IncidentBannerProps {
   onRetry?: () => void;
   /** L4「查看原因」；缺省退回 onDismiss，保证按钮不空 */
   onExplain?: () => void;
+  /**
+   * 紧凑说明：只出「为什么 + 怎么办」两行，且不触发 L4 的终止压暗/重做按钮。
+   * 错误演示用它 —— 事故画面播完之后才挂出来（用户 2026-10-23）。
+   */
+  compact?: boolean;
   demoId?: string;
   className?: string;
 }
@@ -70,6 +87,7 @@ export function IncidentBanner({
   onDismiss,
   onRetry,
   onExplain,
+  compact = false,
   demoId,
   className,
 }: IncidentBannerProps) {
@@ -99,11 +117,12 @@ export function IncidentBanner({
 
   const assertive = level === "L3" || level === "L4";
   const safeTitle = sanitizeForStudents(title, "事故");
-  const showDeduction = level === "L2" && typeof deduction === "number";
+  const showDeduction = level === "L2" && !compact && typeof deduction === "number";
+  const levelTag = compact ? DEMO_LEVEL_TAG[level] : LEVEL_TAG[level];
 
   return (
     <>
-      {level === "L4" ? (
+      {level === "L4" && !compact ? (
         <>
           {/* 全屏压暗 + 红框：不放 section 内（section 有 translate，会改变 fixed 包含块） */}
           <div className={terminate.terminateDim} aria-hidden="true" />
@@ -118,10 +137,10 @@ export function IncidentBanner({
         role={assertive ? "alert" : "status"}
         aria-live={assertive ? "assertive" : "polite"}
         aria-atomic="true"
-        aria-label={`${LEVEL_TAG[level]}：${safeTitle}`}
+        aria-label={`${levelTag}：${safeTitle}`}
       >
         <header className={styles.incidentHead}>
-          <span className={styles.incidentLevel}>{LEVEL_TAG[level]}</span>
+          <span className={styles.incidentLevel}>{levelTag}</span>
           {level === "L1" ? null : (
             // 图标逐级递进（用户 2026-10-22：四级要一眼分清）：
             // L2 感叹号（提醒你扣分了）→ L3 三角警告（危险动作）→ L4 叉（本次实验终止）
@@ -147,28 +166,40 @@ export function IncidentBanner({
           ) : null}
         </header>
 
-        {level === "L4" ? (
+        {level === "L4" && !compact ? (
           <p className={terminate.incidentTerminate}>本次实验终止</p>
         ) : null}
 
-        {/* L1/L2 是"提醒/扣分"级：只留一行怎么改，避免和结果条、右栏重复；L3/L4 才展开三行 */}
+        {/* L1/L2 是"提醒/扣分"级：只留一行怎么改，避免和结果条、右栏重复；L3/L4 才展开三行。
+            错误演示（compact）只出「为什么 + 怎么办」两行 —— 画面已经说明白发生了什么。 */}
         {level === "L1" || level === "L2" ? (
-          <p className={styles.incidentBrief}>
-            <span className={styles.incidentKey}>怎么改</span>
-            <span className={styles.incidentBriefText}>{sanitizeForStudents(lines[2])}</span>
-          </p>
+          compact ? (
+            <ol className={styles.incidentLines}>
+              {COMPACT_ROWS.map((index) => (
+                <li key={ROW_KEYS[index]} className={styles.incidentLine}>
+                  <span className={styles.incidentKey}>{ROW_KEYS[index]}</span>
+                  <span className={styles.incidentText}>{sanitizeForStudents(lines[index])}</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className={styles.incidentBrief}>
+              <span className={styles.incidentKey}>怎么改</span>
+              <span className={styles.incidentBriefText}>{sanitizeForStudents(lines[2])}</span>
+            </p>
+          )
         ) : (
           <ol className={styles.incidentLines}>
-            {lines.map((text, index) => (
+            {(compact ? COMPACT_ROWS : FULL_ROWS).map((index) => (
               <li key={ROW_KEYS[index]} className={styles.incidentLine}>
                 <span className={styles.incidentKey}>{ROW_KEYS[index]}</span>
-                <span className={styles.incidentText}>{sanitizeForStudents(text)}</span>
+                <span className={styles.incidentText}>{sanitizeForStudents(lines[index])}</span>
               </li>
             ))}
           </ol>
         )}
 
-        {level === "L4" ? (
+        {level === "L4" && !compact ? (
           <div className={terminate.incidentActions}>
             <button
               type="button"

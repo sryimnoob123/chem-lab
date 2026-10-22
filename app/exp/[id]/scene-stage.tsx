@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import type { StepDefinition } from "@/lib/engine.types";
 import type { SceneAction, SceneActionApi } from "@/components/exp/scene/actions/action-layer";
+import type { IncidentPlan } from "@/components/exp/scene/actions/incident-plan";
 import { prefersReducedMotion } from "@/components/exp/scene/actions/timeline";
 import { getSceneVessel } from "@/lib/scene/palette";
 import { getSceneReagent } from "@/lib/scene/reagents";
@@ -159,6 +160,7 @@ export function SceneStage({
   onQuickAction,
   onCueVessel,
   actionApiRef,
+  onIncidentCue,
   layoutKey,
   toolIds,
   activeTool = null,
@@ -204,6 +206,8 @@ export function SceneStage({
   onCueVessel?: (vesselId: string | null) => void;
   /** 工作台通过它播动作（洗涤/搅拌/转移/称量…），播完才 dispatch。 */
   actionApiRef?: { current: SceneActionApi | null };
+  /** 事故在时间线中途「炸」的那一帧：出声 / 定格（真操作与演示同一条回调） */
+  onIncidentCue?: (kind: "impact" | "settle") => void;
   /** 步骤/重置变化：器皿回位 */
   layoutKey?: number;
   /** 当前建议动作的 type（observe/weigh/dissolve…）；决定「点器皿」算不算完成 */
@@ -278,7 +282,20 @@ export function SceneStage({
 
   useEffect(() => {
     if (!actionApiRef) return undefined;
-    actionApiRef.current = { play: playAction, skip: finishAction, busy: Boolean(sceneAction) };
+    actionApiRef.current = {
+      play: playAction,
+      // 事故演出的唯一入口：和普通动作走同一条 playAction，只是参数里带 fx/op
+      playIncident: (plan: IncidentPlan) =>
+        playAction({
+          kind: "incident",
+          vesselId: plan.vesselId,
+          fx: plan.fx,
+          op: plan.op,
+          from: plan.from,
+        }),
+      skip: finishAction,
+      busy: Boolean(sceneAction),
+    };
     return () => {
       actionApiRef.current = null;
     };
@@ -919,6 +936,7 @@ export function SceneStage({
                 onReveal={() => undefined}
                 action={sceneAction}
                 onActionDone={finishAction}
+                onActionCue={onIncidentCue}
                 pour={flow.pour}
                 layoutKey={layoutKey}
               />

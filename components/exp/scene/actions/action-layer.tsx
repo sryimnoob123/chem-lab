@@ -15,10 +15,14 @@
 import { useEffect, useId, useMemo, useRef } from "react";
 import { anchorOf, type VesselOffset } from "./geometry";
 import { playBeats, prefersReducedMotion } from "./timeline";
+import type { SceneCue } from "./rinse";
 import { buildRinse } from "./rinse";
 import { buildDrops, buildStir } from "./stir";
 import { buildTransfer } from "./transfer";
 import { buildHeat, buildObserve, buildRead, buildWeigh } from "./instrument";
+import { buildIncident, type IncidentOp } from "./incident";
+import type { IncidentFx } from "./incident-art";
+import type { IncidentPlan } from "./incident-plan";
 
 export type SceneAction =
   | { kind: "rinse"; vesselId: string; tool?: string | null }
@@ -29,10 +33,17 @@ export type SceneAction =
   | { kind: "weigh"; mass?: number }
   | { kind: "read"; value?: number }
   | { kind: "observe"; vesselId: string }
-  | { kind: "heat"; vesselId: string };
+  | { kind: "heat"; vesselId: string }
+  /** 事故：起手错操作 → 中途炸 → 余波归位（与上面几条同一套器皿/液体/token） */
+  | { kind: "incident"; vesselId: string; fx: IncidentFx; op: IncidentOp; from?: string | null };
 
 export type SceneActionApi = {
   play: (action: SceneAction) => Promise<boolean>;
+  /**
+   * 事故演出的唯一入口。
+   * 真操作与错误演示都调它；要不要改实验状态由调用方在 Promise 之后做（演示不 commit）。
+   */
+  playIncident: (plan: IncidentPlan) => Promise<boolean>;
   skip: () => void;
   busy: boolean;
 };
@@ -41,6 +52,10 @@ type Props = {
   action: SceneAction | null;
   /** 器皿当前位置（拖动偏移），动作要落在器皿现在的位置上 */
   offsets: Readonly<Record<string, VesselOffset>>;
+  /** 器皿原本的液位（0 空 / 0.38 有液）：事故结束回到这里，卸下层时液面不跳 */
+  baseLevelOf?: (vesselId: string) => number;
+  /** 时间线中途回调（事故在中间那一帧触发：播一声闷响 / 让台面轻震） */
+  onCue?: (kind: SceneCue["kind"]) => void;
   onDone: () => void;
 };
 
@@ -60,9 +75,30 @@ function countUp(el: Element | null, to: number, decimals: number, ms: number): 
   return () => cancelAnimationFrame(raf);
 }
 
-export function ActionLayer({ action, offsets, onDone }: Props) {
+/** 事故「炸」的那一下：整块台面轻震（只动 transform，不碰 React 状态，260ms 内结束）。 */
+function impactShake(el: Element | null): void {
+  if (!el) return;
+  el.animate(
+    [
+      { transform: "translate(0px, 0px)" },
+      { transform: "translate(-3px, 1.5px)", offset: 0.18 },
+      { transform: "translate(2.5px, -1.5px)", offset: 0.38 },
+      { transform: "translate(-2px, 1px)", offset: 0.58 },
+      { transform: "translate(1.5px, -0.5px)", offset: 0.78 },
+      { transform: "translate(0px, 0px)" },
+    ],
+    { duration: 280, easing: "ease-out" },
+  );
+}
+
+export function ActionLayer({ action, offsets, baseLevelOf, onCue, onDone }: Props) {
   const uid = useId().replace(/:/g, "");
   const groupRef = useRef<SVGGElement | null>(null);
+  /** 回调放 ref：父组件每次渲染都换引用，直接进 deps 会让动画重播 */
+  const cueRef = useRef(onCue);
+  useEffect(() => {
+    cueRef.current = onCue;
+  }, [onCue]);
 
   /** 一条动作 = 一份渲染 + 一组 beat；动作变了就重建。 */
   const scene = useMemo(() => {
@@ -101,10 +137,20 @@ export function ActionLayer({ action, offsets, onDone }: Props) {
         const a = anchorOf(action.vesselId, offsets[action.vesselId]);
         return a ? buildHeat(a, { clipId: `act-${uid}-a` }) : null;
       }
+      case "incident": {
+        const a = anchorOf(action.vesselId, offsets[action.vesselId]);
+        if (!a) return null;
+        return buildIncident(a, {
+          fx: action.fx,
+          op: action.op,
+          clipId: `act-${uid}-i`,
+          baseLevel: baseLevelOf?.(action.vesselId) ?? 0.38,
+        });
+      }
       default:
         return null;
     }
-  }, [action, offsets, uid]);
+  }, [action, offsets, uid, baseLevelOf]);
 
   useEffect(() => {
     if (!scene) {
@@ -126,9 +172,17 @@ export function ActionLayer({ action, offsets, onDone }: Props) {
         Math.max(500, ms - 120),
       );
     }
+    // 时间线回调：事故在中间那一帧「炸」（不是播完再炸）
+    const cues = (scene.cues ?? []).map((cue) =>
+      window.setTimeout(() => {
+        cueRef.current?.(cue.kind);
+        if (cue.kind === "impact") impactShake(root);
+      }, cue.at),
+    );
     const timer = window.setTimeout(onDone, Math.max(ms, scene.ms));
     return () => {
       window.clearTimeout(timer);
+      cues.forEach((id) => window.clearTimeout(id));
       stopCount();
     };
     // scene 变了才重播一次

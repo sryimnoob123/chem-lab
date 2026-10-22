@@ -124,6 +124,13 @@
   --scene-grain: rgba(74, 87, 104, 0.5);
   --scene-glass-fill: rgba(240, 247, 250, 0.9);
   --scene-accent: var(--exp-accent);
+  /* 事故段（裂纹 / 碎玻璃 / 爆心 / 毒气）：仍走纸白场，暖色只在爆心小范围用，
+     不用白色高光（AGENTS §9.1）。裂纹用深墨，碎玻璃用淡玻璃色压深一档。 */
+  --scene-crack: rgba(22, 32, 44, 0.72);
+  --scene-shard: rgba(226, 238, 246, 0.96);
+  --scene-blast: #d98324;
+  --scene-blast-core: #f6d58a;
+  --scene-toxic: rgba(146, 162, 74, 0.5);
 
   /* 每实验主色：器皿高光 / 液面 / 任务看板共用 --exp-accent。
      对比度（纸白 #F6F7F5 上）：exp01 5.42:1 / exp03 6.19:1 / exp09 5.74:1，均 ≥4.5。 */

@@ -300,6 +300,12 @@ export interface ChoiceHazard {
   level: IncidentLevel;
   /** 无特效事故留空 */
   fx?: FxKey;
+  /**
+   * 事故演出：这条错操作是**怎么做的**（倒液 / 加热 / 搅拌 / 用玻璃棒捅），
+   * 决定事故动画的起手式（用户 2026-10-23：事故要在操作动画中途炸）。
+   * 缺省按 choice.type 推（见 components/exp/scene/actions/incident-plan.ts）。
+   */
+  op?: "pour" | "heat" | "stir" | "poke";
   deduct: number;
   competency: CompetencyCode;
   terminate: boolean;
