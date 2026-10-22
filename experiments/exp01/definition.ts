@@ -761,7 +761,7 @@ const step7: StepDefinition = {
     correct(
       "step7-label",
       "transfer",
-      "量浓硫酸入水稀释→冷却→转入试剂瓶贴标签",
+      "量浓硫酸沿玻璃棒注入 250 mL 烧杯的水中→冷却→转入试剂瓶贴标签",
       "demo-op-step7-label",
       "A1",
       {

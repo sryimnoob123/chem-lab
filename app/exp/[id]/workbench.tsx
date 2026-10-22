@@ -7,13 +7,13 @@ import { getDefinition } from "@/lib/engine";
 import { TOOLS_BY_EXPERIMENT, getSceneTool, type SceneToolId } from "@/lib/scene/tools";
 import { getSceneVessel } from "@/lib/scene/palette";
 import { getSceneReagent } from "@/lib/scene/reagents";
-import type { Action, FxKey as EngineFxKey } from "@/lib/engine.types";
+import type { Action, FxKey as EngineFxKey, IncidentLevel } from "@/lib/engine.types";
 import { FxByKey } from "@/components/exp/scene/fx";
 import { ScoreOdometer, StreakPill } from "@/components/exp/feedback";
 import { MissionBoard, type MissionParam } from "@/components/exp/guide/mission-board";
+import { TrapPanel } from "@/components/exp/guide/trap-panel";
 import { stepVerb } from "@/components/exp/guide/step-verb";
 import { NextActionCard } from "@/components/exp/guide/NextActionCard";
-import { IdleNudge } from "@/components/exp/guide/idle-nudge";
 import { ResultBar } from "@/components/exp/guide/ResultBar";
 import {
   ACTION_VERB,
@@ -46,6 +46,7 @@ import { SoundToggle } from "@/components/audio/sound-toggle";
 import { ensureAudio, playSound } from "@/lib/audio/engine";
 import type { FxKey as SceneFxKey } from "@/lib/scene/fx";
 import { ExperimentDock } from "./experiment-dock";
+import { exp01StepHow } from "@/experiments/exp01/step-how";
 import { rackIdsFor } from "./rack-ids";
 import { SceneStage } from "./scene-stage";
 import { teacherNote } from "./teacher-notes";
@@ -64,6 +65,29 @@ const REJECT_FALLBACK = [
   "当前步骤不接受这个试剂",
   "按上方「建议动作」再试一次",
 ] as const;
+
+/**
+ * 落库失败必须能被看见。
+ *
+ * 教训（2026-10-22 扣子 dev 环境）：sendAction 里只 `await fetch(...)`，
+ * 而 HTTP 500 是**正常 resolve** 的 —— catch 不触发、界面照常推进，
+ * 于是动作被静默丢掉，交卷时时间线是空的，报告显示 0 分。
+ * 这里把非 2xx 变成带 status 的错误，交给 errorMessage() 映射成人话。
+ */
+class PersistFailure extends Error {
+  status: number;
+
+  constructor(status: number, what: string) {
+    super(`${what}（HTTP ${status}）`);
+    this.name = "PersistFailure";
+    this.status = status;
+  }
+}
+
+async function requireOk(response: Response, what: string): Promise<void> {
+  if (response.ok) return;
+  throw new PersistFailure(response.status, what);
+}
 
 const FX_MAP: Record<EngineFxKey, SceneFxKey> = {
   "boil-over": "boilOver",
@@ -261,11 +285,10 @@ export function Workbench({
   /** E2 事故条的"已读"标记：按 feedbackSeq 记住，下一次事故重新弹出�?*/
   const [bannerDismissed, setBannerDismissed] = useState(-1);
   /**
-   * 30 秒没动手 → 浮出一条免费提示（idle-nudge）。
-   * 直接记「哪一次操作/哪一步时冒出来的」，渲染期和当前值比对：
-   * 只要动了一下（feedbackSeq 变）或换步，这条就自动失效，不需要再写一个清空 effect。
+   * 空闲提示（30 秒没动手浮一条「内壁还挂水珠吗？」）已下线（用户 2026-10-22）：
+   * 它隔 30 秒反复弹、盖住事故条和结果条，演示时比提示本身更打扰。
+   * 卡住的学生走右侧灯泡（扣 1/3/5 分）或看板上的一句话指引。
    */
-  const [idleAt, setIdleAt] = useState<{ seq: number; step: number } | null>(null);
   const actionsRef = useRef<HTMLElement | null>(null);
   const runIdRef = useRef<string | null>(null);
   const queueRef = useRef<Array<{ action: Action; inputMode: InputMode }>>([]);
@@ -305,11 +328,12 @@ export function Workbench({
       }
       const task = sendChainRef.current
         .then(async () => {
-          await fetch(`/api/runs/${runId}/events`, {
+          const response = await fetch(`/api/runs/${runId}/events`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ events: [payload] }),
           });
+          await requireOk(response, "这一步没存上");
         })
         .catch((error: unknown) => {
           // E3 系统错误：接口没落库；音效只提示，不承载信息。
@@ -341,11 +365,15 @@ export function Workbench({
       }
       const task = sendChainRef.current
         .then(async () => {
-          await fetch(`/api/runs/${runId}/drops`, {
+          const response = await fetch(`/api/runs/${runId}/drops`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(drop),
           });
+          // 投放审计是次要记录：失败不打断学生，但不能再假装成功
+          if (!response.ok && typeof console !== "undefined") {
+            console.warn(`[drop] 投放记录没存上：HTTP ${response.status}`);
+          }
         })
         .catch(() => {
           playSound("error-system");
@@ -372,7 +400,20 @@ export function Workbench({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ experimentId: expId }),
       });
-      if (!runRes.ok) return null;
+      if (!runRes.ok) {
+        // 拿不到 runId = 之后每个动作都只在内存里排队，永远不会落库。
+        // 原来这里静默 return null：学生照常做实验，交卷时时间线是空的（扣子 dev 实测）。
+        setSystemError({
+          message: "没连上记录服务：现在做的操作不会被保存",
+          detail: `创建记录失败（HTTP ${runRes.status}）`,
+          canRetry: true,
+        });
+        retryRef.current = () => {
+          bootstrapRef.current = null;
+          void bootstrap();
+        };
+        return null;
+      }
       const data = await runRes.json().catch(() => null);
       if (!data?.ok || typeof data.runId !== "string") return null;
 
@@ -382,7 +423,14 @@ export function Workbench({
       const queuedDrops = dropQueueRef.current.splice(0);
       queuedDrops.forEach((drop) => sendDrop(drop));
       return data.runId;
-    } catch {
+    } catch (error) {
+      // 网络层失败同样要出声：不然看起来只是「点了没反应」
+      const detail = errorMessage(error);
+      setSystemError({ message: "没连上记录服务：现在做的操作不会被保存", detail: detail.message, canRetry: true });
+      retryRef.current = () => {
+        bootstrapRef.current = null;
+        void bootstrap();
+      };
       return null;
     }
   }, [demoReadonly, expId, sendAction, sendDrop]);
@@ -695,12 +743,18 @@ export function Workbench({
           tone: hasAbnormality ? "warn" : "normal",
         },
       ];
-  /** 第四行：本步指引；取过提示就换成那条提示（同屏只留一条）�?*/
-  // 卡片删掉后，任务看板是唯一的「下一步做什么」出口：给动作名 + 手上的操作方式
-  const boardGuide = missionGuide(
-    ui.hint?.text ?? (suggested ? `${guideName(suggested.label)}：${ACTION_HOW[suggested.type] ?? ""}` : undefined),
-    step.title,
-  );
+  /**
+   * 第四行：本步指引；取过提示就换成那条提示（同屏只留一条）。
+   *
+   * 卡片删掉后，任务看板是唯一的「下一步做什么」出口 —— 所以这一行必须**整句说完**：
+   * 动作名不再裁到 18 字，操作方式优先用「按步骤写的完整流程」（exp01 的 step-how），
+   * 没有才退回按动作原语的通用说明（2026-10-22 用户：指引被截断，看完仍不知道该做什么）。
+   */
+  const stepHow = expId === "exp01" ? exp01StepHow(step.index) : undefined;
+  const guideSource =
+    ui.hint?.text ??
+    (suggested ? `${guideName(suggested.label, 60)}：${stepHow ?? ACTION_HOW[suggested.type] ?? ""}` : undefined);
+  const boardGuide = missionGuide(guideSource, step.title, 260);
 
   /**
    * 提示三级阶梯（用�?2026-10-22 口径）：
@@ -737,6 +791,22 @@ export function Workbench({
       : `demo-feedback-fail-${ui.event.stepNumber}`
     : undefined;
 
+  /**
+   * 错误演示（右上角面板）点出来的那次「事故预览」：只出画面与文案，**不动实验状态**。
+   *
+   * 用户口径（2026-10-22）：面板是给每一步做介绍用的，点了要有反应，
+   * 但不能因此让人重做实验、也不能把分数扣掉 —— 所以这里不走 choose()，
+   * 直接拿定义里那条 trap 的 hazard 渲染同一套事故条 + 特效。
+   */
+  const [trapDemo, setTrapDemo] = useState<{
+    seq: number;
+    level: IncidentLevel;
+    deduction: number;
+    title: string;
+    lines: readonly [string, string, string];
+    fx?: SceneFxKey;
+  } | null>(null);
+
   const fx =
     // L2 及以上都播：L2 的「烘箱烤失效」「不洗涤」这类事故本身有物理后果（刻度报废、浓度偏低），
     // 原来只在 L3/L4 播，学生做了 L2 的错只看到一行扣分，等于没有后果（用户 2026-10-22）。
@@ -750,6 +820,8 @@ export function Workbench({
         active
         scale="inline"
       />
+    ) : trapDemo?.fx ? (
+      <FxByKey key={`trap-${trapDemo.seq}`} fx={trapDemo.fx} level={trapDemo.level} active scale="inline" />
     ) : null;
 
   /** E2：违规/事故都出事故条；级别由 level 决定视觉（L1 提醒 / L2 扣分 / L3 严重 / L4 终止） */
@@ -977,22 +1049,6 @@ export function Workbench({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [choose, finish, performed, retry, step, ui.exp.done]);
-
-  useEffect(() => {
-    // 30s 没有操作 → 浮出一条免费的方向提示（L1 文案），**不扣分**。
-    // 学生没按灯泡，只是慢，扣分没道理；要更具体时他自己点「再具体点」，才走三级阶梯。
-    if (ui.exp.done || mode === "auto") return;
-    const seq = ui.feedbackSeq;
-    const stepIndex = ui.exp.stepIndex;
-    const timer = window.setTimeout(() => {
-      setIdleAt({ seq, step: stepIndex });
-    }, 30000);
-    return () => window.clearTimeout(timer);
-  }, [ui.feedbackSeq, ui.exp.stepIndex, ui.exp.done, mode]);
-
-  /** 只在「冒出提示之后一直没动过」时才显示（渲染期比对，不动 state）。 */
-  const idleNudge =
-    idleAt !== null && idleAt.seq === ui.feedbackSeq && idleAt.step === ui.exp.stepIndex;
 
   useEffect(() => {
     if (mode !== "auto" || ui.exp.done || autoBusyRef.current || finishingRef.current) return;
@@ -1330,21 +1386,7 @@ export function Workbench({
           >
             {fx}
           </SceneStage>
-          {/* 30 秒没动手：浮出一条免费提示（不扣分），让卡住的人有个台阶下 */}
-          {idleNudge && !ui.exp.done ? (
-            <div className={styles.idleSlot}>
-              <IdleNudge
-                text={step.hints?.h0}
-                actionName={guideName(suggested.label)}
-                onDismiss={() => setIdleAt(null)}
-                onAskMore={() => {
-                  setIdleAt(null);
-                  askHint();
-                }}
-              />
-            </div>
-          ) : null}
-          {/* E2 事故（L3/L4）：事故�?+ 三行处置，贴在舞台上沿，不遮实验台中�?*/}
+          {/* E2 事故（L3/L4）：事故条 + 三行处置，贴在舞台上沿，不遮实验台中心 */}
           {incidentEvent ? (
             <IncidentBanner
               open={bannerDismissed !== ui.feedbackSeq}
@@ -1362,6 +1404,46 @@ export function Workbench({
               demoId="demo-incident-banner"
             />
           ) : null}
+          {/* 错误演示的事故条：只讲解、不判罚（没有 onRetry，所以不会出现「重做本步」） */}
+          {trapDemo ? (
+            <IncidentBanner
+              open
+              level={trapDemo.level}
+              title={trapDemo.title}
+              lines={trapDemo.lines}
+              deduction={trapDemo.deduction}
+              onDismiss={() => setTrapDemo(null)}
+              demoId="demo-trap-incident"
+            />
+          ) : null}
+          {/* 右上角「错误演示」：当前步骤定义里的 trap，点了走真实判定链路（事故 / 扣分 / 特效） */}
+          <TrapPanel
+            traps={step.choices
+              .filter((item) => item.role === "trap")
+              .map((item) => ({ choiceId: item.choiceId, label: item.label, level: item.hazard?.level }))}
+            disabled={ui.exp.done || finishing}
+            onPick={(choiceId) => {
+              // 只在界面上演一遍：不 dispatch、不扣分、不重做本步（用户 2026-10-22）
+              const choice = step.choices.find((item) => item.choiceId === choiceId);
+              const hazard = choice?.hazard;
+              if (!hazard) return;
+              ensureAudio();
+              playSound("error-system");
+              setTrapDemo({
+                seq: Date.now(),
+                level: hazard.level,
+                deduction: hazard.deduct,
+                title: hazard.feedback.title,
+                lines: [
+                  hazard.feedback.title,
+                  hazard.feedback.why ?? "这一步不该这么做。",
+                  hazard.feedback.correct ?? "按左侧看板给的正确做法重来一遍。",
+                ],
+                fx: hazard.fx ? FX_MAP[hazard.fx] : undefined,
+              });
+            }}
+          />
+
         </section>
 
         <aside className={styles.rail} aria-label="操作面板">

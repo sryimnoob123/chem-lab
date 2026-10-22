@@ -66,7 +66,12 @@ export function expectedVesselId(
   if (!POUR_TYPES.has(choice.type)) return null;
 
   const label = hanOnly(choice.label);
-  // ① 文案点名：文案里出现哪台器皿的名字，就是它（最长匹配优先，避免「量筒」吃掉「容量瓶」）
+  // ① 溶解只可能在烧杯里做（容量瓶不能搅拌/加热），文案即使后面又提到容量瓶，
+  //    这一步手上要动的也是烧杯 —— 先于「点名」判定，避免判到容量瓶上去。
+  if (choice.type === "dissolve" && vessels.some((vessel) => vessel.id === "beaker")) {
+    return "beaker";
+  }
+  // ② 文案点名：文案里出现哪台器皿的名字，就是它（最长匹配优先，避免「量筒」吃掉「容量瓶」）
   const named = [...vessels]
     .filter((vessel) => {
       const word = hanOnly(vessel.label);

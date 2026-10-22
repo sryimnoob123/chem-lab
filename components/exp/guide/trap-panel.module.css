@@ -1,0 +1,140 @@
+/* 错误演示面板：纸白小卡，压在舞台右上（右栏左侧）。只动 transform / 背景色。 */
+
+.panel {
+  position: absolute;
+  top: 14px;
+  right: 252px;
+  z-index: 12;
+  width: 206px;
+  padding: 8px;
+  border: 1px solid var(--bench-line, #d5dce4);
+  border-radius: 2px;
+  background: var(--card, #fff);
+  box-shadow: 0 1px 2px rgba(18, 35, 59, 0.05);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 2px 6px;
+}
+
+.kicker {
+  color: var(--ink-2, #4a5768);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.count {
+  color: var(--ink-2, #4a5768);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  opacity: 0.55;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 8px;
+  border: 1px solid var(--line, #dbe5f0);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink-2, #4a5768);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 120ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 120ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 事故等级：L1 灰、L2 琥珀、L3 朱红、L4 深红。只用字符色，不做底色块。 */
+.level {
+  flex: 0 0 auto;
+  color: var(--ink-2, #4a5768);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  opacity: 0.55;
+}
+
+.item[data-level="L2"] .level {
+  color: #a8700f;
+  opacity: 0.85;
+}
+
+.item[data-level="L3"] .level {
+  color: #b23c25;
+  opacity: 0.9;
+}
+
+.item[data-level="L4"] .level {
+  color: #8c1d12;
+  opacity: 0.95;
+}
+
+.item:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--river-500, #3a4a9e);
+  outline-offset: 1px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .item:hover:not(:disabled) {
+    border-color: rgba(74, 87, 104, 0.32);
+    background: rgba(74, 87, 104, 0.06);
+  }
+}
+
+/* 窄屏：右栏贴边，把面板挪到左上（看板下方），别和器皿抢中间 */
+@media (max-width: 1180px) {
+  .panel {
+    top: auto;
+    right: auto;
+    bottom: 92px;
+    left: 16px;
+    width: 172px;
+  }
+
+  .item {
+    min-height: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    transition: none;
+  }
+}

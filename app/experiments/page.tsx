@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AppShell, type NavExperiment } from "@/components/app/shell";
 import { Reveal } from "@/components/motion/reveal";
 import { loadCatalog } from "@/lib/catalog";
+import { hasFinishedRun } from "@/lib/queries/plan-access";
 import { getStudent } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ const FEATURED_IDS = ["exp01", "exp03", "exp09"] as const;
  */
 const PLAYABLE_IN_MORE = new Set(["exp08"]);
 
-function StateBadge({ playable }: { playable: boolean }) {
+function StateBadge({ playable, label }: { playable: boolean; label?: string }) {
   return playable ? (
     <span className="cat-state" data-kind="open">
       <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
@@ -35,7 +36,7 @@ function StateBadge({ playable }: { playable: boolean }) {
         <rect x="3.5" y="7" width="9" height="6.5" rx="1" fill="none" stroke="currentColor" strokeWidth="1.4" />
         <path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" strokeWidth="1.4" />
       </svg>
-      即将开放
+      {label ?? "即将开放"}
     </span>
   );
 }
@@ -47,7 +48,14 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const { unlock } = await searchParams;
   /** ?unlock=all 给调试/演示用：跳过精做筛选，10 个全部可点 */
   const debugAll = unlock === "all";
-  const { groups, totalHours, playable } = await loadCatalog(student.studentNo, { unlockAll: debugAll });
+  const { groups, totalHours } = await loadCatalog(student.studentNo, { unlockAll: debugAll });
+
+  /**
+   * 「进阶学习 · 拼接实验」入口：交卷完成过至少一个实验才可点。
+   * 查库失败由 hasFinishedRun 兜底成 false —— 入口显示锁定文案，页面照样渲染。
+   */
+  const planUnlocked = debugAll || (await hasFinishedRun(student.studentNo));
+  const planLockedHint = "做完 1 个实验后解锁";
 
   const allItems = groups.flatMap((g) =>
     g.items.map((item) => ({ ...item, groupId: g.id, groupTitle: g.title, unlocked: g.unlocked })),
@@ -65,6 +73,28 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
     (item): item is (typeof allItems)[number] => Boolean(item),
   );
   const rest = allItems.filter((item) => !FEATURED_IDS.includes(item.id as (typeof FEATURED_IDS)[number]));
+
+  /** 进阶学习入口的行内容：解锁与锁定共用，只有外层容器和状态标签不同 */
+  const advancedBody = (
+    <>
+      <span className="cat-row__no mono" aria-hidden="true">
+        ◆
+      </span>
+      <span className="cat-row__icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <rect x="14" y="13" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M10 7.5h3a2 2 0 0 1 2 2V13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </span>
+      <span className="cat-row__main">
+        <span className="cat-row__title">拼接实验（拼接式方案）</span>
+        <span className="cat-row__desc">自选器材、试剂与步骤，规则引擎逐条校验并评分</span>
+      </span>
+      <span className="cat-row__meta mono">设计 · 21 条规则</span>
+      <StateBadge playable={planUnlocked} label={planLockedHint} />
+    </>
+  );
 
   return (
     <AppShell
@@ -112,7 +142,31 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           </ul>
         </Reveal>
 
-        <Reveal as="details" className="cat-more" index={2}>
+        <Reveal as="section" className="cat-featured" index={2} aria-labelledby="cat-advanced-head">
+          <div className="cat-featured__head">
+            <h2 id="cat-advanced-head">进阶学习</h2>
+          </div>
+          <ol className="cat-list">
+            <li className="cat-row" data-state={planUnlocked ? "open" : "locked"}>
+              {planUnlocked ? (
+                <Link className="cat-row__link ix-lift" href="/plan" data-demo-id="demo-advanced-plan">
+                  {advancedBody}
+                </Link>
+              ) : (
+                <div
+                  className="cat-row__link"
+                  aria-disabled="true"
+                  data-demo-id="demo-advanced-plan"
+                  data-locked-why={planLockedHint}
+                >
+                  {advancedBody}
+                </div>
+              )}
+            </li>
+          </ol>
+        </Reveal>
+
+        <Reveal as="details" className="cat-more" index={3}>
           <summary className="cat-more__summary">
             <span className="cat-more__title">更多实验</span>
             <span className="cat-more__count mono">{rest.length} 个 · 即将开放</span>

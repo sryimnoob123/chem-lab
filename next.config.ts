@@ -14,11 +14,22 @@ const nextConfig: NextConfig = {
   },
   /**
    * dev 模式下 Next 16 默认拦截「跨站」访问 `/_next/*` 开发资源。
-   * 用 127.0.0.1 打开 :3000 时，页面能渲染但客户端脚本全部不执行
-   * （表现成整页点了没反应、数据已渲染但所有交互失效）。
-   * 本地验收脚本、截屏管线都用 127.0.0.1，所以显式放行。
+   * 一旦被拦，页面 HTML 还能出来，但**客户端脚本全不执行**：靠 useEffect 出内容的组件
+   * 会原地变空白（前测页空卡片、空选项就是它），点击也没反应。
+   * 本地是 127.0.0.1，扣子预览是 *.coze.site / *.bytefaas.com 这类代理域名，
+   * 一律显式放行；真遇到别的域名用 DEV_ALLOWED_ORIGINS 追加（逗号分隔）。
    */
-  allowedDevOrigins: ["127.0.0.1", "localhost"],
+  allowedDevOrigins: [
+    "127.0.0.1",
+    "localhost",
+    "*.coze.site",
+    "*.coze.cn",
+    "*.bytefaas.com",
+    ...(process.env.DEV_ALLOWED_ORIGINS ?? "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  ],
 };
 
 export default nextConfig;

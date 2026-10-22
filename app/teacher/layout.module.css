@@ -1,0 +1,84 @@
+/**
+ * 教师端顶栏的「返回主界面」入口。
+ *
+ * 为什么单独一个 module：顶栏样式集中在 globals.css（共享文件，本次不动），
+ * 新增入口只需要这一条规则，放模块里可以保证只作用于教师端外壳。
+ * 视觉语言与 .tch-brand__tag / .tch-unlock 一致：1px --bench-line 描边、2px 圆角、
+ * 仅用 token 取色，不在组件里写字面量颜色。
+ */
+
+.backLink {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* 触控区 ≥44px：移动端横竖屏都不小于这条线 */
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--bench-line);
+  border-radius: 2px;
+  color: var(--bench-text);
+  font-size: var(--text-12);
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    color 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.backLink__arrow {
+  font-size: var(--text-14);
+  line-height: 1;
+}
+
+/* 悬停只在真有指针的设备上生效，触屏不留下"粘住"的 hover 态 */
+@media (hover: hover) and (pointer: fine) {
+  .backLink:hover {
+    color: var(--ink);
+    border-color: var(--ink-2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backLink {
+    transition: none;
+  }
+}
+
+/* 窄屏（≤520px）：顶栏要同时容纳品牌、两个 Tab 和教师解锁按钮，
+   返回入口收成 44×44 的方形箭头键，可访问名由 aria-label 保留。
+   同时把这一行的间距与页边从 10px/16px 收到 8px —— 实测 390px 宽下
+   44(返回) + 32(校徽) + 128(Tab) + 116(用户区) + 间距 = 刚好放不下，
+   收紧 gutter 才能让校徽不被 flex 压到 0 宽而叠到 Tab 上。
+   选择器加 .bar 前缀提高优先级，避免与 globals.css 里的 .tch-top__inner 冲突。 */
+@media (max-width: 520px) {
+  .backLink {
+    width: 44px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+  }
+
+  .backLink__label {
+    display: none;
+  }
+
+  .bar:global(.tch-top__inner) {
+    gap: 8px;
+    padding-inline: 8px;
+  }
+
+  /* 校徽是 flex 可收缩项，给它保底宽度，宁可挤 Tab 也不叠在返回入口上 */
+  .bar :global(.tch-brand) {
+    min-width: 32px;
+  }
+}
+
+/* ≤430px 一整行确实放不下（44 + 32 + 128 + 116 + 间距 > 页面可用宽），
+   实测 390px 就会把右侧用户区挤出页边，此时收起校徽，保留返回入口与教师端导航 */
+@media (max-width: 430px) {
+  .bar :global(.tch-brand) {
+    display: none;
+  }
+}
