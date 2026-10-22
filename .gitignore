@@ -35,6 +35,17 @@ logs/
 # build cache
 tsconfig.tsbuildinfo
 
+# tsc 误编译出的同目录 .js 产物（2026-10-22：lib/engine.types.js 被 git add -A 带进去过，
+# 留着会让打包器优先解析旧 .js，别删这条）
+lib/*.js
+components/**/*.js
+app/**/*.js
+experiments/**/*.js
+!**/next.config.js
+!**/*.config.js
+!**/*.postcss.js
+!**/postcss.config.js
+
 # 预览端口声明文件（不提交 git）
 .preview
 

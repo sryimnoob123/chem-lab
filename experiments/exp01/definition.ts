@@ -159,7 +159,7 @@ const step1: StepDefinition = {
     correct(
       "step1-check",
       "observe",
-      "按清单逐件核对名称/规格/数量并签字",
+      "按清单核对品名/规格/数量并签字",
       "demo-op-step1-check",
       "S2",
       {
@@ -265,6 +265,14 @@ const step2: StepDefinition = {
       { observation: { text: "水平泡居中，天平已调平" } },
     ),
     correct(
+      "step2-brush",
+      "observe",
+      "用软毛刷/绸布取放称量瓶，不用手直接抓",
+      "demo-op-step2-brush",
+      "S1",
+      { observation: { text: "称量瓶用软毛刷/绸布取放，未直接用手抓" } },
+    ),
+    correct(
       "step2-calibrate",
       "calibrate",
       "开机预热 ≥30 min，按内校键校准后回零",
@@ -277,14 +285,6 @@ const step2: StepDefinition = {
         entityPatch: { "balance-1": { reading: 0, note: "空载 0.0000 g，已内校" } },
         feedback: fb("info", "天平已调平并内校，空载回零", undefined, undefined, ["S003"]),
       },
-    ),
-    correct(
-      "step2-brush",
-      "observe",
-      "用软毛刷/绸布取放称量瓶，不用手直接抓",
-      "demo-op-step2-brush",
-      "S1",
-      { observation: { text: "称量瓶用软毛刷/绸布取放，未直接用手抓" } },
     ),
     trap(
       "step2-no-level",
@@ -335,7 +335,7 @@ const step3: StepDefinition = {
   scene: "天平室",
   demoId: "exp01-step3-weigh",
   judge: {
-    criterion: "|m₁ − m₂ − 1.0599| ≤ 0.0005 g；瓶外壁无残留、试样无洒落",
+    criterion: "差减质量 1.0599 g，允差 ±0.0005 g；瓶外壁无残留、试样无洒落",
     competency: ["S1", "K2"],
     tolerance: { paramKey: "mass", expected: 1.0599, unit: "g", tolerance: 0.0005 },
   },
@@ -464,6 +464,7 @@ const step4: StepDefinition = {
       "demo-op-step4-dissolve",
       "S2",
       {
+        ...P({ reagent: "water" }),
         observation: { text: "固体完全溶解，烧杯内无残留固体" },
         entityPatch: { "beaker-100": { note: "Na₂CO₃ 已完全溶解" } },
       },
