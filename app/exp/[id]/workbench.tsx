@@ -993,6 +993,21 @@ export function Workbench({
     return () => window.clearTimeout(timer);
   }, [mode, demoReadonly, finish, performed, step, total, ui.exp.stepIndex]);
 
+  /**
+   * 做完最后一步 → 自动进结算页（用户 2026-10-22：七步走完停在台面上，
+   * 没有任何提示，"都不知道我做完没有"）。
+   *
+   * 留 1.4 秒给最后一条成功反馈被看见，然后直接交卷跳报告页；
+   * 演示只读模式（?play=demo）不落库，走 finish() 里的 demo 分支。
+   */
+  useEffect(() => {
+    if (!ui.exp.done || demoReadonly || finishingRef.current) return;
+    const timer = window.setTimeout(() => {
+      if (!finishingRef.current) void finish();
+    }, 1400);
+    return () => window.clearTimeout(timer);
+  }, [ui.exp.done, demoReadonly, finish]);
+
   useEffect(() => {
     // 放进 setTimeout(0)：Next 16 的 react-hooks/set-state-in-effect 不允许在 effect 里同步 setState
     const timer = window.setTimeout(() => {
