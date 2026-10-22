@@ -113,9 +113,11 @@ describe("resolveDrop", () => {
     expect(resolveDrop(step([dissolve]), "na2co3-solid", new Set()).kind).toBe("accept");
   });
 
-  it("时序与 style 口径一致：吸附 160 / 倒入 700 / 拒收 240", () => {
+  it("时序与 style 口径一致：吸附 160 / 倒入 1160 / 拒收 240", () => {
     expect(SNAP_MS).toBe(160);
-    expect(POUR_MS).toBe(700);
+    // 倒入动画 2026-10-22 加长到 1160ms（= pour.tsx 的 TOTAL_MS）：
+    // 飞行 290 + 倾转 180 + 液柱与液滴 + 飞回 250，700ms 演不完"举瓶倒水"这一段。
+    expect(POUR_MS).toBe(1160);
     expect(REJECT_MS).toBe(240);
   });
 });

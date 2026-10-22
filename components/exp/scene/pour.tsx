@@ -7,11 +7,12 @@
  * 不是水凭空出现在瓶里。" 所以一次加入 = 5 段，总时长约 1150ms：
  *
  *   0ms     试剂瓶从架上（from）飞到器皿上方（290ms，缓出）
- *   290ms   瓶身倾转 −58°（180ms）——"举起来倒"的姿态
- *   430ms   2~3 条液流从瓶口落到器皿（每条 380ms，错开 90ms）
+ *   290ms   瓶身绕**瓶口**倾转 118°（180ms）——瓶口不动、瓶身甩到一侧上方
+ *   370ms   连续液柱从瓶口竖直落下（scaleY 0.12→1，560ms，中途不断线）
+ *   430ms   3 颗液滴沿同一条竖线错开下坠（每条 380ms，错开 90ms）
  *   620ms   落点涟漪（圆环 scale .3→1 + opacity 1→0，380ms）
  *   640ms   液面抬升（scaleY .12→1，260ms，缓出）
- *   900ms   瓶子飞回架上并淡出（250ms）
+ *   900ms   瓶子飞回架上并淡出（250ms），液柱同步收尾
  *
  * 全部用 WAAPI `el.animate()`，不引库；下一次加入会 cancel 上一次的
  * 全部 Animation + timer；`prefers-reduced-motion` 下不注册动画（1 帧切换）。
@@ -43,7 +44,27 @@ const RETURN_MS = 250;
 const TOTAL_MS = 1160;
 
 const DROP_COUNT = 3;
-const TILT_DEG = -58;
+
+/**
+ * 倾倒角：118°（瓶口朝下、低于瓶身主体）。
+ * CSS 的 transform-origin 挂在**瓶口中心**（`.pourBottle { transform-origin: 50% -8px }`），
+ * 所以旋转只甩瓶身、瓶口位置不动 —— 液流才能从瓶口竖直落到液面，不会从瓶身侧面冒出来。
+ * 方向按「瓶子从哪侧来」取符号：从左侧来 → 顺时针 +118°（瓶身在左上，口朝右下）。
+ */
+const TILT_DEG = 118;
+
+/** 瓶身左上角相对瓶口中心的偏移（宽 30、高 46，瓶口在元素上沿外 8px）。 */
+const MOUTH_TO_BOX = { x: 15, y: -8 };
+
+/** 瓶口悬停在液面上方的高度（px）。液流长度 = 这段距离，必须 > 0 才不断线。 */
+const MOUTH_GAP = 68;
+
+/** 液柱开始落下的时间点：比第一颗液滴早 60ms，让"水流先出来、水珠跟着落"。 */
+const STREAM_DELAY = DROP_START - 60;
+/** 液柱生长时长：要在第 3 颗液滴落地前落满全段。 */
+const STREAM_GROW_MS = 220;
+/** 液柱持续时间（含收尾淡出）。 */
+const STREAM_MS = 560;
 
 /** 落点校正：exp09 的投放热区是旧布局，和 SVG 里锥形瓶的位置不一致；
  *  优先用实验台 SVG（viewBox 360×640）里锥形瓶瓶口的真实位置，找不到就退回父组件给的 to。 */
@@ -112,6 +133,7 @@ export function PourFX({ pour, onDone }: { pour: PourState | null; onDone: () =>
     if (!root) return;
 
     const drops = Array.from(root.querySelectorAll<HTMLElement>("[data-pour-drop]"));
+    const stream = root.querySelector<HTMLElement>("[data-pour-stream]");
     const ripple = root.querySelector<HTMLElement>("[data-pour-ripple]");
     const liquid = root.querySelector<HTMLElement>("[data-pour-liquid]");
     const flying = root.querySelector<HTMLElement>("[data-pour-bottle]");
@@ -132,8 +154,12 @@ export function PourFX({ pour, onDone }: { pour: PourState | null; onDone: () =>
       liquid.style.height = `${h}px`;
     }
 
-    // 瓶子飞行的终点：器皿正上方（瓶口朝下，留出倾倒空间）
-    const hover = { x: to.x, y: to.y - 64 };
+    // 瓶口停在器皿液面正上方：瓶口 = 元素左上角 + (15, -8)。
+    // transform-origin 挂在瓶口，旋转不会挪动它，液流起点因此稳定、可以竖直落。
+    const fromRight = pour.to.x > pour.from.x;
+    const tilt = TILT_DEG * (fromRight ? 1 : -1);
+    const mouth = { x: to.x, y: to.y - MOUTH_GAP };
+    const hover = { x: mouth.x - MOUTH_TO_BOX.x, y: mouth.y - MOUTH_TO_BOX.y };
 
     if (flying) {
       flying.style.left = `${pour.from.x}px`;
@@ -143,14 +169,16 @@ export function PourFX({ pour, onDone }: { pour: PourState | null; onDone: () =>
       for (let i = 0; i <= STEP; i += 1) {
         const t = i / STEP;
         const p = flyPath(pour.from, hover, t);
+        // 空中先微微倾斜（像被人拎起来），落位时再一口气倒下去
+        const lean = tilt * 0.12 * t;
         frames.push({
-          transform: `translate(${(p.x - pour.from.x).toFixed(1)}px, ${(p.y - pour.from.y).toFixed(1)}px) rotate(0deg)`,
+          transform: `translate(${(p.x - pour.from.x).toFixed(1)}px, ${(p.y - pour.from.y).toFixed(1)}px) rotate(${lean.toFixed(1)}deg)`,
           offset: t,
         });
       }
-      // 到达后倾斜
+      // 到达后倾斜到倾倒角
       frames.push({
-        transform: `translate(${(hover.x - pour.from.x).toFixed(1)}px, ${(hover.y - pour.from.y).toFixed(1)}px) rotate(${TILT_DEG}deg)`,
+        transform: `translate(${(hover.x - pour.from.x).toFixed(1)}px, ${(hover.y - pour.from.y).toFixed(1)}px) rotate(${tilt.toFixed(1)}deg)`,
         offset: 1,
       });
       anims.push(
@@ -165,7 +193,7 @@ export function PourFX({ pour, onDone }: { pour: PourState | null; onDone: () =>
         flying.animate(
           [
             {
-              transform: `translate(${(hover.x - pour.from.x).toFixed(1)}px, ${(hover.y - pour.from.y).toFixed(1)}px) rotate(${TILT_DEG}deg)`,
+              transform: `translate(${(hover.x - pour.from.x).toFixed(1)}px, ${(hover.y - pour.from.y).toFixed(1)}px) rotate(${tilt.toFixed(1)}deg)`,
               opacity: 1,
             },
             { transform: "translate(0px, 0px) rotate(0deg)", opacity: 0 },
@@ -180,28 +208,54 @@ export function PourFX({ pour, onDone }: { pour: PourState | null; onDone: () =>
       );
     }
 
-    // 液流：从倾倒后的瓶口落到器皿液面
-    const mouth = { x: hover.x + 6, y: hover.y + 16 };
+    // 液柱：一条从瓶口竖直落到液面的连续水流（参考 preview/drag-pour.html 的做法）。
+    // 只用 scaleY 生长，不碰 height，避免逐帧重排；落满后再淡出，保证中途"不断线"。
+    if (stream) {
+      stream.style.left = `${mouth.x - 1.4}px`;
+      stream.style.top = `${mouth.y}px`;
+      stream.style.height = `${MOUTH_GAP}px`;
+      anims.push(
+        stream.animate(
+          [
+            { transform: "scaleY(0.06)", opacity: 0.85, offset: 0 },
+            { transform: "scaleY(1)", opacity: 0.95, offset: STREAM_GROW_MS / STREAM_MS },
+            { transform: "scaleY(1)", opacity: 0.95, offset: 0.86 },
+            { transform: "scaleY(1)", opacity: 0, offset: 1 },
+          ],
+          {
+            duration: STREAM_MS,
+            delay: STREAM_DELAY,
+            easing: "cubic-bezier(0.3, 0.02, 0.66, 1)",
+            fill: "both",
+          },
+        ),
+      );
+    }
+
+    // 液滴：沿同一条竖线跟着水流落，只做轻微摆动，不能斜着从瓶身侧面飞
     drops.forEach((drop, index) => {
-      drop.style.left = `${pour.from.x - 3.5}px`;
-      drop.style.top = `${pour.from.y - 5}px`;
-      const dx = mouth.x - pour.from.x;
-      const dy = mouth.y - pour.from.y;
+      drop.style.left = `${mouth.x - 3.5}px`;
+      drop.style.top = `${mouth.y - 5}px`;
+      const sway = (index - 1) * 2.5;
       anims.push(
         drop.animate(
           [
-            { transform: "translate(0px, 0px) scale(0.4)", opacity: 0 },
-            { transform: `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(1)`, opacity: 1, offset: 0.34 },
+            { transform: "translate(0px, 0px) scale(0.55)", opacity: 0 },
             {
-              transform: `translate(${(mouth.x - pour.from.x).toFixed(1)}px, ${(to.y - pour.from.y).toFixed(1)}px) scale(0.7)`,
-              opacity: 0.9,
+              transform: `translate(${sway.toFixed(1)}px, ${(MOUTH_GAP * 0.55).toFixed(1)}px) scale(0.9)`,
+              opacity: 1,
+              offset: 0.55,
+            },
+            {
+              transform: `translate(${(sway * 1.6).toFixed(1)}px, ${MOUTH_GAP}px) scale(0.7)`,
+              opacity: 0.7,
               offset: 1,
             },
           ],
           {
             duration: DROP_FLIGHT_MS,
             delay: DROP_START + index * STAGGER_MS,
-            easing: "cubic-bezier(0.4, 0, 0.6, 1)",
+            easing: "cubic-bezier(0.45, 0, 0.55, 1)",
             fill: "both",
           },
         ),
@@ -273,6 +327,12 @@ export function PourFX({ pour, onDone }: { pour: PourState | null; onDone: () =>
         <span className={styles.pourBottleNeck} style={{ borderColor: color }} />
         <span className={styles.pourBottleFill} style={{ background: color }} />
       </span>
+      {/* 连续液柱：从瓶口竖直落到液面，是"水在流"的主体 */}
+      <span
+        data-pour-stream
+        className={styles.pourStream}
+        style={{ left: to.x - 1.4, top: to.y - MOUTH_GAP, height: MOUTH_GAP, background: color, ...vars }}
+      />
       {Array.from({ length: DROP_COUNT }, (_, i) => (
         <span
           key={i}

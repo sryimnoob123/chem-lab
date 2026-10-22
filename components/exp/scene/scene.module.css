@@ -560,6 +560,42 @@
     opacity: 0.85;
   }
 }
+
+/* ================= 局部交互：谁被操作，只有谁动 =================
+   用户 2026-10-22：不要去跟整块台面互动，点了烧杯就只跟烧杯互动。
+   transform-box: fill-box 已在 .vessel 上，缩放以器皿自身中心为原点；
+   曲线/时长按 skill animate 口径（120ms、cubic-bezier(.23,1,.32,1)、按下 .97）。 */
+.vessel.vessel {
+  /* 明确给一个 scale(1) 基准：SVG <g> 从 transform:none 过渡到 scale(1.02) 在 Chrome 里
+     会卡在 identity（实测点了不放大），有基准矩阵才插值。 */
+  transform: scale(1);
+  transition:
+    transform 120ms cubic-bezier(0.23, 1, 0.32, 1),
+    filter 120ms ease;
+}
+
+.vessel.vessel[data-active="true"] {
+  transform: scale(1.02);
+}
+
+.vessel.vessel[data-pressed="true"] {
+  transform: scale(0.97);
+  transition-duration: 30ms;
+}
+
+/* 选中的那一台描边加深（focusRing 是 SVG 描边，不用白色高光） */
+.vessel[data-active="true"] .focusRing {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vessel.vessel,
+  .vessel.vessel[data-active="true"],
+  .vessel.vessel[data-pressed="true"] {
+    transform: none;
+    transition: none;
+  }
+}
 /* ---------------- 试剂加入动画（pour.tsx） ----------------
    4 段：瓶身倾转 300ms / 液滴飞行 420ms（错开 90ms）/ 涟漪 420ms（延迟 360ms）/ 液面抬升 260ms（延迟 400ms）。
    全部走 WAAPI，这里只提供几何与初始态；不动元素本体 transform。 */
@@ -571,8 +607,10 @@
 }
 
 /* 飞过去倒的瓶子（用户 2026-10-22 点名要的那一段）：
-   从试剂架起飞 → 器皿上方倾斜 −58° → 倒完飞回淡出。
-   初始位置由 pour.tsx 的 from 写入 left/top，动画只动 transform。 */
+   从试剂架起飞 → 器皿上方倾斜 → 倒完飞回淡出。
+   初始位置由 pour.tsx 的 from 写入 left/top，动画只动 transform。
+   transform-origin 挂在**瓶口中心**（元素上沿外 8px）：绕口旋转时瓶口不动，
+   液流才能从瓶口竖直落下；瓶身自然甩向一侧、低于瓶口。 */
 .pourBottle {
   position: absolute;
   width: 30px;
@@ -580,7 +618,7 @@
   border: 2px solid var(--river-700, #3f5f7a);
   border-radius: 3px;
   background: rgba(252, 253, 252, 0.98);
-  transform-origin: 50% 88%;
+  transform-origin: 50% -8px;
   box-shadow: 0 8px 18px rgba(22, 32, 44, 0.26);
   opacity: 1;
   will-change: transform;
@@ -610,11 +648,28 @@
 
 .pourDrop {
   position: absolute;
-  width: 7px;
-  height: 10px;
+  width: 8px;
+  height: 11px;
   border-radius: 50% 50% 60% 60% / 55% 55% 100% 100%;
+  /* 纸白底上"试剂色"普遍偏浅（蒸馏水 #DCE9F2），必须叠一圈墨色描边才看得见 */
   background: var(--pour-color, #dce9f2);
-  box-shadow: 0 0 0 1px rgba(246, 247, 245, 0.90);
+  border: 1px solid rgba(54, 84, 110, 0.42);
+  opacity: 0;
+}
+
+/* 连续液柱：倾倒时从瓶口竖直落到液面的一段水。
+   宽度/高度由 pour.tsx 按瓶口到液面的距离写入，动画只用 scaleY 生长 + 淡出，
+   所以过程中不会"断成几颗珠子"。transform-origin 在顶端，水从瓶口长出来。 */
+.pourStream {
+  position: absolute;
+  width: 3.2px;
+  border-radius: 2px;
+  transform-origin: 50% 0;
+  /* 液柱本身按试剂色着色，但左缘压一条墨线：白底 + 浅色试剂时也能看出"有一条水" */
+  background: var(--pour-color, #dce9f2);
+  box-shadow:
+    -0.6px 0 0 rgba(54, 84, 110, 0.5),
+    0 0 4px rgba(54, 84, 110, 0.16);
   opacity: 0;
 }
 
