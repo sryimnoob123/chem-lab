@@ -141,6 +141,9 @@ export function useDropFlow({ stageRef, resolve, onPour, onAccept, onReject }: D
             key: Date.now(),
             color: getSceneReagent(reagentId)?.colorHex ?? "#DCE9F2",
             mode: mode === "event" ? "event" : mode,
+            // 倒进哪台 + 从哪松手：台面场景的 SVG 倾倒动画按这两个算瓶口与液柱
+            vesselId: dropVessel?.dataset.vesselId ?? null,
+            release: point ?? centerOf(bottleRect),
             from: {
               x: bottleRect.left + bottleRect.width / 2 - stageRect.left,
               y: bottleRect.top + 8 - stageRect.top,
@@ -198,10 +201,63 @@ export function useDropFlow({ stageRef, resolve, onPour, onAccept, onReject }: D
     [animate, stageRef],
   );
 
+  /**
+   * 已经有外部判定（工作台按「本步建议动作」判过）时，只播倒液动画，播完再回调。
+   *
+   * 为什么需要这条：台面场景的投放判定在 workbench（onUseReagent 里看 suggested.type），
+   * 而 resolveDrop 只认"文案里点名了这瓶试剂"的步骤 —— exp01 的「洗瓶给烧杯加水溶解」
+   * 文案里没有"蒸馏水"三个字，走 resolveDrop 会被误判成加错试剂。
+   * 所以判定仍归 workbench，这里只负责把"瓶子飞过去→倾斜→液柱落下→液面上升"演完，
+   * 演完再让步骤推进（用户口径：动作结束才出结果）。
+   */
+  const pourThen = useCallback(
+    (reagentId: string, vesselId: string, point: DropPoint | undefined, done: () => void) => {
+      const stage = stageRef.current;
+      const bottle = stage?.querySelector(BOTTLE_SELECTOR(reagentId));
+      const bottleRect = bottle?.getBoundingClientRect();
+      const stageRect = stage?.getBoundingClientRect();
+      if (!stage || !stageRect || prefersReduced()) {
+        done();
+        return;
+      }
+      // 上一次动画还没收尾就再来一次：直接把上一次收掉，不让两队动画叠在一起
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      busyRef.current = true;
+      setDraggingId(null);
+      setOverFlask(false);
+      setPour({
+        key: Date.now(),
+        color: getSceneReagent(reagentId)?.colorHex ?? "#DCE9F2",
+        mode: "drag",
+        vesselId,
+        release: point ?? (bottleRect ? centerOf(bottleRect) : undefined),
+        from: {
+          x: (bottleRect?.left ?? stageRect.left) + (bottleRect?.width ?? 0) / 2 - stageRect.left,
+          y: (bottleRect?.top ?? stageRect.top) + 8 - stageRect.top,
+        },
+        to: {
+          x: stageRect.width / 2,
+          y: stageRect.height / 2,
+        },
+      });
+      timerRef.current = window.setTimeout(() => {
+        timerRef.current = null;
+        busyRef.current = false;
+        setPour(null);
+        done();
+      }, POUR_MS - 60);
+    },
+    [stageRef],
+  );
+
   return {
     draggingId,
     overFlask,
     pour,
+    pourThen,
     beginDrag: (id: string) => {
       setDraggingId(id);
       setOverFlask(false);

@@ -18,16 +18,18 @@ export type VesselArtProps = {
   fxKey: number;
   /** 液面颜色覆盖（如变色反应的终态色）。 */
   liquidOverride?: string | null;
+  /** 液位 0..1（倒液时由 bench-scene 记账，液面随倒随涨）。 */
+  level?: number;
 };
 
-export function VesselArt({ vessel, contents, outcome, fxKey, liquidOverride }: VesselArtProps) {
+export function VesselArt({ vessel, contents, outcome, fxKey, liquidOverride, level }: VesselArtProps) {
   const showLiquid = vessel.kind !== "burette" && contents.length > 0;
   // 变色反应的终态色优先；没有才回到混色表（旧行为保持一致）
   const finalLiquid = liquidOverride ?? outcome?.phenomena.colorChange?.toHex ?? null;
 
   return (
     <g className={styles.vesselArt} data-vessel-kind={vessel.kind}>
-      <GlassVessel vessel={vessel} contents={contents} liquidOverride={finalLiquid} />
+      <GlassVessel vessel={vessel} contents={contents} liquidOverride={finalLiquid} level={level} />
       <g key={fxKey}>
         <OutcomeFx vessel={vessel} outcome={outcome} showLiquid={showLiquid} />
       </g>

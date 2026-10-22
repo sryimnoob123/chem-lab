@@ -82,8 +82,8 @@
   --bench-grid: rgba(74, 87, 104, 0.05);
 
   /* 洗涤槽：台面开孔，槽底比台面深一档，内壁更亮，才有"凹进去"的盆感 */
-  --sink-basin: #dde4ea;
-  --sink-wall: #e8edf2;
+  --sink-basin: #f2f4f3;
+  --sink-wall: #f9faf8;
 
   /* 暗场（只在事故 L3/L4 反差、以及演示浮层等需要深底的局部使用） */
   --bench-ink-dark: #0e1620;
@@ -101,6 +101,17 @@
   --glass-shadow: rgba(74, 87, 104, 0.12);
   --liquid-sheen: rgba(74, 87, 104, 0.16);
   --liquid-depth: rgba(74, 87, 104, 0.22);
+
+  /* 画法统一（2026-10-22 二轮）：器皿/液体/试剂瓶全部走 preview/drag-pour.html 那一套。
+     数值就是那份参考实现里的值 —— 外轮廓 .46、内壁虚光 .12、高光 .13、接地影 .10。
+     换文字色/换主题都不改这几个：它们描述的是"墨在纸上的浓淡"，不是语义色。 */
+  --canvas-glass-line: rgba(74, 87, 104, 0.46);
+  --canvas-glass-fill: rgba(74, 87, 104, 0.035);
+  --canvas-glass-inner: rgba(74, 87, 104, 0.12);
+  --canvas-shine: rgba(74, 87, 104, 0.13);
+  --canvas-shadow: rgba(74, 87, 104, 0.1);
+  --canvas-graduation: rgba(74, 87, 104, 0.55);
+  --canvas-bottle-lid: rgba(74, 87, 104, 0.45);
 
   /* 动作层（洗涤 / 倾倒 / 转移 / 加热）用色。
      水色偏青灰、低饱和，避免纸白底上显得像荧光；描边走同一档墨色。

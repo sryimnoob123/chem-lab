@@ -26,6 +26,10 @@ export type PourGeom = {
   to: { x: number; y: number };
   color: string;
   mode: "click" | "drag" | "event";
+  /** 台面场景：倒进哪台器皿（HTML 层不用；bench-pour 靠它取器皿几何算瓶口坐标）。 */
+  vesselId?: string | null;
+  /** 松手点的视口坐标：SVG 里的瓶子从手指松开的地方起飞，接上拖动影子。 */
+  release?: { x: number; y: number } | null;
 };
 
 export type PourState = PourGeom & { key: number };

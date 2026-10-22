@@ -448,33 +448,14 @@
   transition: none;
 }
 
+/* 试剂瓶：画法照 preview/drag-pour.html —— 一只 SVG 细颈瓶（玻璃轮廓 + 液体 + 反光），
+   试剂架 / 拖动影子 / 倾倒动画共用同一个组件，三处看到的一定是同一只瓶子。 */
 .reagentBottle {
-  position: relative;
-  flex: 0 0 20px;
-  width: 20px;
-  height: 28px;
-  border: 1px solid rgba(201, 214, 228, 0.5);
-  border-radius: 1px;
-}
-
-.reagentBottle::before {
-  content: "";
-  position: absolute;
-  top: -4px;
-  left: 6px;
-  width: 8px;
-  height: 4px;
-  border: 1px solid rgba(201, 214, 228, 0.5);
-  border-bottom: 0;
-}
-
-.reagentFill {
-  position: absolute;
-  left: 2px;
-  right: 2px;
-  bottom: 2px;
-  height: 55%;
-  opacity: 0.75;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 32px;
+  display: block;
+  overflow: visible;
 }
 
 .reagentText {
@@ -801,33 +782,11 @@
 }
 
 .dragGhostBottle {
-  position: relative;
-  flex: 0 0 16px;
-  width: 16px;
-  height: 24px;
-  border: 1px solid var(--river-700);
-  border-radius: 1px;
-  background: rgba(246, 247, 245, 0.9);
-}
-
-.dragGhostBottle::before {
-  content: "";
-  position: absolute;
-  top: -4px;
-  left: 5px;
-  width: 6px;
-  height: 4px;
-  border: 1px solid var(--river-700);
-  border-bottom: 0;
-}
-
-.dragGhostFill {
-  position: absolute;
-  left: 2px;
-  right: 2px;
-  bottom: 2px;
-  height: 62%;
-  border-radius: 0 0 1px 1px;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 40px;
+  display: block;
+  overflow: visible;
 }
 
 .dragGhostName {

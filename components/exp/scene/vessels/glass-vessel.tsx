@@ -1,223 +1,214 @@
 "use client";
 
 /**
- * 玻璃器皿 2.5D（三层质感，亮场口径）：
- *   1. 外轮廓：淡墨 1.4px（--glass-outline，rgba(74,87,104,.72)）
- *   2. 内侧 1px 亮边：先铺 3.2px 器皿主色描边，再用 1.4px 外轮廓压住外侧，
- *      最终露出约 1px 的 --exp-accent 内壁（纸白底，不用白色高光）
- *   3. 底部弧形反光：器底一条淡墨 + 器皿色的弧线
- * 液体：上浅下深（叠一层由透明到 --liquid-depth 的渐变）+ 细椭圆液面 + 微光晕 + 3~6 个常驻气泡。
- * 只动 transform / opacity；不用图片、不用 feTurbulence 等重型 filter。
+ * 玻璃器皿 —— 画法照 preview/drag-pour.html（2.5D，纸白场）：
+ *   1. 接地阴影：一枚极淡的径向渐变椭圆（器皿坐在台面上，不飘）；
+ *   2. 玻璃：一层极淡墨玻璃面 + 一条 1.6px 淡墨外轮廓（vector-effect 恒定线宽，
+ *      缩放到哪台器皿都是同一个粗细）+ 内壁一圈 3.5px 的淡墨虚光；
+ *   3. 顶面一定是椭圆（瓶口 / 液面），这是 2.5D 唯一的信息来源；
+ *   4. 液体 = 矩形 + 同色液面椭圆，两层都被 clipPath（主体轮廓）裁 —— 收腰、圆底自动成立；
+ *      液位 level 只挪矩形上沿，所以液面能随倒液连续上升。
+ *
+ * 只用 transform / opacity 做动效；不用图片、不用 filter。
  */
 
-import { useId, type CSSProperties } from "react";
-import { mixLiquids } from "@/lib/scene/liquid-mix";
+import { useId } from "react";
+import { getSubstance } from "@/lib/chem/substances";
+import { mixLiquids, normalizeLiquidIds } from "@/lib/scene/liquid-mix";
 import type { SceneVessel } from "@/lib/scene/types";
-import { vesselBubbles } from "@/lib/scene/vessel-paint";
 import {
   BURETTE_TICKS,
+  CENTER_X,
   MOUTH_Y,
+  SURFACE_RY,
   VESSEL_SCALE,
   bodyPath,
-  liquidPath,
-  liquidSurfaceRx,
-  liquidSurfaceY,
+  levelTopY,
+  liquidBox,
+  mouthOf,
   reflectArc,
   sheenPath,
+  surfaceRxAt,
 } from "./vessel-geometry";
 import styles from "./vessel.module.css";
 
-const CENTER_X: Readonly<Record<string, number>> = {
-  flask: 80,
-  beaker: 80,
-  volumetric: 80,
-  tube: 20,
-  dish: 52,
-  burette: 60,
-};
+/** 白色粉末在白玻璃上会消失：压成暖灰白（与旧的沉淀配色一致）。 */
+const SOLID_FALLBACK = "#E7E2D6";
+/** 固体粉末层的厚度（局部坐标）。 */
+const POWDER_H = 9;
 
 export interface GlassVesselProps {
   vessel: SceneVessel;
   contents: readonly string[];
   /** 变色反应的终态色（优先级高于混色表）。 */
   liquidOverride?: string | null;
+  /** 液位 0..1；不传就按内容物推（有液体 0.38 / 只有固体 0）。 */
+  level?: number;
 }
 
-/** 器底 y（接地阴影用，局部坐标）。 */
-const BASE_Y: Readonly<Record<string, number>> = {
-  flask: 184,
-  beaker: 188,
-  volumetric: 188,
-  tube: 194,
-  dish: 182,
-  burette: 344,
-};
+/** 内容物里有没有液体（水、溶液、指示剂都算）。 */
+export function hasLiquidContent(contents: readonly string[]): boolean {
+  return normalizeLiquidIds(contents).some((id) => {
+    const phase = getSubstance(id)?.phase;
+    return phase === "liquid" || phase === "aqueous";
+  });
+}
 
-export function GlassVessel({ vessel, contents, liquidOverride }: GlassVesselProps) {
+/** 第一瓶固体：粉末层用它上色（找不到返回 null）。 */
+export function solidColorOf(contents: readonly string[]): string | null {
+  for (const id of normalizeLiquidIds(contents)) {
+    const substance = getSubstance(id);
+    if (substance?.phase === "solid") {
+      return substance.color.toUpperCase() === "#FFFFFF" ? SOLID_FALLBACK : substance.color;
+    }
+  }
+  return null;
+}
+
+export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVesselProps) {
   const uid = useId().replace(/:/g, "");
   const kind = vessel.kind;
-  const glassId = `glass-${uid}`;
-  const depthId = `depth-${uid}`;
   const clipId = `clip-${uid}`;
   const shadowId = `shadow-${uid}`;
   const scale = VESSEL_SCALE[kind];
   const body = bodyPath(kind);
+  const mouth = mouthOf(kind);
+  const box = liquidBox(kind);
+  const cx = CENTER_X[kind];
 
+  const resolved = level ?? (hasLiquidContent(contents) ? 0.38 : 0);
   const mix = mixLiquids(contents);
-  // 白色沉淀在白玻璃上会"消失"：压成暖灰白（与旧画法一致）
   const rawLiquid = liquidOverride ?? mix.color;
-  const liquid =
-    mix.kind === "precipitate" && rawLiquid.toUpperCase() === "#FFFFFF" ? "#EDEAE1" : rawLiquid;
-  const liquidOpacity = Math.min(0.8, Math.max(0.45, mix.opacity));
-  const showLiquid = kind !== "burette" && contents.length > 0;
-  const bubbles = showLiquid ? vesselBubbles(kind) : [];
-  const cx = CENTER_X[kind] ?? 80;
-  const surfaceY = liquidSurfaceY(kind);
-  const surfaceRx = liquidSurfaceRx(kind);
+  const liquid = mix.kind === "precipitate" && rawLiquid.toUpperCase() === "#FFFFFF" ? "#EDEAE1" : rawLiquid;
+  const liquidOpacity = Math.min(0.82, Math.max(0.46, mix.opacity));
+  const showLiquid = kind !== "burette" && resolved > 0.004;
+  const top = levelTopY(box, resolved);
+  const surfaceRx = surfaceRxAt(kind, top);
+  const solid = kind === "burette" ? null : solidColorOf(contents);
+  const powderTop = box.bottom - POWDER_H;
 
   return (
-    <g transform={`translate(${vessel.x} ${vessel.y}) scale(${scale})`} className={styles.art}>
-      {/* 接地阴影：器皿坐在台面上，而不是浮着。
-          用径向渐变（中心深、边缘全透明），比纯色椭圆更像真实投影，也不用 filter。 */}
+    <g transform={`translate(${vessel.x} ${vessel.y}) scale(${scale})`} className={styles.art} data-vessel-art={vessel.id}>
       <defs>
+        {/* 接地阴影：器底一圈极淡的墨，不用 filter */}
         <radialGradient id={shadowId}>
-          <stop offset="0%" stopColor="#39485A" stopOpacity="0.22" />
-          <stop offset="55%" stopColor="#39485A" stopOpacity="0.1" />
-          <stop offset="100%" stopColor="#39485A" stopOpacity="0" />
+          <stop offset="0%" stopColor="var(--canvas-shadow)" stopOpacity="0.9" />
+          <stop offset="62%" stopColor="var(--canvas-shadow)" stopOpacity="0.42" />
+          <stop offset="100%" stopColor="var(--canvas-shadow)" stopOpacity="0" />
         </radialGradient>
-      </defs>
-      <ellipse
-        cx={cx}
-        cy={BASE_Y[kind] ?? 184}
-        rx={surfaceRx * 1.12}
-        ry={8}
-        fill={`url(#${shadowId})`}
-      />
-      <defs>
-        {/* 玻璃体：左上淡、右下略深，给一点圆柱感 */}
-        <linearGradient id={glassId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="var(--glass-fill-deep)" />
-          <stop offset="52%" stopColor="var(--glass-fill)" />
-          <stop offset="100%" stopColor="var(--glass-reflect)" />
-        </linearGradient>
-        {/* 液体纵深：上浅下深（只叠墨色，不新造颜色） */}
-        <linearGradient id={depthId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--liquid-depth)" stopOpacity="0" />
-          <stop offset="62%" stopColor="var(--liquid-depth)" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="var(--liquid-depth)" stopOpacity="0.62" />
-        </linearGradient>
-        {/* 内壁亮边只留在器皿内侧：把宽描边的外侧一半裁掉 */}
         <clipPath id={clipId}>
           <path d={body} />
         </clipPath>
       </defs>
 
-      {/* 第一层：玻璃体填充（淡墨渐变，不用白色玻璃感） */}
-      <path d={body} fill={`url(#${glassId})`} stroke="none" />
+      {/* 接地阴影（drag-pour 的 .shadow 椭圆） */}
+      <ellipse cx={cx} cy={box.bottom + 2} rx={surfaceRx * 1.06} ry={7} fill={`url(#${shadowId})`} />
 
-      {kind === "burette" ? <BuretteParts /> : null}
+      {/* 液面之前先铺一层玻璃面：液体是「装在玻璃里」的，不是贴在纸上 */}
+      <path d={body} fill="var(--canvas-glass-fill)" />
 
-      {/* 第二层：内侧 1px 亮边 —— 宽描边 + 内侧裁切，再用外轮廓压住 0.7px */}
+      {/* 固体粉末：沉在器底的一层（不是液体，不参与液面动画） */}
+      {solid ? (
+        <g clipPath={`url(#${clipId})`} aria-hidden="true">
+          <rect x={box.x} y={powderTop} width={box.w} height={POWDER_H} fill={solid} opacity="0.92" />
+          <ellipse cx={box.cx} cy={powderTop} rx={box.w / 2} ry={2.4} fill={solid} opacity="0.75" />
+        </g>
+      ) : null}
+
+      {/* 液体：矩形 + 液面椭圆，被主体轮廓裁出来。倒液时整组按底边 scaleY 长高。 */}
+      {showLiquid ? (
+        <g
+          clipPath={`url(#${clipId})`}
+          className={styles.liquidGroup}
+          data-vessel-liquid={vessel.id}
+          data-liquid-level={resolved.toFixed(3)}
+        >
+          <rect
+            data-liquid-rect
+            x={box.x}
+            y={top}
+            width={box.w}
+            height={Math.max(0, box.bottom - top)}
+            fill={liquid}
+            fillOpacity={liquidOpacity}
+          />
+          {/* 液面：同色椭圆压在矩形上沿，露出上半 = 有厚度的液面 */}
+          <ellipse
+            data-liquid-surface
+            cx={box.cx}
+            cy={top}
+            rx={surfaceRx}
+            ry={SURFACE_RY}
+            fill={liquid}
+            fillOpacity={Math.min(0.95, liquidOpacity + 0.12)}
+          />
+          <ellipse
+            cx={box.cx}
+            cy={top}
+            rx={surfaceRx}
+            ry={SURFACE_RY}
+            fill="none"
+            stroke="var(--canvas-glass-inner)"
+            strokeWidth={0.9}
+          />
+        </g>
+      ) : null}
+
+      {/* 玻璃外轮廓（drag-pour 的 .glass）：恒定 1.6px，缩放到哪台都一样粗 */}
+      <path
+        d={body}
+        fill="none"
+        stroke="var(--canvas-glass-line)"
+        strokeWidth={1.6}
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+      {/* 内壁那圈淡淡的厚度（宽描边被轮廓裁在内侧） */}
       <path
         d={body}
         fill="none"
         className={styles.innerEdge}
-        strokeWidth={2.6}
+        strokeWidth={7}
         strokeLinejoin="round"
         clipPath={`url(#${clipId})`}
       />
-      {/* 第一层：外轮廓淡墨描边 */}
-      <path
-        d={body}
+      {/* 瓶口：一定是椭圆（2.5D 看见口里面） */}
+      <ellipse
+        cx={mouth.cx}
+        cy={mouth.y}
+        rx={mouth.rx}
+        ry={mouth.ry}
         fill="none"
-        stroke="var(--glass-outline)"
-        strokeWidth={1.4}
-        strokeLinejoin="round"
+        stroke="var(--canvas-glass-line)"
+        strokeWidth={1.6}
+        vectorEffect="non-scaling-stroke"
       />
-
-      <MouthDetail kind={kind} />
-      <Graduations kind={kind} />
-
-      {/* 器皿高光：左上一条主色细线（替代旧的白色高光） */}
+      {/* 左壁一条淡墨高光（纸白底不用白高光） */}
       <path d={sheenPath(kind)} className={styles.sheen} />
+      {/* 器底一条反光弧：玻璃坐在台面上 */}
+      <path d={reflectArc(kind)} className={styles.reflect} />
 
-      {showLiquid ? (
-        <g
-          className={styles.liquidGroup}
-          data-vessel-liquid={vessel.id}
-          style={{ transformBox: "view-box", transformOrigin: "0 0" }}
-        >
-          <path
-            d={liquidPath(kind)}
-            className={mix.kind === "precipitate" ? styles.liquidThick : styles.liquid}
-            style={{ fill: liquid }}
-            fillOpacity={liquidOpacity}
-          />
-          <path d={liquidPath(kind)} fill={`url(#${depthId})`} />
-          {/* 液面：细椭圆 + 微光晕（两层描边，不铺白） */}
-          <ellipse
-            cx={cx}
-            cy={surfaceY}
-            rx={surfaceRx * 0.98}
-            ry={4.2}
-            fill="none"
-            className={styles.surfaceGlow}
-            strokeWidth={3}
-          />
-          <ellipse
-            cx={cx}
-            cy={surfaceY}
-            rx={surfaceRx}
-            ry={4.6}
-            fill="none"
-            className={styles.surface}
-            strokeWidth={1.1}
-          />
-          {bubbles.map((bubble, index) => (
-            <circle
-              key={index}
-              className={styles.bubble}
-              cx={bubble.cx}
-              cy={bubble.cy}
-              r={bubble.r}
-              style={
-                {
-                  "--bubble-delay": `${bubble.delayMs}ms`,
-                  "--bubble-dur": `${bubble.durationMs}ms`,
-                  "--bubble-rise": `${bubble.rise}px`,
-                } as CSSProperties
-              }
-            />
-          ))}
-        </g>
-      ) : null}
-
-      {/* 第三层：底部弧形反光（画在液体之上，弧线才露得出来） */}
-      <path d={reflectArc(kind)} fill="none" className={styles.reflect} strokeWidth={1.2} strokeLinecap="round" />
+      {kind === "beaker" ? <BeakerTicks /> : null}
+      {kind === "volumetric" ? <VolumetricMark /> : null}
+      {kind === "burette" ? <BuretteParts /> : null}
     </g>
   );
 }
 
-/**
- * 刻度：烧杯 20/40/60/80 mL 四条主刻度 + 一条半格线。
- * 纸白底上刻度线要淡（墨 0.45），否则像贴纸；数字只在两条主刻度上出现，避免糊。
- */
-function Graduations({ kind }: { kind: SceneVessel["kind"] }) {
-  if (kind !== "beaker") return null;
-  const rows: readonly { y: number; label?: string }[] = [
-    { y: 78, label: "80" },
-    { y: 100 },
-    { y: 122, label: "40" },
-    { y: 144 },
-  ];
+/** 烧杯刻度：四条主刻度 + 标签，淡墨细线（纸白底不能画粗黑线）。 */
+function BeakerTicks() {
   return (
     <g className={styles.graduation} aria-hidden="true">
-      {rows.map((row) => (
+      {[
+        { y: 78, label: "80" },
+        { y: 100 },
+        { y: 122, label: "40" },
+        { y: 144 },
+      ].map((row) => (
         <g key={row.y}>
-          <line x1="115" y1={row.y} x2="130" y2={row.y} strokeWidth="0.9" />
-          <line x1="115" y1={row.y + 7} x2="122" y2={row.y + 7} strokeWidth="0.7" opacity="0.45" />
+          <line x1="116" y1={row.y} x2="130" y2={row.y} strokeWidth="0.9" />
           {row.label ? (
-            <text x="110" y={row.y + 3} textAnchor="end" fontSize="8" opacity="0.7">
+            <text x="112" y={row.y + 3} textAnchor="end" fontSize="8">
               {row.label}
             </text>
           ) : null}
@@ -227,32 +218,19 @@ function Graduations({ kind }: { kind: SceneVessel["kind"] }) {
   );
 }
 
-/** 瓶口 / 塞子 / 刻度这些识别细节：结构沿用旧画法，颜色改走 token。 */
-function MouthDetail({ kind }: { kind: SceneVessel["kind"] }) {
-  if (kind === "flask") {
-    return <line x1="60" y1={MOUTH_Y.flask} x2="100" y2={MOUTH_Y.flask} className={styles.outline} strokeWidth={1.4} />;
-  }
-  if (kind === "beaker") {
-    return <ellipse cx="80" cy={MOUTH_Y.beaker} rx="54" ry="7.5" fill="none" className={styles.outline} strokeWidth={1.4} />;
-  }
-  if (kind === "volumetric") {
-    return (
-      <>
-        <path d="M66 10 H94 V18 H66 Z" className={styles.glassShape} strokeWidth={1.4} />
-        <line x1="66" y1="40" x2="94" y2="40" className={styles.graduation} strokeWidth={1.6} />
-        <text x="98" y="43" className={styles.capacity}>
-          100
-        </text>
-      </>
-    );
-  }
-  if (kind === "tube") {
-    return <ellipse cx="20" cy={MOUTH_Y.tube} rx="13" ry="3.5" fill="none" className={styles.outline} strokeWidth={1.4} />;
-  }
-  return null;
+/** 容量瓶 100 mL：颈上一道标线 + 容量数字。 */
+function VolumetricMark() {
+  return (
+    <g aria-hidden="true">
+      <line x1="68" y1="40" x2="92" y2="40" className={styles.graduation} strokeWidth="1.6" />
+      <text x="96" y="43" className={styles.capacity}>
+        100
+      </text>
+    </g>
+  );
 }
 
-/** 滴定管：管身 + 旋塞 + 尖嘴 + 11 条刻度（沿用既有几何，换三层描边）。 */
+/** 滴定管：旋塞 + 尖嘴 + 刻度（结构沿用旧画法，线色统一到新 token）。 */
 function BuretteParts() {
   return (
     <g>
@@ -260,13 +238,12 @@ function BuretteParts() {
       <path d="M56 316 H64 V320 L62 342 H58 L56 320 Z" className={styles.glassShape} strokeWidth={1.4} />
       <rect x="87" y="303.5" width="12" height="9" rx="2" className={styles.glassShape} strokeWidth={1.4} />
       <line x1="82" y1="308" x2="87" y2="308" className={styles.outline} strokeWidth={1.4} />
-      <g className={styles.graduation} strokeWidth={0.9}>
+      <g className={styles.graduation} strokeWidth="0.9">
         {Array.from({ length: BURETTE_TICKS }, (_, index) => (
           <line key={index} x1="62" y1={52 + index * 24.4} x2="72.3" y2={52 + index * 24.4} />
         ))}
       </g>
-      <path d="M45 14 H75 L73 20 V300 H47 V20 Z" fill="none" className={styles.innerEdge} strokeWidth={3.2} />
-      <path d="M45 14 H75 L73 20 V300 H47 V20 Z" fill="none" className={styles.outline} strokeWidth={1.4} />
+      <line x1="47" y1={MOUTH_Y.burette} x2="73" y2={MOUTH_Y.burette} className={styles.outline} strokeWidth={1.4} />
     </g>
   );
 }

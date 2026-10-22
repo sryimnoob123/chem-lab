@@ -1,9 +1,14 @@
 /**
- * 器皿几何（2.5D 玻璃质感）—— 路径与局部坐标。
+ * 器皿几何（2.5D 玻璃，画法照 preview/drag-pour.html）—— 纯数据 + 纯函数，不含 React。
  *
- * 坐标系沿用 public/instruments：锥形瓶 / 烧杯 160×200、滴定管 120×360、
- * 试管 40×200、容量瓶 160×200；外层由 VesselArt 做 translate + scale。
- * 纯数据 + 纯函数，不含 React。
+ * 坐标：沿用 public/instruments 的局部画布（锥形瓶 / 烧杯 / 容量瓶 160×200、试管 40×200、
+ * 滴定管 120×360），外层由 glass-vessel.tsx 做 translate + scale。
+ *
+ * drag-pour 那套画法的三个要点（本文件提供全部几何）：
+ *   1. 液体 = 一个矩形 + 液面椭圆，两层都塞进 `clipPath`（器皿主体路径）里裁出来 ——
+ *      锥形瓶的收腰、试管的圆底、容量瓶的圆肚都由裁切自动得到，不用手写液体路径；
+ *   2. 液面椭圆压在矩形上沿、同色、不透明度更高，看起来是「有厚度的液面」；
+ *   3. 液位 `level`（0..1）只决定矩形上沿 y，所以液面能随倒液连续上升。
  */
 
 import type { SceneVesselKind } from "@/lib/scene/types";
@@ -20,14 +25,18 @@ export const VESSEL_SCALE: Readonly<Record<SceneVesselKind, number>> = {
   dish: 0.64,
 };
 
+/* ---------------- 主体轮廓 ----------------
+   底部圆角照 drag-pour 的烧杯（Q 收口）画，玻璃才有「厚壁」而不是一个纸盒。 */
+
 export const FLASK_BODY = "M63 16 H97 V62 L128 178 Q128 184 122 184 H38 Q32 184 32 178 L63 62 Z";
-export const BEAKER_BODY = "M26 41 V188 H134 V41 Z";
+export const BEAKER_BODY = "M26 41 V180 Q26 188 34 188 H126 Q134 188 134 180 V41";
 export const TUBE_BODY = "M7 10 V188 Q7 196 20 196 Q33 196 33 188 V10";
 export const VOLUMETRIC_BODY =
   "M68 18 H92 V70 C92 80 128 102 132 134 Q136 162 116 176 Q98 188 80 188 Q62 188 44 176 Q24 162 28 134 C32 102 68 80 68 70 Z";
 export const DISH_BODY = "M12 150 Q12 182 62 182 Q92 182 92 150 Z";
+export const BURETTE_BODY = "M45 14 H75 L73 20 V300 H47 V20 Z";
 
-/** 玻璃主体的外轮廓（三层质感里的第一层，1.4px 淡墨）。 */
+/** 玻璃主体的外轮廓（drag-pour 的 `.glass` 那一条 path）。 */
 export function bodyPath(kind: SceneVesselKind): string {
   switch (kind) {
     case "flask":
@@ -41,20 +50,130 @@ export function bodyPath(kind: SceneVesselKind): string {
     case "dish":
       return DISH_BODY;
     default:
-      return "M45 14 H75 L73 20 V300 H47 V20 Z";
+      return BURETTE_BODY;
   }
 }
 
+/* ---------------- 瓶口椭圆（2.5D 的关键：口是椭圆的，能看见「里面」） ---------------- */
+
+export type VesselMouth = { cx: number; y: number; rx: number; ry: number };
+
+export function mouthOf(kind: SceneVesselKind): VesselMouth {
+  switch (kind) {
+    case "flask":
+      return { cx: 80, y: 16, rx: 17, ry: 3.2 };
+    case "beaker":
+      return { cx: 80, y: 41, rx: 54, ry: 7 };
+    case "volumetric":
+      return { cx: 80, y: 18, rx: 12, ry: 2.6 };
+    case "tube":
+      return { cx: 20, y: 10, rx: 13, ry: 3.4 };
+    case "dish":
+      return { cx: 52, y: 150, rx: 40, ry: 6 };
+    default:
+      return { cx: 60, y: 14, rx: 15, ry: 3 };
+  }
+}
+
+/** 瓶口中心 y（局部坐标）—— 倾倒时瓶口要对准这里。 */
 export const MOUTH_Y: Readonly<Record<SceneVesselKind, number>> = {
   flask: 16,
   beaker: 41,
   tube: 10,
-  volumetric: 10,
+  volumetric: 18,
   dish: 150,
   burette: 14,
 };
 
-/** 液面高度（液体路径的上沿），液面高光椭圆画在这条线上。 */
+/** 中轴 x（局部坐标）。 */
+export const CENTER_X: Readonly<Record<SceneVesselKind, number>> = {
+  flask: 80,
+  beaker: 80,
+  volumetric: 80,
+  tube: 20,
+  dish: 52,
+  burette: 60,
+};
+
+/** 器底 y（局部坐标）。 */
+export const BASE_Y: Readonly<Record<SceneVesselKind, number>> = {
+  flask: 184,
+  beaker: 188,
+  volumetric: 188,
+  tube: 194,
+  dish: 182,
+  burette: 344,
+};
+
+/* ---------------- 液体：矩形 + 液面 ---------------- */
+
+export type LiquidBox = {
+  /** 液体矩形左沿 / 宽度（比玻璃窄 3 单位左右 = 壁厚） */
+  x: number;
+  w: number;
+  /** 器内底（矩形下沿） */
+  bottom: number;
+  /** level = 1 时液面能到的最高处（不进瓶颈） */
+  topMax: number;
+  cx: number;
+};
+
+const LIQUID_BOX: Readonly<Record<SceneVesselKind, LiquidBox>> = {
+  flask: { x: 36, w: 88, bottom: 182, topMax: 74, cx: 80 },
+  beaker: { x: 29, w: 102, bottom: 186, topMax: 52, cx: 80 },
+  volumetric: { x: 34, w: 92, bottom: 184, topMax: 80, cx: 80 },
+  tube: { x: 9, w: 22, bottom: 192, topMax: 34, cx: 20 },
+  dish: { x: 14, w: 76, bottom: 178, topMax: 156, cx: 52 },
+  burette: { x: 47, w: 26, bottom: 298, topMax: 20, cx: 60 },
+};
+
+export function liquidBox(kind: SceneVesselKind): LiquidBox {
+  return LIQUID_BOX[kind];
+}
+
+/** level（0..1）→ 液面上沿 y（局部坐标）。level ≤ 0 时等于器内底 = 没有液体。 */
+export function levelTopY(box: LiquidBox, level: number): number {
+  const clamped = Math.max(0, Math.min(1, level));
+  const span = box.bottom - box.topMax;
+  return Number((box.bottom - span * clamped).toFixed(2));
+}
+
+/**
+ * 液面椭圆半径：液面越靠下，瓶身越宽（锥形瓶 / 容量瓶的收腰）；
+ * 分段的折线近似足够——液面椭圆只有几个像素高，形状画准了也看不出来。
+ */
+export function surfaceRxAt(kind: SceneVesselKind, y: number): number {
+  switch (kind) {
+    case "flask": {
+      const half = 17 + (31 / 116) * (y - 62);
+      return Number(Math.min(47, Math.max(17, half)).toFixed(1));
+    }
+    case "volumetric": {
+      if (y <= 72) return 12;
+      const grow = 12 + (40 / 62) * (y - 72);
+      const taper = y > 150 ? Math.max(20, 52 - (y - 150) * 0.45) : 52;
+      return Number(Math.min(taper, grow).toFixed(1));
+    }
+    case "tube":
+      return 11;
+    case "dish":
+      return 38;
+    case "burette":
+      return 13;
+    default:
+      return 51;
+  }
+}
+
+/** 液面椭圆的扁度（局部坐标，未乘 scale）。 */
+export const SURFACE_RY = 4.4;
+
+/** 默认液位（有液体但没数过体积时）：看得出「里面有水」，又不至于像满瓶。 */
+export function defaultLevel(hasLiquid: boolean): number {
+  return hasLiquid ? 0.38 : 0;
+}
+
+/** 满液位口径的液面上沿（动作层锚点用，含义不变）。 */
 export function liquidSurfaceY(kind: SceneVesselKind): number {
   switch (kind) {
     case "flask":
@@ -72,46 +191,23 @@ export function liquidSurfaceY(kind: SceneVesselKind): number {
   }
 }
 
-/** 液面椭圆半径（细椭圆：宽而扁）。 */
+/** 液面椭圆半径（满液位口径，旧接口保留）。 */
 export function liquidSurfaceRx(kind: SceneVesselKind): number {
-  switch (kind) {
-    case "flask":
-      return 45;
-    case "beaker":
-      return 51;
-    case "volumetric":
-      return 44;
-    case "tube":
-      return 11;
-    default:
-      return 40;
-  }
+  return surfaceRxAt(kind, liquidSurfaceY(kind));
 }
 
-/** 液体填充路径（与既有 scene 一致，改一处即可）。 */
-export function liquidPath(kind: SceneVesselKind): string {
-  if (kind === "flask") {
-    const y = 116;
-    const left = 63 - (31 / 116) * (y - 62);
-    const right = 97 + (31 / 116) * (y - 62);
-    return `M${left.toFixed(1)} ${y} H${right.toFixed(1)} L126 178 Q128 184 122 184 H38 Q32 184 34 178 Z`;
-  }
-  if (kind === "beaker") return "M29 114 H131 V186 H29 Z";
-  if (kind === "volumetric") return "M36 140 H124 Q128 160 112 174 Q96 188 80 188 Q64 188 48 174 Q32 160 36 140 Z";
-  if (kind === "dish") return "M12 158 H92 V178 Q92 182 62 182 Q12 182 12 178 Z";
-  return "M9 102 H31 V188 Q31 194 20 194 Q9 194 9 188 Z";
-}
+/* ---------------- 装饰细节 ---------------- */
 
 /**
- * 底部弧形反光（第三层）：贴着器底的一条弧线，用淡墨 + 器皿主色，
- * 让玻璃"坐"在台面上，而不是飘着。
+ * 底部弧形反光：贴着器底的一条弧线，让玻璃「坐」在台面上。
+ * 只留一条淡墨线，不再叠主色（drag-pour 的器底就是一条淡弧）。
  */
 export function reflectArc(kind: SceneVesselKind): string {
   switch (kind) {
     case "flask":
       return "M42 174 Q80 186 118 174";
     case "beaker":
-      return "M30 182 Q80 190 130 182";
+      return "M32 180 Q80 188 128 180";
     case "volumetric":
       return "M42 176 Q80 188 118 176";
     case "tube":
@@ -126,10 +222,7 @@ export function reflectArc(kind: SceneVesselKind): string {
 /** 滴定管刻度（11 条，既有口径）。 */
 export const BURETTE_TICKS = 11;
 
-/**
- * 器皿高光（左上一条细线）：纸白底上不用白色，改为 --exp-accent 低透明度，
- * 让每台实验的器皿都带上自己那一档主色。
- */
+/** 器皿高光：左上一条淡墨细线（drag-pour 的 `.shine`，纸白底不用白色高光）。 */
 export function sheenPath(kind: SceneVesselKind): string {
   switch (kind) {
     case "flask":

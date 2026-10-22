@@ -1,109 +1,72 @@
-/* 器皿 2.5D 质感（亮场）—— 颜色只走 token / 器皿主色，不写新字面色。 */
+/* 器皿 2.5D（画法照 preview/drag-pour.html）—— 颜色只走 token，不写新字面色。 */
 
 .art {
   pointer-events: none;
 }
 
-/* 第二层：内侧 1px 亮边（宽描边打底，被外轮廓压住外侧后剩约 1px 器皿色） */
-.innerEdge {
-  stroke: color-mix(in srgb, var(--exp-accent) 42%, transparent);
-  fill: none;
-}
-
-/* 第一层：外轮廓淡墨描边 */
+/* 玻璃外轮廓 / 瓶口椭圆：线宽由 vectorEffect 恒定，这里只管颜色 */
 .outline {
   fill: none;
-  stroke: var(--glass-outline);
+  stroke: var(--canvas-glass-line);
 }
 
 .glassShape {
-  fill: var(--glass-fill-deep);
-  stroke: var(--glass-outline);
+  fill: var(--canvas-glass-fill);
+  stroke: var(--canvas-glass-line);
 }
 
-/* 器皿高光：左上一条细线，用器皿主色（纸白底不用白色高光） */
-.sheen {
-  stroke: color-mix(in srgb, var(--exp-accent) 24%, transparent);
+/* 内壁那圈厚度：宽描边被主体轮廓裁在内侧，形成一圈淡墨虚光 */
+.innerEdge {
+  stroke: var(--canvas-glass-inner);
   fill: none;
-  stroke-width: 1.6;
+}
+
+/* 左壁高光：纸白底上是一条淡墨细线，不是白高光 */
+.sheen {
+  stroke: var(--canvas-shine);
+  fill: none;
+  stroke-width: 2.6;
   stroke-linecap: round;
 }
 
-/* 第三层：底部弧形反光（淡墨 + 器皿主色） */
+/* 器底反光弧 */
 .reflect {
-  stroke: color-mix(in srgb, var(--exp-accent) 20%, var(--glass-reflect));
+  stroke: var(--canvas-glass-inner);
   fill: none;
+  stroke-width: 1.2;
+  stroke-linecap: round;
 }
 
 .graduation {
-  stroke: var(--glass-outline);
-  opacity: 0.78;
+  stroke: var(--canvas-graduation);
+  fill: var(--canvas-graduation);
+  opacity: 0.9;
+}
+
+.graduation text {
+  stroke: none;
+  font-family: var(--font-mono);
 }
 
 .capacity {
   fill: var(--ink-2);
-  opacity: 0.7;
+  opacity: 0.75;
   font-family: var(--font-mono);
   font-size: 12px;
 }
 
-/* ---------------- 液体 ---------------- */
-.liquid,
-.liquidThick {
-  transition: fill 600ms var(--ease-drawer);
-}
-
-.liquidThick {
-  stroke: var(--glass-outline);
-  stroke-opacity: 0.18;
-  stroke-width: 0.9;
-}
-
-/* 液面：细椭圆 + 微光晕（不铺白色高光） */
-.surface {
-  stroke: color-mix(in srgb, var(--exp-accent) 46%, transparent);
-  fill: none;
-}
-
-.surfaceGlow {
-  stroke: color-mix(in srgb, var(--exp-accent) 15%, transparent);
-  fill: none;
-}
-
-/* 常驻气泡：3~6 个，6~9s 一个周期，延迟错开（按组算 1 个环境循环） */
-.bubble {
-  fill: color-mix(in srgb, var(--exp-accent) 34%, transparent);
-  opacity: 0;
-  animation: bubbleRise var(--bubble-dur, 7200ms) linear infinite;
-  animation-delay: var(--bubble-delay, 0ms);
-}
-
-@keyframes bubbleRise {
-  0% {
-    opacity: 0;
-    transform: translateY(0);
-  }
-  14% {
-    opacity: 0.55;
-  }
-  76% {
-    opacity: 0.38;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(calc(-1 * var(--bubble-rise, 54px)));
-  }
+/* ---------------- 液体 ----------------
+   倒液时的「液面上升」= 整组按底边 scaleY（0 → 1），由 bench-pour 用 WAAPI 播。
+   React 只渲染最终液位，所以中途任何一次重渲染都不会把液面拽回去。 */
+.liquidGroup {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transition: none;
+  will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .liquid,
-  .liquidThick {
-    transition: none;
-  }
-
-  .bubble {
-    animation: none;
-    opacity: 0.32;
-    transform: none;
+  .liquidGroup {
+    will-change: auto;
   }
 }

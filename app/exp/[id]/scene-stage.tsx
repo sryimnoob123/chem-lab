@@ -10,6 +10,7 @@ import { getSceneReagent } from "@/lib/scene/reagents";
 import { DEFAULT_RACK_IDS, rackIdsFor } from "./rack-ids";
 import { expectedVesselId, wrongVesselLine } from "./vessel-targets";
 import { BenchScene, type SceneFeedback } from "@/components/exp/scene/bench-scene";
+import { ReagentBottle } from "@/components/exp/scene/reagent-bottle";
 import type { SceneToolId } from "@/lib/scene/tools";
 import { ComputeBench } from "@/components/exp/scene/compute-bench";
 import { PourFX } from "@/components/exp/scene/pour";
@@ -467,8 +468,9 @@ export function SceneStage({
       return;
     }
     // 试剂落到器皿上 = 真的加进去（原来只发一条 info，什么也没发生 —— 用户 2026-10-22）
+    // 先演完「瓶子飞过去 → 倾斜 → 液柱落进器皿 → 液面上升」，再让工作台 dispatch。
     if (onUseReagent) {
-      onUseReagent(id, hit);
+      flow.pourThen(id, hit, point, () => onUseReagent(id, hit));
       return;
     }
     flow.drop(id, point);
@@ -671,12 +673,12 @@ export function SceneStage({
                   }
                 }}
               >
-                <span className={styles.reagentBottle} aria-hidden="true">
-                  <span
-                    className={styles.reagentFill}
-                    style={{ background: reagent.colorHex }}
-                  />
-                </span>
+                <ReagentBottle
+                  className={styles.reagentBottle}
+                  color={reagent.colorHex}
+                  width={22}
+                  height={32}
+                />
                 <span className={styles.reagentText}>
                   <span className={styles.reagentName}>{reagent.name}</span>
                   <span className={styles.reagentFormula}>{reagent.formula}</span>
@@ -792,6 +794,7 @@ export function SceneStage({
                 onReveal={() => undefined}
                 action={sceneAction}
                 onActionDone={finishAction}
+                pour={flow.pour}
                 layoutKey={layoutKey}
               />
             </div>
@@ -821,8 +824,15 @@ export function SceneStage({
             data-hint-highlight={hintHighlight ? "true" : "false"}
             data-demo-id="demo-scene-drop-flask"
             aria-label={isBenchScene ? "实验台：把选中的试剂放进来" : "锥形瓶：把选中的试剂放进来"}
-            onClick={() => {
-              if (selectedId) flow.tapTarget(selectedId);
+            onClick={(event) => {
+              if (!selectedId) return;
+              // 台面场景：点热区 = 让手里那瓶倒进指针位置下压着的那台器皿（和拖拽同一条链路）
+              if (isBenchScene) {
+                dropAt(selectedId, { x: event.clientX, y: event.clientY });
+                setSelectedId(null);
+                return;
+              }
+              flow.tapTarget(selectedId);
             }}
             onDragOver={(event) => {
               event.preventDefault();
@@ -845,7 +855,9 @@ export function SceneStage({
         {children}
       </div>
 
-      <PourFX pour={flow.pour} onDone={flow.clearPour} />
+      {/* 台面场景的倾倒画在 SVG 里（bench-scene → bench-pour）：坐标是器皿几何算出来的，
+          瓶口对准容器的口。滴定场景（exp09）仍用 HTML 层的 PourFX。 */}
+      {isBenchScene ? null : <PourFX pour={flow.pour} onDone={flow.clearPour} />}
 
       {/* 动作播放中：给一个明确的「跳过」（默认必须播完，但用户可以催） */}
       {sceneAction ? (
@@ -872,12 +884,12 @@ export function SceneStage({
           aria-hidden="true"
           data-demo-id="demo-drag-ghost"
         >
-          <span className={styles.dragGhostBottle}>
-            <span
-              className={styles.dragGhostFill}
-              style={{ background: getSceneReagent(ghostReagent)?.colorHex ?? "#DCE9F2" }}
-            />
-          </span>
+          <ReagentBottle
+            className={styles.dragGhostBottle}
+            color={getSceneReagent(ghostReagent)?.colorHex ?? "#DCE9F2"}
+            width={28}
+            height={40}
+          />
           <span className={styles.dragGhostName}>
             {getSceneReagent(ghostReagent)?.name ?? ""}
           </span>

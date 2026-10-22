@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
 import { DROPPABLE_KINDS, SCENE_VESSELS } from "@/lib/scene/palette";
 import { describeContents } from "@/lib/scene/reagents";
 import type { SceneFx, SceneOutcome } from "@/lib/scene/types";
@@ -9,7 +9,10 @@ import styles from "./scene.module.css";
 import { VesselArt } from "./vessel-art";
 import { ToolTray } from "./tool-tray";
 import { Sink } from "./sink";
+import { BenchPour, type BenchPourIntent } from "./bench-pour";
+import { hasLiquidContent } from "./vessels/glass-vessel";
 import { ActionLayer, type SceneAction } from "./actions/action-layer";
+
 import type { SceneToolId } from "@/lib/scene/tools";
 import { BENCH } from "./bench-layout";
 import {
@@ -96,6 +99,9 @@ type BenchSceneProps = {
   action?: SceneAction | null;
   /** 动作播完（或跳过）后回调，工作台这时才 dispatch。 */
   onActionDone?: () => void;
+  /** 一次倾倒（画在本 SVG 里，坐标就是 viewBox 单位）。 */
+  pour?: BenchPourIntent | null;
+
   /** 步骤/实验重置：器皿回到基准布局（用户 2026-10-22：拖完要能回去）。 */
   layoutKey?: number;
   /** 事故特效层（父组件绝对定位挂在舞台内）。 */
@@ -131,11 +137,19 @@ export function BenchScene({
   onReveal,
   action = null,
   onActionDone,
+  pour = null,
   layoutKey,
   children,
 }: BenchSceneProps) {
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [pressedId, setPressedId] = useState<string | null>(null);
+  /**
+   * 器皿液位（0..1）：倒一次涨一格，涨上去不回落（用户 2026-10-22：液面要随倒液上升）。
+   * 只记「倒了几次」，液位由次数算出来 —— 这样倾倒动画的起止液位在整段动画里都是常量，
+   * 中途任何一次重渲染都不会把液面拽回去，也不需要在渲染期读写 ref。
+   */
+  const [pours, setPours] = useState<Record<string, number>>({});
+
   /**
    * 器皿可以被拖动（用户 2026-10-22：烧杯试管拖不动）。
    * 只存「相对原位」的偏移，坐标仍在 SCENE_VESSELS 里当基准，拖动不改数据源。
@@ -158,6 +172,38 @@ export function BenchScene({
   useEffect(() => {
     offsetsRef.current = offsets;
   }, [offsets]);
+
+  /** 这台器皿的底液位：内容物里本来就有液体 → 0.38，只有固体 → 0（只有器底粉末层）。 */
+  const baseLevelOf = (id: string) => (hasLiquidContent(contents[id] ?? []) ? 0.38 : 0);
+  /** 倒过 n 次之后的液位（0.22 一格，上限 0.88，不超过器皿的 topMax）。 */
+  const levelAfter = (id: string, n: number) => Math.min(0.88, Number((baseLevelOf(id) + 0.22 * n).toFixed(3)));
+
+  /**
+   * 这一次倾倒的液位计划：从「已经倒过 n 次」涨到「n+1 次」。
+   * 只按 pour.key 算一次并记住 —— 动画落地时计数会 +1，如果这里跟着重算，
+   * 动画会以为还要再涨一格（实测：液面先跳到两格，再掉回一格）。
+   */
+  const pourVesselId: string | null = pour?.vesselId ?? null;
+  const pourKey = pour?.key ?? 0;
+  const pourPlan = useMemo(() => {
+    if (!pourVesselId) return null;
+    const from = levelAfter(pourVesselId, pours[pourVesselId] ?? 0);
+    return { id: pourVesselId, from, to: Math.min(0.88, Number((from + 0.22).toFixed(3))) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 故意只看这次倾倒：pours 落地后变化不该让计划重算
+  }, [pourKey, pourVesselId]);
+
+  const pourFrom = pourPlan?.from ?? 0;
+  const pourTo = pourPlan?.to ?? 0;
+
+  /**
+   * 渲染用的液位：倾倒期间**立刻**按「倒完」的高度画，再由 bench-pour 用 scaleY
+   * 从旧液位涨上来。动画落地后 onLanded 才把计数补上，液位在这一刻正好等于已经在画的高度。
+   */
+  const levelOf = (id: string) => (pourPlan?.id === id ? pourPlan.to : levelAfter(id, pours[id] ?? 0));
+  /** 动画落地：这一台「倒过一次」记账 +1（液位 = levelAfter(次数)，正好等于计划里的 to）。 */
+  const landPour = useCallback((id: string) => {
+    setPours((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+  }, []);
 
   /**
    * 器皿归位（用户 2026-10-22："松手之后还是要让它能回去，不然很容易出问题"）。
@@ -507,37 +553,35 @@ export function BenchScene({
           }}
         >
           {/* 底座 + 立柱 */}
-          <rect x="0" y="108" width="132" height="18" rx="3" fill="#4A5768" opacity="0.85" />
-          <rect x="56" y="44" width="20" height="64" fill="#4A5768" opacity="0.7" />
+          <rect x="0" y="108" width="132" height="18" rx="3" fill="var(--canvas-glass-fill)" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
+          <rect x="56" y="44" width="20" height="64" fill="var(--canvas-glass-fill)" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
           {/* 玻璃防风罩 + 称量盘（静态外形） */}
-          <rect x="18" y="2" width="96" height="44" rx="2" fill="#fff" fillOpacity="0.5" stroke="#16202C" strokeOpacity="0.7" strokeWidth="1.4" />
-          <line x1="66" y1="2" x2="66" y2="12" stroke="#16202C" strokeOpacity="0.45" strokeWidth="1" />
+          <rect x="18" y="2" width="96" height="44" rx="2" fill="none" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
+          <line x1="66" y1="2" x2="66" y2="12" stroke="var(--canvas-glass-line)" strokeWidth={1.2} />
           <ellipse
             data-balance-pan
             cx="66"
             cy="34"
             rx="30"
             ry="6"
-            fill="#DCE9F2"
-            fillOpacity="0.7"
-            stroke="#16202C"
-            strokeOpacity="0.45"
-            strokeWidth="1"
+            fill="var(--canvas-glass-fill)"
+            stroke="var(--canvas-glass-line)"
+            strokeWidth="1.2"
           />
           {/* 显示屏 */}
-          <rect x="20" y="56" width="92" height="26" rx="2" fill="#16202C" opacity="0.85" />
+          <rect x="20" y="56" width="92" height="26" rx="2" fill="none" stroke="var(--canvas-glass-line)" strokeWidth={1.2} />
           <text
             data-balance-readout
             x="66"
             y="74"
             textAnchor="middle"
-            fill="#8FE3CF"
-            fontSize="19"
+            fill="var(--ink)"
+            fontSize="18"
             fontFamily="ui-monospace, monospace"
           >
             0.0000 g
           </text>
-          <text x="66" y="100" textAnchor="middle" fill="#4A5768" fontSize="14">
+          <text x="66" y="100" textAnchor="middle" fill="var(--ink-2)" fontSize="12">
             分析天平 · 0.1 mg
           </text>
         </g>
@@ -547,15 +591,15 @@ export function BenchScene({
         {instrument === "ph" ? (
         <g data-demo-id="demo-scene-instrument-ph" aria-hidden="true" transform="translate(792 196)">
           {/* 电极杆 + 球泡 */}
-          <line x1="34" y1="70" x2="34" y2="4" stroke="#4A5768" strokeOpacity="0.75" strokeWidth="2.5" />
-          <circle cx="34" cy="4" r="4.5" fill="#81D4FA" fillOpacity="0.85" stroke="#16202C" strokeOpacity="0.6" strokeWidth="1" />
+          <line x1="34" y1="70" x2="34" y2="4" stroke="var(--canvas-glass-line)" strokeWidth={2.2} />
+          <circle cx="34" cy="4" r="4.5" fill="var(--canvas-glass-fill)" stroke="var(--canvas-glass-line)" strokeWidth={1.4} />
           {/* 主机 */}
-          <rect x="8" y="70" width="124" height="70" rx="4" fill="#fff" fillOpacity="0.9" stroke="#16202C" strokeOpacity="0.7" strokeWidth="1.4" />
-          <rect x="18" y="80" width="104" height="30" rx="2" fill="#16202C" opacity="0.85" />
-          <text x="70" y="101" textAnchor="middle" fill="#8FE3CF" fontSize="20" fontFamily="ui-monospace, monospace">
+          <rect x="8" y="70" width="124" height="70" rx="4" fill="none" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
+          <rect x="18" y="80" width="104" height="30" rx="2" fill="none" stroke="var(--canvas-glass-line)" strokeWidth={1.2} />
+          <text x="70" y="101" textAnchor="middle" fill="var(--ink)" fontSize="18" fontFamily="var(--font-mono)">
             7.00
           </text>
-          <text x="70" y="128" textAnchor="middle" fill="#4A5768" fontSize="14">
+          <text x="70" y="128" textAnchor="middle" fill="var(--ink-2)" fontSize="12">
             pH 计 · 0.01
           </text>
         </g>
@@ -709,6 +753,7 @@ export function BenchScene({
                     contents={contents[vessel.id] ?? []}
                     outcome={activeOutcome}
                     fxKey={reaction?.key ?? 0}
+                    level={levelOf(vessel.id)}
                   />
                 </g>
               </g>
@@ -722,14 +767,8 @@ export function BenchScene({
                 >
                   {vessel.label}
                 </text>
-                <text
-                  x={vessel.x + vessel.w / 2}
-                  y={(LABEL_POSITION[vessel.id] ?? { y: 356, contentY: 368 }).contentY}
-                  textAnchor="middle"
-                  className={styles.vesselContents}
-                >
-                  {describeContents(contents[vessel.id] ?? [])}
-                </text>
+                {/* 器皿下面只留名字：空 / 配方这类状态用液面、颜色、粉末层表达，不再写一行小字
+                    （AGENTS §9.1 / §9.9）。读屏仍然从 aria-label 拿到「内含…」。 */}
               </g>
               {/* 成功光环 / 拒收红环（一次性，动画结束由 onAnimationEnd 清掉） */}
               {fb === "success" ? (
@@ -836,6 +875,16 @@ export function BenchScene({
             </g>
           );
         })}
+
+        {/* 倾倒：瓶子 / 液柱 / 涟漪全部画在这个 SVG 里，坐标就是器皿几何算出来的 */}
+        <BenchPour
+          pour={pour}
+          fromLevel={pourFrom}
+          toLevel={pourTo}
+          svgRef={svgRef}
+          offsets={offsets}
+          onLanded={landPour}
+        />
 
         {/* 动作层：洗涤 / 搅拌 / 转移 / 称量等动作统一在这里播（可复用底层） */}
         <ActionLayer action={action} offsets={offsets} onDone={onActionDone ?? noop} />
