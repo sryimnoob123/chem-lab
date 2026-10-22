@@ -62,17 +62,22 @@ export default async function ExperimentPage({ params, searchParams }: Experimen
   const demoVessel = typeof query.vessel === "string" ? query.vessel : undefined;
   const demo = query.demo === "1" || query.demo === "true";
   const playDemo = query.play === "demo";
+  /** 教师端「课堂演示」：/exp/exp01?teach=1 —— 演示引导自动开、指尖替学生把每一步做掉，不落库 */
+  const teach = query.teach === "1" || query.teach === "true";
+  /** 学生端「演示」入口也可以直接用 ?coach=1 打开 */
+  const coach = teach || query.coach === "1" || query.coach === "true";
 
   return (
-    <BopbpsGate expId={id} bypass={demo || playDemo || force}>
-      {/* data-exp 给整页提供 --exp-accent（器皿内侧亮边 / 液面 / 任务看板强调色）。
+    <BopbpsGate expId={id} bypass={demo || playDemo || teach || force}>
+      {/* data-exp 给整页提供 --exp-accent（器皿内侧亮边 / 液面 / 演示光带强调色）。
           display:contents 不产生盒子，不影响既有布局与热区。 */}
       <div data-exp={id} style={{ display: "contents" }}>
         <Workbench
           expId={id}
           demoReagent={demo ? demoReagent : undefined}
           demoVessel={demo ? demoVessel : undefined}
-          demoReadonly={playDemo}
+          demoReadonly={playDemo || teach}
+          coachAuto={coach}
         />
       </div>
     </BopbpsGate>

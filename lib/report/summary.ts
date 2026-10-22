@@ -45,7 +45,7 @@ export function buildRunSummary(input: RunSummaryInput): RunSummary {
     tone === "great"
       ? "流程完整、读数规范，几乎没有多余动作。"
       : tone === "needs-work"
-        ? "步骤有遗漏，建议对照左上角看板再走一遍。"
+        ? "步骤有遗漏，建议对照实验步骤再走一遍。"
         : "基本完成，个别步骤还可以更稳。";
 
   const facts: RunSummary["facts"] = [

@@ -13,10 +13,10 @@ describe("实验总结", () => {
     expect(s.tone).toBe("ok");
   });
 
-  it("分低 → needs-work，提示对照看板", () => {
+  it("分低 → needs-work，提示对照实验步骤", () => {
     const s = buildRunSummary({ total: 52, incidentCount: 0, coveredSteps: 7, totalSteps: 7, minutes: 30 });
     expect(s.tone).toBe("needs-work");
-    expect(s.headline).toContain("看板");
+    expect(s.headline).toContain("对照实验步骤");
   });
 
   it("步骤覆盖不足一半也判 needs-work", () => {

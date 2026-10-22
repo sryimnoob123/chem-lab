@@ -87,6 +87,9 @@ export default async function TeacherOverviewPage({ searchParams }: { searchPara
           数据更新于 <span className="mono">{formatClock(new Date())}</span>
         </span>
         <TeacherExportButton />
+        <Link className="btn btn--primary" href="/exp/exp01?teach=1" data-demo-id="teacher-demo-open">
+          课堂演示
+        </Link>
         <a className="btn btn--secondary" href="/teacher">
           刷新
         </a>

@@ -180,7 +180,7 @@ export function resolveDrop(
       lines: [
         `本步不该这样加${reagentName(reagentId)}`,
         why ? clip(firstClause(why), 40) : "这个做法有后果，换个做法",
-        fix ? clip(firstClause(fix), 40) : "按「建议动作」做，别自己加量",
+        fix ? clip(firstClause(fix), 40) : "按高亮的目标做，别自己加量",
       ],
     };
   }
@@ -214,7 +214,7 @@ export function resolveDrop(
     lines: [
       `本步不加试剂`,
       `这一步要做的是「${verb}」，不是投试剂`,
-      suggestedName ? `按「建议动作」做：${suggestedName}` : "按「建议动作」那一步做",
+      suggestedName ? `按高亮的目标做：${suggestedName}` : "按高亮的地方做",
     ],
     hint: suggestedName || undefined,
   };

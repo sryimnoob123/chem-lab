@@ -5,26 +5,21 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { getDefinition } from "@/lib/engine";
 import { TOOLS_BY_EXPERIMENT, getSceneTool, type SceneToolId } from "@/lib/scene/tools";
-import { getSceneVessel } from "@/lib/scene/palette";
+import { getSceneVessel, SCENE_VESSELS } from "@/lib/scene/palette";
 import { getSceneReagent } from "@/lib/scene/reagents";
 import type { Action, FxKey as EngineFxKey, IncidentLevel } from "@/lib/engine.types";
 import { FxByKey } from "@/components/exp/scene/fx";
 import { ScoreOdometer, StreakPill } from "@/components/exp/feedback";
-import { MissionBoard, type MissionParam } from "@/components/exp/guide/mission-board";
 import { TrapPanel } from "@/components/exp/guide/trap-panel";
-import { stepVerb } from "@/components/exp/guide/step-verb";
-import { NextActionCard } from "@/components/exp/guide/NextActionCard";
 import { ResultBar } from "@/components/exp/guide/ResultBar";
+import { DemoCoach } from "@/components/exp/guide/demo-coach";
+import { buildCoachPlan, type CoachPlan } from "@/components/exp/guide/coach-plan";
 import {
-  ACTION_VERB,
   clip,
   guideName,
   nextLine,
   resultText,
-  whyLine,
-  type StepDotState,
 } from "@/components/exp/guide/copy";
-import { missionGoal, missionGuide, missionProgress } from "@/components/exp/guide/mission-copy";
 import { canPourAction, nextReagentId, resolveDrop, type DropReject } from "@/components/exp/guide/drop-resolve";
 
 /**
@@ -58,6 +53,7 @@ import { exp01StepHow } from "@/experiments/exp01/step-how";
 import { rackIdsFor } from "./rack-ids";
 import { SceneStage } from "./scene-stage";
 import { teacherNote } from "./teacher-notes";
+import { expectedVesselId } from "./vessel-targets";
 import {
   createWorkbenchState,
   currentStep,
@@ -71,7 +67,7 @@ import styles from "./workbench.module.css";
 const REJECT_FALLBACK = [
   "这一步投不进去",
   "当前步骤不接受这个试剂",
-  "按上方「建议动作」再试一次",
+  "对着亮起的那台器皿再拖一次",
 ] as const;
 
 /**
@@ -268,15 +264,20 @@ export function Workbench({
   demoReagent,
   demoVessel,
   demoReadonly = false,
+  coachAuto = false,
 }: {
   expId: string;
   demoReagent?: string;
   demoVessel?: string;
   demoReadonly?: boolean;
+  /** 演示引导自动开、并且替学生把每一步做掉（教师端「课堂演示」） */
+  coachAuto?: boolean;
 }) {
   const router = useRouter();
   const [ui, dispatch] = useReducer(workbenchReducer, expId, createWorkbenchState);
   const [sceneCaption, setSceneCaption] = useState<string | null>(null);
+  /** 演示引导开关（学生端点「演示」，或 ?coach=1 / 教师端 ?teach=1 自动开） */
+  const [coachOpen, setCoachOpen] = useState(coachAuto);
   /** 手上拿着的台面工具；非空时点器皿 = 使用它（水龙头冲、毛刷洗…） */
   const [activeTool, setActiveTool] = useState<SceneToolId | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -341,6 +342,8 @@ export function Workbench({
   /** 本步该动的器皿（SceneStage 报上来）+ 上一次真正操作过的器皿（转移动作的源）。 */
   const cueVesselRef = useRef<string | null>(null);
   const lastVesselRef = useRef<string | null>(null);
+  /** 演示引导当前这一步的路线（给「演示代做」读，避免闭包里拿到上一帧的 plan）。 */
+  const coachPlanRef = useRef<CoachPlan | null>(null);
 
   const sendAction = useCallback(
     (
@@ -642,30 +645,9 @@ export function Workbench({
     step.choices.find((item) => item.role === "correct") ??
     step.choices[0];
   const suggestedKey = suggested ? step.choices.indexOf(suggested) + 1 : undefined;
-  const otherChoices = step.choices.filter((item) => item.choiceId !== suggested?.choiceId);
 
-  /** 场景内流程指引：下一步该用哪瓶试剂 —— 试剂架微亮 + 锥形瓶脉冲，和看板指向同一动作。 */
+  /** 场景内流程指引：下一步该用哪瓶试剂 —— 试剂架微亮 + 锥形瓶脉冲。 */
   const nextReagent = nextReagentId(step, performed, rackIdsFor(expId));
-
-  // 每步用时：时间线显示 "✓ 第 1 步 · 洗涤 12s"。时间只在 effect/事件里读，渲染期不调 Date.now()
-  const stepClockRef = useRef<{ index: number; start: number } | null>(null);
-  const [stepSeconds, setStepSeconds] = useState<Record<number, number>>({});
-  useEffect(() => {
-    const index = ui.exp.stepIndex;
-    const clock = stepClockRef.current;
-    if (!clock) {
-      stepClockRef.current = { index, start: Date.now() };
-      return;
-    }
-    if (clock.index === index) return;
-    const finished = clock.index;
-    const spent = Math.max(1, Math.round((Date.now() - clock.start) / 1000));
-    stepClockRef.current = { index, start: Date.now() };
-    const timer = window.setTimeout(() => {
-      setStepSeconds((previous) => ({ ...previous, [finished]: spent }));
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [ui.exp.stepIndex]);
 
   // 两段式反馈：先出结果�?~600ms），再把「下一步」滑出来；phase 由点击事件驱�?
   const [guidePhase, setGuidePhase] = useState<"result" | "next">("next");
@@ -718,9 +700,6 @@ export function Workbench({
           // 让第一次进来的人不用猜（用户 2026-10-22）。
           `现在该做：${clip(guideName(suggested.label), 14)}`);
   const resultLine2 = ui.event ? resultCopy.line2 : undefined;
-  const dots: StepDotState[] = stepStates.map((state) =>
-    state === "done" ? "done" : state === "current" ? "current" : "todo",
-  );
   const nextText =
     ui.event && !ui.exp.done && guidePhase === "next" && suggested
       ? nextLine(suggested.type, suggested.label)
@@ -746,41 +725,32 @@ export function Workbench({
   const observedRatio = /浓度比[^=]*=\s*([\d.]+)/.exec(observedTexts)?.[1] ?? null;
 
   /**
-   * 看板折叠抽屉里的参数格（减法）：右栏只留大字读数 + 允许误差，
-   * 其余（已用体积 / 指示剂 / 观察记录 / 违规事故）都收进看板折叠区。
-   */
-  const boardParams: MissionParam[] = isExp09
-    ? [
-        { label: "已用体积 V", value: reading.toFixed(2), unit: "mL", note: "初读数 0.00 起算" },
-        { label: "指示剂颜色", value: indicator, note: "酚酞 2 滴 / 第 05 步加入" },
-      ]
-    : [
-        {
-          label: "观察记录",
-          value: String(ui.exp.observations.length),
-          unit: "次",
-          note: "按 doc 记录",
-        },
-        {
-          label: "违规 / 事故",
-          value: String(ui.exp.violations.length + ui.exp.incidents.length),
-          unit: "次",
-          note: "已记录",
-          tone: hasAbnormality ? "warn" : "normal",
-        },
-      ];
-  /**
-   * 第四行：本步指引；取过提示就换成那条提示（同屏只留一条）。
-   *
-   * 卡片删掉后，任务看板是唯一的「下一步做什么」出口 —— 所以这一行必须**整句说完**：
-   * 动作名不再裁到 18 字，操作方式优先用「按步骤写的完整流程」（exp01 的 step-how），
-   * 没有才退回按动作原语的通用说明（2026-10-22 用户：指引被截断，看完仍不知道该做什么）。
+   * 演示引导（唯一一套「下一步做什么」）：把建议动作翻译成一条路线，
+   * 光带 + 指尖 + 气泡照着走一遍。旧任务看板已下线（用户 2026-10-22）。
    */
   const stepHow = expId === "exp01" ? exp01StepHow(step.index) : undefined;
-  const guideSource =
-    ui.hint?.text ??
-    (suggested ? `${guideName(suggested.label, 60)}：${stepHow ?? ACTION_HOW[suggested.type] ?? ""}` : undefined);
-  const boardGuide = missionGuide(guideSource, step.title, 260);
+  /** 场景高亮的器皿（纯函数算，不在渲染期读 ref —— React Compiler 的 rules/refs 会判错） */
+  const cueVesselId = expectedVesselId(step, performed, SCENE_VESSELS);
+  const coachPlan: CoachPlan | null =
+    coachOpen && !ui.exp.done && suggested
+      ? buildCoachPlan({
+          key: `${expId}:${step.index}:${suggested.choiceId}:${performed.size}`,
+          type: suggested.type,
+          label: suggested.label,
+          vessels: SCENE_VESSELS,
+          reagentId: nextReagent,
+          reagentName: nextReagent ? getSceneReagent(nextReagent)?.name : null,
+          cueVesselId,
+          stepHow,
+          tools: (TOOLS_BY_EXPERIMENT[expId] ?? [])
+            .map((id) => getSceneTool(id))
+            .filter((tool): tool is NonNullable<typeof tool> => Boolean(tool))
+            .map((tool) => ({ id: tool.id, label: tool.label })),
+        })
+      : null;
+  useEffect(() => {
+    coachPlanRef.current = coachPlan;
+  }, [coachPlan]);
 
   /**
    * 提示三级阶梯（用�?2026-10-22 口径）：
@@ -921,6 +891,23 @@ export function Workbench({
     [withAction, choose],
   );
 
+  /**
+   * 演示代做（教师端 / 自动引导）：用学生手动操作同一条链路把这一步做掉 ——
+   * 先播场景动作（洗 / 搅拌 / 转移 / 倒液），播完再判分推进，不直接跳状态。
+   */
+  const performForCoach = useCallback(() => {
+    if (ui.exp.done) return;
+    if (!suggested || actionBusyRef.current) return;
+    const vesselId = coachPlanRef.current?.vesselId ?? cueVesselRef.current ?? lastVesselRef.current;
+    const tool = (coachPlanRef.current?.toolId ?? null) as SceneToolId | null;
+    const from = lastVesselRef.current;
+    if (vesselId) lastVesselRef.current = vesselId;
+    chooseWithAction(
+      suggested.choiceId,
+      actionForChoice(suggested, { vesselId, tool, from }),
+    );
+  }, [chooseWithAction, suggested, ui.exp.done, demoReadonly]);
+
   /** 拖拽三段式 · 段 3a：倒入动画播完后才走到这里 —— 这时才推进步骤。 */
   const handleDropAccepted = useCallback(
     (choiceId: string, inputMode: "drag" | "click" | "event") => choose(choiceId, inputMode),
@@ -951,6 +938,8 @@ export function Workbench({
     // UI 档次 1/2/3 → 引擎 HintLevel 0/1/2；演示只读模式不落库。
     const tier = hintTierFor(hintUsedInStep(ui, ui.exp.stepIndex));
     dispatch({ type: "hint" });
+    // 提示是引导系统的一部分：取到提示就把引导打开，气泡第二行换成这条提示
+    setCoachOpen(true);
     const activeRunId = runIdRef.current;
     if (!tier || !activeRunId || demoReadonly) return;
     void fetch(`/api/runs/${activeRunId}/events`, {
@@ -1077,12 +1066,18 @@ export function Workbench({
 
   useEffect(() => {
     // 放进 setTimeout(0)：Next 16 的 react-hooks/set-state-in-effect 不允许在 effect 里同步 setState
+    // 「跳过实验」只在演示 / 课堂里出现（学生正常流程看不到，AGENTS 9.4 的顾虑）。
     const timer = window.setTimeout(() => {
       const params = new URLSearchParams(window.location.search);
-      setSkipVisible(params.get("demo") === "1" || params.get("play") === "demo");
+      setSkipVisible(
+        coachAuto ||
+          params.get("demo") === "1" ||
+          params.get("play") === "demo" ||
+          params.get("teach") === "1",
+      );
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [coachAuto]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1301,47 +1296,28 @@ export function Workbench({
           <h1 className={styles.srOnly} id="stage-title">
             实验 {pad2(Number(expNo) || 0)} 操作台，第 {stepNo} 步 {step.title}
           </h1>
-          {/* 左上角任务看板：一句话目标 + 进度点 + 当前一步一句指引；细则全在折叠区 */}
-          <div className={styles.missionSlot}>
-            <MissionBoard
-              expNo={expNo.padStart(2, "0")}
-              title={definition.title}
-              goal={missionGoal(expId, definition.title, total)}
-              progress={missionProgress(stepNo, total, stepVerb(step.title, suggested.type, ACTION_VERB))}
-              criterion={step.judge.criterion}
-              guide={boardGuide}
-              dots={dots}
-              steps={definition.steps.map((item) => ({ index: item.index, title: item.title }))}
-              seconds={stepSeconds}
-              onPeek={(index) =>
-                setSceneCaption(`第 ${index + 1} 步：${definition.steps[index]?.title ?? ""}`)
-              }
-              params={boardParams}
-              hint={{
-                level: hintLevel,
-                active: Boolean(ui.hint),
-                deduct: Boolean(ui.hint?.shouldDeduct),
-                used: hintUsed,
-                max: MAX_HINTS_PER_STEP,
-                exhausted: hintExhausted,
-                nextDeduct: hintDeductPoints,
-                onAsk: askHint,
-              }}
-              note={{ label: "老师会说", text: teacherNote(expId, step.index) }}
-              done={ui.exp.done}
-            />
+          {/*
+            唯一一套引导：演示按钮 → 光带 + 虚拟手指 + 气泡（DemoCoach）。
+            旧任务看板（mission-board.*）2026-10-22 下线，两套指引并存会互相打架。
+          */}
+          <div className={styles.coachSlot}>
+            <button
+              type="button"
+              className={`${styles.coachButton} ix`}
+              data-demo-id="demo-coach-open"
+              data-open={coachOpen ? "true" : "false"}
+              aria-pressed={coachOpen}
+              onClick={() => setCoachOpen((open) => !open)}
+              title="跟着光带走一遍：这一步该拿什么、拖到哪"
+            >
+              <span className={styles.coachDot} aria-hidden="true" />
+              {coachOpen ? "关闭演示" : "演示"}
+            </button>
           </div>
 
           {/*
-            新手教学：只在「真正的第 1 步」弹。
-            之前无条件挂载，刷新恢复到第 7 步时也会弹那 4 张「怎么拖、怎么看结果」的卡，
-            内容说的是开头的事、和当前步对不上（用户 2026-10-22 报）。
-            进度 > 0 说明已经上手过了，直接给看板/建议动作卡的动态引导。
-          */}
-          {/*
-            旧「第 1/4 步 · 开始前先看一眼」弹窗已删（用户 2026-10-22）：
-            它每次进实验都盖住半个台面；它讲的「怎么拖、怎么看结果」现在由场景目标环 +
-            底部「现在该做」+ 动作播报承担。同一个页面只留一套「告诉我该干什么」的机制。
+            旧「第 1/4 步 · 开始前先看一眼」弹窗与新手教学卡都已删（用户 2026-10-22）：
+            同一个页面只留一套「告诉我该干什么」的机制 —— 现在是演示引导 + 底部「现在该做」。
           */}
           <SceneStage
             expId={expId}
@@ -1566,7 +1542,7 @@ export function Workbench({
                 lines: [
                   hazard.feedback.title,
                   hazard.feedback.why ?? "这一步不该这么做。",
-                  hazard.feedback.correct ?? "按左侧看板给的正确做法重来一遍。",
+                  hazard.feedback.correct ?? "按场景里亮起的目标再来一遍。",
                 ],
                 fx: hazard.fx ? FX_MAP[hazard.fx] : undefined,
               });
@@ -1795,6 +1771,18 @@ export function Workbench({
         onDismiss={() => setSystemError(null)}
         demoId="demo-error-toast"
       />
+
+      {/* 演示引导：光带 + 虚拟手指 + 气泡；教师端自动开并且替学生把这一步做掉 */}
+      {coachOpen ? (
+        <DemoCoach
+          key={coachPlan?.key ?? "coach-off"}
+          plan={coachPlan}
+          auto={coachAuto}
+          onPerform={performForCoach}
+          onClose={() => setCoachOpen(false)}
+          hint={ui.hint?.text ?? null}
+        />
+      ) : null}
 
       {/* 一键演示的虚拟光标：只在 auto 模式出现，pointer-events 永远 none */}
       {mode === "auto" ? <GhostCursor state={ghost} /> : null}

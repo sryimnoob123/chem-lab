@@ -1,0 +1,227 @@
+/* DemoCoach —— 光带 + 虚拟手指 + 气泡（演示引导）。
+   纸白底上的淡墨 + 实验主色，不压暗台面、不遮全屏。 */
+
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+  pointer-events: none;
+}
+
+.ribbon {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.ribbonGlow {
+  fill: none;
+  stroke: var(--exp-accent);
+  stroke-width: 16;
+  stroke-linecap: round;
+  opacity: 0.1;
+  filter: blur(6px);
+}
+
+.ribbonCore {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* 起点：一个淡淡的呼吸圈，告诉学生「手先放这」 */
+.halo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border: 1.5px solid var(--exp-accent);
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: coach-breathe 1.8s ease-in-out infinite;
+}
+
+/* 终点：落点圈 + 松手涟漪 */
+.target {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  border: 1px dashed color-mix(in srgb, var(--exp-accent) 60%, transparent);
+  border-radius: 50%;
+  opacity: 0.55;
+}
+
+.targetRipple {
+  position: absolute;
+  inset: -6px;
+  border: 2px solid var(--exp-accent);
+  border-radius: 50%;
+  animation: coach-ripple 900ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* 虚拟手指：指尖一点实心 + 一圈柔光，像真的按在屏幕上 */
+.finger {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  will-change: transform;
+}
+
+.tip {
+  position: absolute;
+  left: -9px;
+  top: -9px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--exp-accent);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.9),
+    0 6px 16px -6px rgba(31, 42, 55, 0.55);
+  transform: scale(1);
+  transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.finger[data-pressed="true"] .tip {
+  transform: scale(0.82);
+}
+
+/* 气泡：柔和、不硬边，两行（动作 + 手怎么动） */
+.bubble {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 13px;
+  border: 1px solid var(--bench-line);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: 0 14px 34px -22px rgba(31, 42, 55, 0.5);
+  animation: coach-in 240ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.bubbleAction {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.bubbleHow {
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* 控制条：贴舞台左下，和台面同一张纸，不和结果条抢位置 */
+.controls {
+  position: absolute;
+  left: 16px;
+  bottom: 56px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px 5px 10px;
+  border: 1px solid var(--bench-line);
+  border-radius: 999px;
+  background: rgba(246, 247, 245, 0.94);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.controlNote {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.control {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--bench-line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    transform 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 140ms ease-out;
+}
+
+.control:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .control:hover {
+    background: var(--paper-2);
+  }
+}
+
+/* 让位：用户自己动手时，光带退到背景，手指与气泡收起 */
+.layer[data-quiet="true"] .ribbon {
+  opacity: 0.18;
+}
+
+.layer[data-quiet="true"] .finger,
+.layer[data-quiet="true"] .halo {
+  opacity: 0;
+}
+
+.layer[data-paused="true"] .halo {
+  animation-play-state: paused;
+}
+
+@keyframes coach-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.75;
+  }
+}
+
+@keyframes coach-ripple {
+  from {
+    transform: scale(0.5);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes coach-in {
+  from {
+    transform: translateY(4px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .halo,
+  .targetRipple,
+  .bubble {
+    animation: none;
+  }
+  .tip {
+    transition: none;
+  }
+}

@@ -302,14 +302,53 @@
   overflow: hidden;
 }
 
-/* 左上角任务看板：和左侧试剂架同一列，压在场景之上但不进实验台中心 */
-.missionSlot {
+/* 左上角演示入口：贴台面边的一张「演示」小按钮，不和场景抢注意力 */
+.coachSlot {
   position: absolute;
   left: 16px;
   top: 14px;
   z-index: 12;
-  width: 244px;
-  max-width: calc(100% - 32px);
+}
+
+.coachButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--bench-line);
+  border-radius: 999px;
+  background: rgba(246, 247, 245, 0.94);
+  color: var(--ink);
+  font-size: 12px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition:
+    transform 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 140ms ease-out;
+}
+
+.coachButton:active {
+  transform: scale(0.97);
+}
+
+.coachButton[data-open="true"] {
+  border-color: var(--exp-accent);
+  color: var(--exp-accent);
+}
+
+.coachDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--exp-accent);
+  box-shadow: 0 0 0 3px rgba(31, 111, 120, 0.14);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .coachButton:hover {
+    border-color: var(--exp-accent);
+  }
 }
 
 .sceneTodo {
@@ -778,7 +817,13 @@
   transform: translate(-50%, -50%) rotate(-5deg) scale(1.04);
   box-shadow: 0 10px 22px rgba(22, 32, 44, 0.22);
   opacity: 0.96;
-  will-change: left, top;
+}
+
+/* 影子常驻渲染、默认隐藏：拖动开始只切 data-on。
+   旧的 `will-change: left, top` 已删 —— 我们从不动 left/top，那等于让浏览器
+   每帧为布局属性做优化（本来就是反的）。 */
+.dragGhost[data-on="false"] {
+  display: none;
 }
 
 .dragGhostBottle {
