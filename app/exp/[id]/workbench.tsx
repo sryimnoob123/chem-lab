@@ -26,6 +26,13 @@ import {
 } from "@/components/exp/guide/copy";
 import { missionGoal, missionGuide, missionProgress } from "@/components/exp/guide/mission-copy";
 import { canPourAction, nextReagentId, resolveDrop, type DropReject } from "@/components/exp/guide/drop-resolve";
+
+/**
+ * 这一步的建议动作是不是「把试剂加进去」（拖一瓶试剂过来就能完成的那种）。
+ * 称量/调平/读数这类步骤不在这里 —— 否则倒一瓶 Na₂CO₃ 过去就把天平校准做完了。
+ * 拖拽要播倒液动画（scene-stage 的 reagentDrop）与 onUseReagent 的判定共用这一份。
+ */
+const REAGENT_TYPES: ReadonlySet<string> = new Set(["dilute", "dissolve", "addDrops", "titrate", "heat", "evaporate", "transfer"]);
 import type { SceneAction, SceneActionApi } from "@/components/exp/scene/actions/action-layer";
 import { actionForChoice } from "@/components/exp/scene/actions/for-choice";
 import {
@@ -1364,6 +1371,8 @@ export function Workbench({
             performed={performed}
             suggestedName={guideName(suggested.label)}
             suggestedType={suggested.type}
+            // 「这一步是不是在加试剂」：决定拖一瓶过去要不要播倒液动画（见 scene-stage dropAt）
+            reagentDrop={Boolean(suggested && REAGENT_TYPES.has(suggested.type))}
             onCueVessel={(id) => {
               cueVesselRef.current = id;
             }}
@@ -1397,16 +1406,7 @@ export function Workbench({
                * 但只对「真的是加试剂」的步骤生效：称量/调平/读数这类步骤，倒一瓶 Na₂CO₃ 过去
                * 就把天平校准做完了，等于跳过操作（2026-10-22 实测：第 2 步被一瓶试剂顶过去）。
                */
-              const REAGENT_TYPES: readonly string[] = [
-                "dilute",
-                "dissolve",
-                "addDrops",
-                "titrate",
-                "heat",
-                "evaporate",
-                "transfer",
-              ];
-              if (suggested && REAGENT_TYPES.includes(suggested.type)) {
+              if (suggested && REAGENT_TYPES.has(suggested.type)) {
                 choose(suggested.choiceId);
                 setSceneCaption(`${reagentName}加入${vesselLabel}：这一步做完了`);
                 return;

@@ -177,6 +177,7 @@ export function SceneStage({
   performed,
   suggestedName,
   suggestedType,
+  reagentDrop = true,
   children,
 }: {
   expId?: string;
@@ -233,6 +234,12 @@ export function SceneStage({
   performed?: ReadonlySet<string>;
   /** 当前建议动作的名字（点错地方时用它说「这一步是 XXX」）。 */
   suggestedName?: string;
+  /**
+   * 这一步的建议动作是不是「把试剂加进去」（workbench 按 REAGENT_TYPES 判）。
+   * 只有 true 才播倒液动画 —— 否则倒一瓶硫酸进去也会演得跟成功一样，
+   * 然后才说「这一步用不上」，自相矛盾。
+   */
+  reagentDrop?: boolean;
   children?: ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -470,7 +477,9 @@ export function SceneStage({
     // 试剂落到器皿上 = 真的加进去（原来只发一条 info，什么也没发生 —— 用户 2026-10-22）
     // 先演完「瓶子飞过去 → 倾斜 → 液柱落进器皿 → 液面上升」，再让工作台 dispatch。
     if (onUseReagent) {
-      flow.pourThen(id, hit, point, () => onUseReagent(id, hit));
+      // 这一步确实是"加试剂" → 先演倒液再判分；否则直接交给工作台说一句为什么
+      if (reagentDrop) flow.pourThen(id, hit, point, () => onUseReagent(id, hit));
+      else onUseReagent(id, hit);
       return;
     }
     flow.drop(id, point);
