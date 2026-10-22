@@ -1,0 +1,214 @@
+{
+  "01-home@1366x768": {
+    "name": "首页",
+    "route": "/",
+    "errors": [],
+    "docScrollWidth": 1366,
+    "vw": 1366,
+    "fontHist": {
+      "14px/400": 16,
+      "14px/500": 7,
+      "12px/400": 10,
+      "53.3px/700": 1,
+      "12px/500": 1,
+      "20px/400": 1
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "02-login@1366x768": {
+    "name": "登录",
+    "route": "/login",
+    "errors": [],
+    "docScrollWidth": 1366,
+    "vw": 1366,
+    "fontHist": {
+      "12px/400": 8,
+      "14px/500": 2,
+      "14px/400": 3
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "03-exp01@1366x768": {
+    "name": "exp01 实验台",
+    "route": "/exp/exp01?force=1",
+    "errors": [],
+    "docScrollWidth": 1366,
+    "vw": 1366,
+    "fontHist": {
+      "12px/400": 58,
+      "12px/500": 2,
+      "14px/400": 38,
+      "12px/600": 1
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "04-plan@1366x768": {
+    "name": "拼接实验",
+    "route": "/plan",
+    "errors": [],
+    "docScrollWidth": 1366,
+    "vw": 1366,
+    "fontHist": {
+      "12px/400": 6,
+      "20px/400": 1,
+      "14px/400": 25,
+      "20px/500": 4,
+      "14px/500": 4
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "05-report@1366x768": {
+    "name": "报告页",
+    "route": "/exp/exp01/report",
+    "errors": [],
+    "docScrollWidth": 1366,
+    "vw": 1366,
+    "fontHist": {
+      "12px/400": 70,
+      "32px/500": 1,
+      "64px/400": 1,
+      "20px/500": 5,
+      "14px/400": 41,
+      "20px/700": 3,
+      "14px/500": 3,
+      "14px/700": 12,
+      "32px/400": 3
+    },
+    "longParas": [
+      {
+        "tag": "li",
+        "lines": 4,
+        "chars": 59,
+        "text": "第 01 步 · 仪器认领、洗涤与干燥你的选择：把烧杯／试管拖进洗涤槽正确做法：拖进洗涤槽：冲洗→刷洗→淋洗→倒置晾干"
+      }
+    ],
+    "overflows": []
+  },
+  "06-teacher@1366x768": {
+    "name": "教师端",
+    "route": "/teacher",
+    "errors": [],
+    "docScrollWidth": 1366,
+    "vw": 1366,
+    "fontHist": {
+      "12px/400": 132,
+      "14px/400": 464,
+      "14px/500": 46,
+      "12px/500": 2,
+      "32px/500": 1,
+      "32px/400": 5
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "01-home@1920x1080": {
+    "name": "首页",
+    "route": "/",
+    "errors": [],
+    "docScrollWidth": 1920,
+    "vw": 1920,
+    "fontHist": {
+      "14px/400": 16,
+      "14px/500": 7,
+      "12px/400": 10,
+      "56px/700": 1,
+      "12px/500": 1,
+      "20px/400": 1
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "02-login@1920x1080": {
+    "name": "登录",
+    "route": "/login",
+    "errors": [],
+    "docScrollWidth": 1920,
+    "vw": 1920,
+    "fontHist": {
+      "12px/400": 8,
+      "14px/500": 2,
+      "14px/400": 3
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "03-exp01@1920x1080": {
+    "name": "exp01 实验台",
+    "route": "/exp/exp01?force=1",
+    "errors": [],
+    "docScrollWidth": 1920,
+    "vw": 1920,
+    "fontHist": {
+      "12px/400": 58,
+      "12px/500": 2,
+      "14px/400": 38,
+      "12px/600": 1
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "04-plan@1920x1080": {
+    "name": "拼接实验",
+    "route": "/plan",
+    "errors": [],
+    "docScrollWidth": 1920,
+    "vw": 1920,
+    "fontHist": {
+      "12px/400": 6,
+      "20px/400": 1,
+      "14px/400": 25,
+      "20px/500": 4,
+      "14px/500": 4
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "05-report@1920x1080": {
+    "name": "报告页",
+    "route": "/exp/exp01/report",
+    "errors": [],
+    "docScrollWidth": 1920,
+    "vw": 1920,
+    "fontHist": {
+      "12px/400": 70,
+      "32px/500": 1,
+      "64px/400": 1,
+      "20px/500": 5,
+      "14px/400": 41,
+      "20px/700": 3,
+      "14px/500": 3,
+      "14px/700": 12,
+      "32px/400": 3
+    },
+    "longParas": [
+      {
+        "tag": "li",
+        "lines": 4,
+        "chars": 59,
+        "text": "第 01 步 · 仪器认领、洗涤与干燥你的选择：把烧杯／试管拖进洗涤槽正确做法：拖进洗涤槽：冲洗→刷洗→淋洗→倒置晾干"
+      }
+    ],
+    "overflows": []
+  },
+  "06-teacher@1920x1080": {
+    "name": "教师端",
+    "route": "/teacher",
+    "errors": [],
+    "docScrollWidth": 1920,
+    "vw": 1920,
+    "fontHist": {
+      "12px/400": 132,
+      "14px/400": 464,
+      "14px/500": 46,
+      "12px/500": 2,
+      "32px/500": 1,
+      "32px/400": 5
+    },
+    "longParas": [],
+    "overflows": []
+  }
+}

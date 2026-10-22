@@ -1,0 +1,234 @@
+{
+  "01-home@1366x768": {
+    "name": "首页",
+    "route": "/",
+    "errors": [],
+    "docScrollWidth": 1366,
+    "vw": 1366,
+    "fontHist": {
+      "14px/400": 16,
+      "16px/700": 1,
+      "11px/400": 2,
+      "53.3px/700": 1,
+      "13px/500": 1,
+      "12px/400": 8,
+      "16px/500": 1,
+      "14px/500": 5,
+      "13px/400": 1
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "02-login@1366x768": {
+    "name": "登录",
+    "route": "/login",
+    "errors": [],
+    "docScrollWidth": 1366,
+    "vw": 1366,
+    "fontHist": {
+      "13px/400": 2,
+      "14px/500": 1,
+      "14px/400": 3,
+      "12px/400": 6,
+      "15px/400": 1
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "03-exp01@1366x768": {
+    "name": "exp01 实验台",
+    "route": "/exp/exp01?force=1",
+    "errors": [],
+    "docScrollWidth": 1366,
+    "vw": 1366,
+    "fontHist": {
+      "12px/400": 14,
+      "10px/400": 16,
+      "12px/500": 1,
+      "11px/400": 16,
+      "9px/400": 13,
+      "14px/400": 38,
+      "11px/500": 1,
+      "10px/600": 1
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "04-plan@1366x768": {
+    "name": "拼接实验",
+    "route": "/plan",
+    "errors": [],
+    "docScrollWidth": 1366,
+    "vw": 1366,
+    "fontHist": {
+      "12px/400": 18,
+      "20px/400": 1,
+      "13px/400": 9,
+      "14px/400": 8,
+      "18px/600": 4,
+      "12px/600": 4
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "05-report@1366x768": {
+    "name": "报告页",
+    "route": "/exp/exp01/report",
+    "errors": [],
+    "docScrollWidth": 1366,
+    "vw": 1366,
+    "fontHist": {
+      "11px/400": 11,
+      "9px/400": 35,
+      "32px/500": 1,
+      "10px/400": 32,
+      "64px/400": 1,
+      "17px/500": 1,
+      "14px/400": 17,
+      "20px/700": 3,
+      "14px/500": 3,
+      "13.5px/400": 24,
+      "13.5px/700": 12,
+      "13px/400": 1,
+      "12.5px/400": 1,
+      "12px/400": 3,
+      "28px/400": 3,
+      "12px/500": 4
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "06-teacher@1366x768": {
+    "name": "教师端",
+    "route": "/teacher",
+    "errors": [],
+    "docScrollWidth": 1366,
+    "vw": 1366,
+    "fontHist": {
+      "14px/400": 467,
+      "12px/400": 137,
+      "14px/500": 46,
+      "12px/500": 2,
+      "25px/500": 1,
+      "32px/400": 5
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "01-home@1920x1080": {
+    "name": "首页",
+    "route": "/",
+    "errors": [],
+    "docScrollWidth": 1920,
+    "vw": 1920,
+    "fontHist": {
+      "14px/400": 16,
+      "16px/700": 1,
+      "11px/400": 2,
+      "56px/700": 1,
+      "13px/500": 1,
+      "12px/400": 8,
+      "16px/500": 1,
+      "14px/500": 5,
+      "13px/400": 1
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "02-login@1920x1080": {
+    "name": "登录",
+    "route": "/login",
+    "errors": [],
+    "docScrollWidth": 1920,
+    "vw": 1920,
+    "fontHist": {
+      "13px/400": 2,
+      "14px/500": 1,
+      "14px/400": 3,
+      "12px/400": 6,
+      "15px/400": 1
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "03-exp01@1920x1080": {
+    "name": "exp01 实验台",
+    "route": "/exp/exp01?force=1",
+    "errors": [],
+    "docScrollWidth": 1920,
+    "vw": 1920,
+    "fontHist": {
+      "12px/400": 14,
+      "10px/400": 16,
+      "12px/500": 1,
+      "11px/400": 16,
+      "9px/400": 13,
+      "14px/400": 38,
+      "11px/500": 1,
+      "10px/600": 1
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "04-plan@1920x1080": {
+    "name": "拼接实验",
+    "route": "/plan",
+    "errors": [],
+    "docScrollWidth": 1920,
+    "vw": 1920,
+    "fontHist": {
+      "12px/400": 18,
+      "20px/400": 1,
+      "13px/400": 9,
+      "14px/400": 8,
+      "18px/600": 4,
+      "12px/600": 4
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "05-report@1920x1080": {
+    "name": "报告页",
+    "route": "/exp/exp01/report",
+    "errors": [],
+    "docScrollWidth": 1920,
+    "vw": 1920,
+    "fontHist": {
+      "11px/400": 11,
+      "9px/400": 35,
+      "32px/500": 1,
+      "10px/400": 32,
+      "64px/400": 1,
+      "17px/500": 1,
+      "14px/400": 17,
+      "20px/700": 3,
+      "14px/500": 3,
+      "13.5px/400": 24,
+      "13.5px/700": 12,
+      "13px/400": 1,
+      "12.5px/400": 1,
+      "12px/400": 3,
+      "28px/400": 3,
+      "12px/500": 4
+    },
+    "longParas": [],
+    "overflows": []
+  },
+  "06-teacher@1920x1080": {
+    "name": "教师端",
+    "route": "/teacher",
+    "errors": [],
+    "docScrollWidth": 1920,
+    "vw": 1920,
+    "fontHist": {
+      "14px/400": 467,
+      "12px/400": 137,
+      "14px/500": 46,
+      "12px/500": 2,
+      "25px/500": 1,
+      "32px/400": 5
+    },
+    "longParas": [],
+    "overflows": []
+  }
+}

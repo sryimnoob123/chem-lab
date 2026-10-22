@@ -23,28 +23,28 @@
 }
 
 .back {
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
   color: var(--river-700);
   text-decoration: none;
 }
 
 .title {
   margin: 0;
-  font-size: var(--text-20);
+  font-size: var(--type-title);
   letter-spacing: -0.01em;
   color: var(--ink);
 }
 
 .who {
   font-family: var(--font-mono);
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
   color: var(--ink-2);
 }
 
 .lead {
   max-width: 74ch;
   margin: 8px 0 16px;
-  font-size: var(--text-13);
+  font-size: var(--type-body);
   line-height: 1.7;
   color: var(--ink-2);
 }
@@ -69,14 +69,14 @@
 
 .panelTitle {
   margin: 0;
-  font-size: var(--text-14);
+  font-size: var(--type-body);
   font-weight: 600;
   color: var(--ink);
 }
 
 .mono {
   font-family: var(--font-mono);
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
   color: var(--ink-2);
 }
 
@@ -116,8 +116,8 @@
 }
 
 .scoreMax {
-  margin-left: 2px;
-  font-size: var(--text-16);
+  margin-left: var(--sp-1);
+  font-size: var(--type-meta);
   font-weight: 500;
   color: var(--ink-2);
 }
@@ -128,9 +128,9 @@
 
 .verdict {
   margin: 0;
-  font-size: var(--text-16);
-  font-weight: 600;
-  line-height: 1.4;
+  font-size: var(--type-title);
+  font-weight: 500;
+  line-height: var(--lh-tight);
   color: var(--ink);
 }
 
@@ -140,7 +140,7 @@
   flex-wrap: wrap;
   margin: 6px 0 0;
   font-family: var(--font-mono);
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
 }
 
 .countPass {
@@ -166,7 +166,7 @@
 
 .sideTitle {
   margin: 0 0 8px;
-  font-size: var(--text-13);
+  font-size: var(--type-body);
   font-weight: 600;
   color: var(--ink);
 }
@@ -181,12 +181,15 @@
 }
 
 .passChip {
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--jade-100);
-  color: color-mix(in srgb, var(--jade-600) 80%, var(--ink));
-  font-size: var(--text-12);
-  line-height: 1.4;
+  /* 24 条「哪里对」如果每条都刷成绿底，整块像一片色带，还要跟 100 分抢焦点。
+     2026-10-23：改成细线小标签，只有达成数量用文字说明（✓ 通过 24）。 */
+  padding: 2px var(--sp-2);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--type-meta);
+  line-height: 1.5;
 }
 
 .issueList {
@@ -217,7 +220,7 @@
 
 .issueText {
   margin: 0;
-  font-size: var(--text-13);
+  font-size: var(--type-body);
   font-weight: 600;
   line-height: 1.55;
   color: var(--ink);
@@ -235,14 +238,14 @@
 
 .issueHint {
   margin: 3px 0 0;
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
   line-height: 1.55;
   color: var(--ink-2);
 }
 
 .okLine {
   margin: 0;
-  font-size: var(--text-13);
+  font-size: var(--type-body);
   line-height: 1.6;
   color: color-mix(in srgb, var(--jade-600) 85%, var(--ink));
 }
@@ -260,7 +263,7 @@
   min-height: 44px;
   list-style: none;
   cursor: pointer;
-  font-size: var(--text-13);
+  font-size: var(--type-body);
   font-weight: 600;
   color: var(--river-700);
 }
@@ -332,7 +335,7 @@
   border-radius: 999px;
   background: var(--card, #fff);
   color: var(--ink-2);
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
   font-weight: 600;
   cursor: pointer;
   transition: transform 120ms var(--ease-out);
@@ -372,14 +375,14 @@
 
 .groupTitle {
   margin: 0;
-  font-size: var(--text-13);
+  font-size: var(--type-body);
   font-weight: 700;
   color: var(--ink);
 }
 
 .groupCount {
   font-family: var(--font-mono);
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
@@ -437,7 +440,7 @@
   border-radius: 10px;
   background: var(--card, #fff);
   color: var(--ink);
-  font-size: var(--text-13);
+  font-size: var(--type-body);
   font-weight: 600;
   pointer-events: none;
   will-change: transform;
@@ -450,7 +453,7 @@
 }
 
 .dragPieceSub {
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
   font-weight: 400;
   color: var(--ink-2);
   white-space: nowrap;
@@ -478,7 +481,7 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  font-size: var(--text-13);
+  font-size: var(--type-body);
   font-weight: 600;
   line-height: 1.45;
   color: var(--ink);
@@ -486,13 +489,13 @@
 
 .tick {
   flex: 0 0 auto;
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
   color: var(--jade-600);
 }
 
 .pieceSub {
   margin: 2px 0 0;
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
   line-height: 1.5;
   color: var(--ink-2);
 }
@@ -517,7 +520,7 @@
 .planIdx {
   min-width: 20px;
   font-family: var(--font-mono);
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
@@ -525,7 +528,7 @@
 .planTitle {
   flex: 1;
   min-width: 0;
-  font-size: var(--text-13);
+  font-size: var(--type-body);
   color: var(--ink);
 }
 
@@ -542,7 +545,7 @@
   border-radius: 6px;
   background: var(--card, #fff);
   color: var(--ink-2);
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
   cursor: pointer;
   transition: transform 120ms var(--ease-out);
 }
@@ -558,7 +561,7 @@
 
 .empty {
   margin: 12px 0 0;
-  font-size: var(--text-13);
+  font-size: var(--type-body);
   line-height: 1.6;
   color: var(--ink-2);
 }
@@ -573,7 +576,7 @@
 
 .saveMsg {
   align-self: center;
-  font-size: var(--text-12);
+  font-size: var(--type-meta);
   color: var(--ink-2);
 }
 
@@ -596,7 +599,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: var(--text-13);
+  font-size: var(--type-body);
   color: var(--ink-2);
 }
 
@@ -613,7 +616,7 @@
   background: var(--card, #fff);
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: var(--text-13);
+  font-size: var(--type-body);
 }
 
 .check {
@@ -623,7 +626,7 @@
 
 .remark {
   margin: 8px 0 0;
-  font-size: var(--text-13);
+  font-size: var(--type-body);
   line-height: 1.75;
   color: var(--ink-2);
   white-space: pre-line;
@@ -663,6 +666,10 @@
 }
 
 @media (max-width: 900px) {
+  .topicGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .cols {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -710,16 +717,18 @@
 }
 
 .topicGrid {
+  /* 2026-10-23：原来四张卡横排（每张约 260px），情境句与每条约束都被挤成两行，
+     一屏里堆了二十多行说明文字。改 2×2：卡宽翻倍，情境一行、约束一行。 */
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-4);
 }
 
 .topicCard {
   display: grid;
-  gap: 8px;
+  gap: var(--sp-2);
   align-content: start;
-  padding: 18px 18px 16px;
+  padding: var(--sp-4) var(--sp-5) var(--sp-4);
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--panel);
@@ -746,44 +755,52 @@
 
 .topicNo {
   font-family: ui-monospace, monospace;
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  color: var(--ink-3, #6b7a8c);
+  font-size: var(--type-meta);
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
 }
 
 .topicTitle {
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: var(--type-title);
+  font-weight: 500;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
   color: var(--ink);
 }
 
 .topicScene {
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--ink-2, #4a5768);
+  font-size: var(--type-body);
+  line-height: var(--lh-meta);
+  color: var(--ink-2);
+  /* 一行：超长省略，悬停看全；底下不再跟一段解释 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .topicGoal {
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--type-body);
+  line-height: var(--lh-meta);
   color: var(--exp-accent);
 }
 
 .topicRules {
   display: grid;
-  gap: 4px;
-  margin-top: 2px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--line);
+  gap: var(--sp-1);
+  margin-top: var(--sp-1);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--line);
 }
 
 .topicRule {
   position: relative;
-  padding-left: 14px;
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--ink-2, #4a5768);
+  padding-left: var(--sp-4);
+  font-size: var(--type-body);
+  line-height: var(--lh-meta);
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .topicRule::before {
@@ -798,9 +815,9 @@
 }
 
 .topicCta {
-  margin-top: 4px;
-  font-size: 12px;
-  font-weight: 600;
+  margin-top: var(--sp-1);
+  font-size: var(--type-body);
+  font-weight: 500;
   color: var(--exp-accent);
 }
 
@@ -829,14 +846,14 @@
 }
 
 .topicHeadTitle {
-  font-size: 15px;
+  font-size: var(--type-title);
   font-weight: 600;
   color: var(--ink);
 }
 
 .topicHeadGoal {
   flex: 1 1 320px;
-  font-size: 13px;
+  font-size: var(--type-body);
   line-height: 1.55;
   color: var(--ink-2, #4a5768);
 }
@@ -846,7 +863,7 @@
   border-radius: 999px;
   padding: 4px 12px;
   background: transparent;
-  font-size: 12px;
+  font-size: var(--type-meta);
   color: var(--ink-2, #4a5768);
   cursor: pointer;
   transition: border-color 160ms cubic-bezier(0.23, 1, 0.32, 1);
@@ -873,7 +890,7 @@
 .remarkPoint {
   position: relative;
   padding-left: 16px;
-  font-size: 13px;
+  font-size: var(--type-body);
   line-height: 1.6;
   color: var(--ink-2, #4a5768);
 }
@@ -906,7 +923,7 @@
 
 .remarkQuestion {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--type-body);
   line-height: 1.6;
   color: var(--exp-accent);
 }

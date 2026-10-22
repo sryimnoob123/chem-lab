@@ -15,7 +15,7 @@ import Link from "next/link";
 import { REFERENCE_PLAN, getPiece, type PieceKind, type PlanInput } from "@/lib/plan/pieces";
 import { validate } from "@/lib/plan/rules";
 import { offlineAssessment } from "@/lib/plan/assess";
-import { applyTopic, getTopic, type PlanTopic } from "@/lib/plan/topics";
+import { applyTopic, type PlanTopic } from "@/lib/plan/topics";
 import type { LlmAssessResult } from "@/lib/plan/llm-assess";
 import { PieceLibrary } from "./piece-library";
 import { ScorePanel } from "./score-panel";
@@ -164,7 +164,7 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
       {!topic ? null : (
         <>
       <p className={s.lead}>
-        素材按实验环节分三段：① HCl 标定 → ② 总碱度测定 → ③ 通用器材与记录。点块加入方案、上下调序，顶部随时给分。
+        点块加入方案，上下调序；顶部随时给分。
       </p>
 
       <ScorePanel report={report} pieceCount={pieces.length} />

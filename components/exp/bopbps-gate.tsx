@@ -43,14 +43,14 @@ const S = {
     boxShadow: "0 1px 2px rgba(18,35,59,.05), 0 8px 24px rgba(18,35,59,.05)",
   } as const,
   label: {
-    fontSize: 11,
+    fontSize: "var(--type-meta)",
     letterSpacing: ".14em",
     textTransform: "uppercase" as const,
     color: "#7b8a9c",
     fontWeight: 600,
   },
-  h3: { fontSize: 15, margin: "6px 0 8px", color: "#12233b" },
-  body: { fontSize: 14, lineHeight: 1.75, color: "#3d4d61", margin: 0 },
+  h3: { fontSize: "var(--type-title)", fontWeight: 500, margin: "8px 0 8px", color: "var(--ink)" },
+  body: { fontSize: "var(--type-body)", lineHeight: 1.65, color: "var(--ink-2)", margin: 0 },
 };
 
 function Question({
@@ -74,7 +74,7 @@ function Question({
           className="mono"
           style={{
             flex: "none",
-            fontSize: 11,
+            fontSize: "var(--type-meta)",
             color: "#1f5fa8",
             background: "#eaf2fb",
             border: "1px solid #d3e3f6",
@@ -106,7 +106,7 @@ function Question({
                 padding: "9px 12px",
                 borderRadius: 10,
                 cursor: "pointer",
-                fontSize: 13.5,
+                fontSize: "var(--type-body)",
                 lineHeight: 1.6,
                 color: "#22303f",
                 background: isAnswer ? "#e6f6ed" : isWrongPick ? "#fdeceb" : on ? "#eaf2fb" : "#fff",
@@ -126,7 +126,7 @@ function Question({
         })}
       </div>
       {revealed && picked && !isCorrectPick ? (
-        <p style={{ ...S.body, fontSize: 13, marginTop: 8, color: "#1a7f4b", whiteSpace: "pre-line" }}>
+        <p style={{ ...S.body, fontSize: "var(--type-meta)", marginTop: 8, color: "#1a7f4b", whiteSpace: "pre-line" }}>
           答案 {q.answer} · {q.explanation}
         </p>
       ) : null}
@@ -149,7 +149,7 @@ function LabPlaceholder() {
         textAlign: "center",
       }}
     >
-      <div style={{ fontSize: 13, fontWeight: 600, color: "#5b6b7d" }}>操作台已就位，答对上面的 3 道前测即解锁</div>
+      <div style={{ fontSize: "var(--type-meta)", fontWeight: 500, color: "var(--ink-2)" }}>操作台已就位，答对上面的 3 道前测即解锁</div>
       <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 12 }}>
         {[0, 1, 2, 3].map((i) => (
           <span
@@ -370,7 +370,7 @@ export function BopbpsGate({
         {/* 正文整体抬到背景之上：卡片保持白底，方格与线稿只从余白和卡片间隙透出来 */}
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={S.label}>BOPPPS · 预习段 · {expId.toUpperCase()}</div>
-          <h1 style={{ fontSize: 24, margin: "8px 0 16px", letterSpacing: "-.01em", color: "#12233b" }}>
+          <h1 style={{ fontSize: "var(--type-display)", fontWeight: 500, margin: "8px 0 16px", letterSpacing: "-.01em", color: "var(--ink)" }}>
             先过前测，再进操作台
           </h1>
 
@@ -396,7 +396,7 @@ export function BopbpsGate({
           <section style={S.card}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
               <div style={S.label}>P · 前测（{c.pre.length} 题，全对解锁下方操作台）</div>
-              <div className="mono" style={{ fontSize: 12, color: passed ? "#1a7f4b" : "#7b8a9c" }}>
+              <div className="mono" style={{ fontSize: "var(--type-meta)", color: passed ? "#1a7f4b" : "var(--ink-2)" }}>
                 {c.pre.filter((q) => picked[q.id]).length}/{c.pre.length}
               </div>
             </div>
@@ -433,7 +433,7 @@ export function BopbpsGate({
                   重新作答
                 </button>
               ) : null}
-              <span style={{ fontSize: 13, color: hint ? "#a33" : "#7b8a9c" }}>
+              <span style={{ fontSize: "var(--type-meta)", color: hint ? "#a33" : "var(--ink-2)" }}>
                 {revealed ? (passed ? "全部正确，操作台已在下方解锁" : "还有错题，看解析后改选再提交") : hint || "选完 3 题后提交"}
               </span>
             </div>

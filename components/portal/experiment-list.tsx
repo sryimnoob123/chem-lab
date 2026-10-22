@@ -34,32 +34,35 @@ export function ExperimentList() {
         }
         .exp-list__items {
           display: grid;
+          /* 5 条分两栏：按列填充（3 + 2），不让最后一行只剩一条挂在左半边 */
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          column-gap: 28px;
+          grid-auto-flow: column;
+          grid-template-rows: repeat(3, auto);
+          column-gap: var(--sp-6);
           margin: 0;
           padding: 0;
           list-style: none;
         }
         .exp-list__row {
           display: grid;
-          grid-template-columns: 30px minmax(0, 1fr);
+          grid-template-columns: var(--sp-6) minmax(0, 1fr);
           align-items: center;
-          gap: 10px;
-          min-height: 46px;
-          padding: 8px 8px 8px 0;
+          gap: var(--sp-2);
+          min-height: 48px;
+          padding: var(--sp-2) var(--sp-2) var(--sp-2) 0;
           border-top: 1px solid var(--line);
           transition: background-color 160ms var(--ease-out), transform 160ms var(--ease-out);
         }
         .exp-list__no {
-          font-size: 12px;
-          line-height: 1.5;
+          font-size: var(--type-meta);
+          line-height: var(--lh-meta);
           color: var(--river-700);
         }
         .exp-list__body { min-width: 0; }
         .exp-list__name {
           display: block;
-          font-size: 14px;
-          line-height: 1.35;
+          font-size: var(--type-body);
+          line-height: 1.4;
           font-weight: 500;
           color: var(--ink);
           transition: color 160ms var(--ease-out);
@@ -67,12 +70,12 @@ export function ExperimentList() {
         .exp-list__all {
           display: inline-flex;
           align-items: center;
-          gap: 4px;
-          margin-top: 14px;
+          gap: var(--sp-1);
+          margin-top: var(--sp-3);
           padding-bottom: 2px;
           border-bottom: 1px solid var(--line);
           color: var(--ink-2);
-          font-size: 12px;
+          font-size: var(--type-meta);
           transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
         }
         .exp-list__arrow {

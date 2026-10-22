@@ -23,18 +23,18 @@
 
 .back {
   color: var(--ink, #16202c);
-  font-size: 11px;
+  font-size: var(--type-meta);
   text-decoration: none;
 }
 
 .back:hover {
-  color: #fff;
+  color: var(--river-700);
 }
 
 .kicker {
   color: var(--ink, #16202c);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   letter-spacing: 0.08em;
   opacity: 0.6;
 }
@@ -43,7 +43,7 @@
   margin-left: auto;
   color: var(--ink, #16202c);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   opacity: 0.65;
 }
 
@@ -68,14 +68,14 @@
 
 .demoNotice strong {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--type-meta);
   font-weight: 500;
   letter-spacing: 0.02em;
 }
 
 .demoNotice span {
   color: var(--ink, #16202c);
-  font-size: 10px;
+  font-size: var(--type-meta);
   opacity: 0.75;
 }
 
@@ -92,7 +92,7 @@
   margin: 0;
   color: var(--ink-2, #4a5768);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   letter-spacing: 0.12em;
 }
 
@@ -113,22 +113,33 @@
   margin: 10px 0 0;
   color: var(--ink, #16202c);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--type-meta);
   opacity: 0.8;
 }
 
 .totalBox {
+  /* 2026-10-23：原来「总分」和 64px 数字同一基线，标签像掉在数字左边的碎片。
+     改成标签在上（辅助档）、数字在下，读数块自成一列，靠对齐区分层级。 */
   flex: 0 0 auto;
-  display: flex;
+  display: grid;
+  /* 标签独占一行，读数与单位在同一基线：86 / 100 */
+  grid-template-columns: auto auto;
   align-items: baseline;
-  gap: 5px;
-  padding-left: 20px;
+  justify-content: end;
+  column-gap: var(--sp-1);
+  row-gap: 2px;
+  padding-left: var(--sp-5);
   border-left: 1px solid var(--bench-line);
 }
 
 .totalLabel {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+
+.totalLabel {
   color: var(--ink, #16202c);
-  font-size: 10px;
+  font-size: var(--type-meta);
   opacity: 0.7;
 }
 
@@ -144,7 +155,7 @@
 .totalUnit {
   color: var(--ink, #16202c);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--type-meta);
   opacity: 0.6;
 }
 
@@ -169,23 +180,24 @@
 }
 
 .partLabel {
-  color: #fff;
-  font-size: 12px;
+  /* 亮场下原来的 #fff 等于白字白底（2026-10-23 修） */
+  color: var(--ink-2);
+  font-size: var(--type-meta);
 }
 
 .partWeight {
   color: var(--ink, #16202c);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   opacity: 0.55;
 }
 
 .partValue {
   display: block;
-  margin-top: 5px;
-  color: #fff;
+  margin-top: var(--sp-1);
+  color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 28px;
+  font-size: var(--type-display);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -193,7 +205,7 @@
 .partNote {
   margin: 7px 0 0;
   color: var(--ink, #16202c);
-  font-size: 9px;
+  font-size: var(--type-meta);
   line-height: 1.35;
   opacity: 0.6;
 }
@@ -241,15 +253,17 @@
 
 .panelHead h2 {
   margin: 0;
-  color: #fff;
-  font-size: 12px;
+  color: var(--ink);
+  font-size: var(--type-title);
   font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: var(--lh-tight);
 }
 
 .panelHead > span {
   color: var(--ink, #16202c);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   opacity: 0.55;
 }
 
@@ -275,12 +289,12 @@
 .code {
   color: var(--ink-2, #4a5768);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--type-meta);
 }
 
 .competencyName {
   color: var(--ink, #16202c);
-  font-size: 10px;
+  font-size: var(--type-meta);
   line-height: 1.3;
 }
 
@@ -289,9 +303,10 @@
 }
 
 .percent {
-  color: #fff;
+  /* 白字压白卡片＝看不见（2026-10-23 修） */
+  color: var(--ink-2);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--type-meta);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -324,7 +339,7 @@
   border: 1px solid var(--warn);
   color: var(--warn);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
 }
 
 .level[data-level="L3"],
@@ -335,14 +350,14 @@
 
 .incidentName {
   color: var(--ink, #16202c);
-  font-size: 10px;
+  font-size: var(--type-meta);
   line-height: 1.35;
 }
 
 .incidentStep {
   color: var(--ink, #16202c);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   opacity: 0.62;
   text-align: right;
 }
@@ -350,7 +365,7 @@
 .incidentDeduct {
   color: #a8321f;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--type-meta);
   text-align: right;
 }
 
@@ -376,14 +391,14 @@
 .timelineStep {
   color: var(--ink-2, #4a5768);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
 }
 
 .timelineAction {
   min-width: 0;
   overflow: hidden;
   color: var(--ink, #16202c);
-  font-size: 10px;
+  font-size: var(--type-meta);
   line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -405,7 +420,7 @@
 
 .timelineState {
   color: #a8321f;
-  font-size: 9px;
+  font-size: var(--type-meta);
   text-align: right;
 }
 
@@ -416,7 +431,7 @@
 .timelineTime {
   color: var(--ink, #16202c);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   opacity: 0.5;
   text-align: right;
 }
@@ -424,7 +439,7 @@
 .empty {
   margin: 12px 0 2px;
   color: var(--ink, #16202c);
-  font-size: 10px;
+  font-size: var(--type-meta);
   line-height: 1.5;
   opacity: 0.6;
 }
@@ -446,20 +461,20 @@
   padding: 0 12px;
   border: 1px solid var(--bench-line);
   color: var(--ink, #16202c);
-  font-size: 11px;
+  font-size: var(--type-meta);
   text-decoration: none;
 }
 
 .action:hover {
   border-color: var(--ink-2, #4a5768);
-  color: #fff;
+  color: var(--river-700);
 }
 
 .footerNote {
   margin-left: auto;
   color: var(--ink, #16202c);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   opacity: 0.45;
 }
 
@@ -580,18 +595,18 @@
   background: rgba(15, 123, 108, 0.08);
   color: #1a6d4f;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--type-meta);
   letter-spacing: 0.04em;
   line-height: 1.6;
 }
 .summaryKicker {
-  font-size: 11px;
+  font-size: var(--type-meta);
   letter-spacing: 0.08em;
   color: var(--ink-2);
 }
 .summaryLine {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--type-title);
   line-height: 1.45;
   font-weight: 500;
   color: var(--ink);
@@ -609,7 +624,7 @@
   gap: 3px;
 }
 .summaryFactLabel {
-  font-size: 11px;
+  font-size: var(--type-meta);
   color: var(--ink-2);
 }
 .summaryFactValue {
@@ -650,17 +665,17 @@
 .wrongStep {
   display: block;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--type-meta);
   color: var(--ink-2);
 }
 .wrongYou {
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: var(--type-body);
   color: #a8321f;
 }
 .wrongRight {
   margin: 2px 0 0;
-  font-size: 13px;
+  font-size: var(--type-body);
   color: #1a6d4f;
 }
 

@@ -51,7 +51,7 @@ export function LoginScreenStyles() {
         animation: login-in 280ms cubic-bezier(.23, 1, .32, 1) 60ms both;
       }
       .login-card .login__brand {
-        font-size: 13px;
+        font-size: var(--type-meta);
         gap: 9px;
         color: var(--ink-2);
         /* a11y：可点目标 ≥44px（桌面视觉不变，只多上下留白） */
@@ -97,14 +97,14 @@ export function LoginScreenStyles() {
         animation: row-in 180ms cubic-bezier(.23, 1, .32, 1) 240ms both;
       }
       .login-card .login__form label span {
-        font-size: 12px;
+        font-size: var(--type-meta);
         letter-spacing: .02em;
       }
       .login-card .login__form input {
         height: 48px;
         padding: 0 14px;
         border-radius: 8px;
-        font-size: 15px;
+        font-size: var(--type-body);
         background: #fbfcfd;
         transition:
           border-color 160ms cubic-bezier(.23, 1, .32, 1),
@@ -116,20 +116,34 @@ export function LoginScreenStyles() {
         box-shadow: 0 0 0 3px rgba(35, 48, 127, .12);
       }
       .login-card .login__submit {
-        height: 50px;
-        margin-top: 6px;
+        height: 48px;
+        margin-top: var(--sp-1);
         border-radius: 8px;
-        font-size: 15px;
+        font-size: var(--type-body);
+        font-weight: 500;
         background: var(--river-700);
         box-shadow: 0 10px 24px rgba(35, 48, 127, .2);
       }
       .login-card .login__submit:active { transform: scale(.97); }
       .login-card .login__foot {
-        margin-top: 24px;
-        font-size: 12px;
+        margin-top: var(--sp-5);
+        font-size: var(--type-meta);
         animation: row-in 120ms cubic-bezier(.23, 1, .32, 1) 300ms both;
       }
       /* a11y：可点目标 ≥44px（视觉仍是同一行，只把行高撑到 44） */
+      .login__foot-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--sp-2);
+        flex-wrap: nowrap;
+        white-space: nowrap;
+      }
+      .login__foot-end {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--sp-3);
+      }
       .login-card .login__foot a {
         display: inline-flex;
         align-items: center;

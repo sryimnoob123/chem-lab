@@ -37,7 +37,7 @@ export function PreLabDrawer({
           border: "1px solid #a9dcc0",
           background: "#e9f7ef",
           color: "#1a7f4b",
-          fontSize: 12.5,
+          fontSize: "var(--type-meta)",
           fontWeight: 700,
           cursor: "pointer",
           boxShadow: "0 2px 10px rgba(18,35,59,.16)",
@@ -66,8 +66,8 @@ export function PreLabDrawer({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <strong style={{ fontSize: 15 }}>预习回顾</strong>
-            <span className="mono" style={{ fontSize: 11.5, color: "#1a7f4b" }}>
+            <strong style={{ fontSize: "var(--type-title)", fontWeight: 500 }}>预习回顾</strong>
+            <span className="mono" style={{ fontSize: "var(--type-meta)", color: "#1a7f4b" }}>
               前测 {correct}/{curriculum.pre.length} 全对
             </span>
             <button
@@ -89,13 +89,13 @@ export function PreLabDrawer({
           </div>
 
           <section style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, letterSpacing: ".14em", color: "#7b8a9c", fontWeight: 600 }}>B · 导入</div>
-            <p style={{ fontSize: 13.5, lineHeight: 1.75, color: "#3d4d61", margin: "6px 0 0" }}>{curriculum.bridgeIn}</p>
+            <div style={{ fontSize: "var(--type-meta)", letterSpacing: ".08em", color: "var(--ink-2)", fontWeight: 500 }}>B · 导入</div>
+            <p style={{ fontSize: "var(--type-body)", lineHeight: 1.65, color: "var(--ink-2)", margin: "6px 0 0" }}>{curriculum.bridgeIn}</p>
           </section>
 
           <section style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, letterSpacing: ".14em", color: "#7b8a9c", fontWeight: 600 }}>O · 目标</div>
-            <ul style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 13.5, lineHeight: 1.7, color: "#3d4d61" }}>
+            <div style={{ fontSize: "var(--type-meta)", letterSpacing: ".08em", color: "var(--ink-2)", fontWeight: 500 }}>O · 目标</div>
+            <ul style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: "var(--type-body)", lineHeight: 1.65, color: "var(--ink-2)" }}>
               {curriculum.objectives.map((o) => (
                 <li key={o.competency} style={{ marginBottom: 4 }}>
                   <span className="mono" style={{ color: "#1f5fa8", fontWeight: 700, marginRight: 6 }}>
@@ -108,18 +108,18 @@ export function PreLabDrawer({
           </section>
 
           <section>
-            <div style={{ fontSize: 11, letterSpacing: ".14em", color: "#7b8a9c", fontWeight: 600 }}>P · 前测回顾</div>
+            <div style={{ fontSize: "var(--type-meta)", letterSpacing: ".08em", color: "var(--ink-2)", fontWeight: 500 }}>P · 前测回顾</div>
             <ol style={{ margin: "8px 0 0", paddingLeft: 0, listStyle: "none", display: "grid", gap: 10 }}>
               {curriculum.pre.map((q) => {
                 const mine = picked[q.id];
                 const ok = mine === q.answer;
                 return (
                   <li key={q.id} style={{ border: "1px solid #eef2f7", borderRadius: 10, padding: "9px 11px" }}>
-                    <div style={{ fontSize: 13, color: "#12233b", fontWeight: 500 }}>{q.stem}</div>
-                    <div style={{ fontSize: 12.5, marginTop: 6, color: ok ? "#1a7f4b" : "#9a6a12" }}>
+                    <div style={{ fontSize: "var(--type-body)", color: "var(--ink)", fontWeight: 500 }}>{q.stem}</div>
+                    <div style={{ fontSize: "var(--type-meta)", marginTop: 6, color: ok ? "#1a7f4b" : "#9a6a12" }}>
                       {ok ? "✓ 你的选择正确" : mine ? `你选了 ${mine}` : "未作答"} · 正确答案 {q.answer}
                     </div>
-                    <div style={{ fontSize: 12, color: "#5b6b7d", marginTop: 4, whiteSpace: "pre-line" }}>{q.explanation}</div>
+                    <div style={{ fontSize: "var(--type-meta)", color: "var(--ink-2)", marginTop: 4, whiteSpace: "pre-line" }}>{q.explanation}</div>
                   </li>
                 );
               })}
@@ -141,8 +141,8 @@ export function PreLabDrawer({
               border: "1px solid #dbe5f0",
               background: "#fff",
               color: "#1f5fa8",
-              fontSize: 13,
-              fontWeight: 600,
+              fontSize: "var(--type-body)",
+              fontWeight: 500,
               cursor: "pointer",
             }}
           >

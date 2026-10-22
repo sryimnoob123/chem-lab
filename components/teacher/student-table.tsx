@@ -53,13 +53,9 @@ export function StudentTable({ rows }: { rows: StudentRow[] }) {
                 <span className="ledger__meta">{row.className || "—"}</span>
               </td>
               <td>
+                {/* 2026-10-23：原来状态下面还压一条进度条，和右侧「完成度」列是同一个数据，
+                    两条并排读起来像两套口径。只留状态文字，比例交给完成度列。 */}
                 <span className={`tch-status tch-status--${tone}`}>{statusText(row.status)}</span>
-                <span className="tch-progress" aria-hidden="true">
-                  <span
-                    className={`tch-progress__fill tch-progress__fill--${tone}`}
-                    style={{ width: `${percent}%` }}
-                  />
-                </span>
               </td>
               <td className="is-right is-mono">{formatPercent(percent, 0)}</td>
               <td className="tch-hide-md">

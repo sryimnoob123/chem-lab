@@ -37,9 +37,8 @@ export default function Cover() {
         <div className="cover-hero__inner">
           <span className="cover-hero__rule" aria-hidden="true" />
           <h1 className="cover-hero__title" data-demo-id="demo-home-hero-title">无机及分析化学实验</h1>
-          <p className="cover-hero__sub">
-            河南大学 · 新能源与智能制造学院 · 03600004 · 36 学时 · 10 个实验
-          </p>
+          {/* 学校与学院在顶栏品牌已经写过，这里只留课程自身的三个事实：一行放得下 */}
+          <p className="cover-hero__sub">03600004 · 36 学时 · 10 个实验</p>
           <p className="cover-hero__slogan" data-demo-id="demo-home-readout">把每一次读数，写进同一本台账。</p>
 
           <div className="cover-hero__actions">
@@ -109,7 +108,7 @@ export default function Cover() {
         .cover-hero__inner { width: 100%; }
         .cover-hero__rule { background: var(--river-700); }
         .cover-hero__title {
-          margin: 15px 0 0;
+          margin: var(--sp-4) 0 0;
           color: var(--ink);
           font-size: clamp(40px, 3.9vw, 56px);
           line-height: 1.18;
@@ -117,29 +116,31 @@ export default function Cover() {
           animation: cover-title-in 300ms var(--ease-out) both;
         }
         .cover-hero__sub {
-          margin: 13px 0 0;
+          margin: var(--sp-3) 0 0;
           color: var(--ink-2);
-          font-size: 13px;
-          line-height: 1.6;
+          font-size: var(--type-meta);
+          line-height: var(--lh-meta);
           font-weight: 500;
+          white-space: nowrap;
         }
+        /* 标语是正文档：比课程事实更该被读，所以放大到 16 而不是再叠一行灰字 */
         .cover-hero__slogan {
-          margin: 8px 0 0;
-          color: var(--ink-2);
-          font-size: 12px;
-          line-height: 1.6;
+          margin: var(--sp-2) 0 0;
+          color: var(--ink);
+          font-size: var(--type-title);
+          line-height: var(--lh-tight);
         }
 
-        .cover-hero__actions { margin-top: 22px; }
+        .cover-hero__actions { margin-top: var(--sp-5); }
         .cover .btn--primary {
           background: var(--river-700);
           color: #fff;
           box-shadow: 0 12px 28px rgba(35, 48, 127, .2);
         }
         .cover .btn--primary:active { transform: scale(.97); }
-        .cover-hero__cta { height: 50px; padding: 0 28px; }
+        .cover-hero__cta { height: 48px; padding: 0 var(--sp-5); }
 
-        .cover-exp { margin-top: 26px; }
+        .cover-exp { margin-top: var(--sp-5); }
 
         .cover-foot {
           z-index: 4;
@@ -182,7 +183,7 @@ export default function Cover() {
           .cover-hero { padding-block: 30px 18px; }
           .cover-hero__title { font-size: 33px; }
           .cover-hero__sub { font-size: 12px; }
-          .cover-hero__slogan { font-size: 11px; }
+          .cover-hero__slogan { font-size: var(--type-title); }
           .cover-hero__actions { margin-top: 18px; }
           .cover-hero__cta { height: 48px; padding: 0 24px; font-size: var(--text-14); }
           .cover-exp { margin-top: 22px; }

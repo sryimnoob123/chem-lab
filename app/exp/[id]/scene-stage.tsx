@@ -827,21 +827,6 @@ export function SceneStage({
             </li>
           ))}
         </ul>
-        <p className={styles.rackNote}>
-          {expId === "exp01"
-            ? "台上：分析天平 200 g / 0.1 mg · 称量瓶 · 烧杯 · 容量瓶 100 mL · Na₂CO₃"
-            : expId === "exp02"
-            ? "台上：分析天平 200 g / 0.1 mg · 烧杯 · 容量瓶 · Na₂CO₃ / 蒸馏水"
-            : expId === "exp03"
-              ? "台上：pH 计 · 烧杯 · 容量瓶 · 蒸馏水"
-              : expId === "exp04"
-                ? "台上：离心管 · 烧杯 · 试管 · 容量瓶 · Na₂CO₃ / 蒸馏水"
-                : expId === "exp08"
-                  ? "台上：分析天平 200 g / 0.1 mg · 烧杯 · Na₂CO₃ 试样"
-                  : isBenchScene
-                    ? "台上：分析天平 · 烧杯 · 容量瓶 · 试剂"
-                    : "台上：酸式滴定管 50 mL / 锥形瓶 250 mL"}
-        </p>
       </aside>
 
       {selected && !flow.draggingId ? (

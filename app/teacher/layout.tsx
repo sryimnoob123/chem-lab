@@ -11,26 +11,6 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
 
   return (
     <>
-      <nav className="step-rail tch-rail" aria-label="教师端导航">
-        <ol className="step-rail__list">
-          <li className="step-rail__item">
-            <Link className="step-rail__link" href="/teacher" title="学情总览">
-              01
-            </Link>
-          </li>
-          <li className="step-rail__item">
-            <Link className="step-rail__link" href="/teacher/roster" title="名单管理">
-              02
-            </Link>
-          </li>
-          <li className="step-rail__item">
-            <Link className="step-rail__link" href="/" title="返回首页">
-              03
-            </Link>
-          </li>
-        </ol>
-      </nav>
-
       <header className="tch-top">
         <div className={`page-shell tch-top__inner ${styles.bar}`}>
           {/*

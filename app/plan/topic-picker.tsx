@@ -13,9 +13,8 @@ import s from "./plan.module.css";
 export function TopicPicker({ onPick }: { onPick: (topic: PlanTopic) => void }) {
   return (
     <section className={s.topicWrap} aria-label="选择实验主题">
-      <p className={s.lead}>
-        先选一个主题，再从素材库拼出你的方案。同一个主题可以有不同做法，规则会告诉你哪里不行、为什么。
-      </p>
+      {/* 一行说清操作；「规则会告诉你哪里不行」放到卡片后的评分卡里说，不在这里重复 */}
+      <p className={s.lead}>选一个主题，再从素材库拼出方案。</p>
       <div className={s.topicGrid}>
         {PLAN_TOPICS.map((topic, index) => (
           <button
@@ -27,11 +26,13 @@ export function TopicPicker({ onPick }: { onPick: (topic: PlanTopic) => void }) 
           >
             <span className={s.topicNo}>{String(index + 1).padStart(2, "0")}</span>
             <span className={s.topicTitle}>{topic.title}</span>
-            <span className={s.topicScene}>{topic.scene}</span>
-            <span className={s.topicGoal}>{topic.goal}</span>
+            {/* 情境一行（超长省略，悬停看全）；目标句进画布后由主题页头承担，卡片不重复 */}
+            <span className={s.topicScene} title={topic.scene}>
+              {topic.scene}
+            </span>
             <span className={s.topicRules}>
               {topic.constraints.map((line) => (
-                <span key={line} className={s.topicRule}>
+                <span key={line} className={s.topicRule} title={line}>
                   {line}
                 </span>
               ))}

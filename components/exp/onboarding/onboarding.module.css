@@ -86,7 +86,7 @@
 
 .desc {
   margin: 6px 0 0;
-  font-size: 13px;
+  font-size: var(--type-body);
   line-height: 1.6;
   color: var(--ink-2, #4a5768);
 }
@@ -120,7 +120,7 @@
   background: var(--river-700, #23307f);
   color: #fff;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--type-body);
   cursor: pointer;
   transition: transform 120ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
 }

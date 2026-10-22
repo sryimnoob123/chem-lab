@@ -587,7 +587,7 @@ export function BenchScene({
             y="74"
             textAnchor="middle"
             fill="var(--ink)"
-            fontSize="18"
+            fontSize="20"
             fontFamily="ui-monospace, monospace"
           >
             0.0000 g
@@ -607,7 +607,7 @@ export function BenchScene({
           {/* 主机 */}
           <rect x="8" y="70" width="124" height="70" rx="4" fill="none" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
           <rect x="18" y="80" width="104" height="30" rx="2" fill="none" stroke="var(--canvas-glass-line)" strokeWidth={1.2} />
-          <text x="70" y="101" textAnchor="middle" fill="var(--ink)" fontSize="18" fontFamily="var(--font-mono)">
+          <text x="70" y="101" textAnchor="middle" fill="var(--ink)" fontSize="20" fontFamily="var(--font-mono)">
             7.00
           </text>
           <text x="70" y="128" textAnchor="middle" fill="var(--ink-2)" fontSize="12">

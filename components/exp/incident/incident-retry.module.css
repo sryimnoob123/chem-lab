@@ -38,7 +38,7 @@
   min-width: 120px;
   margin: 0;
   color: var(--ink-2);
-  font-size: 11px;
+  font-size: var(--type-meta);
   line-height: 1.4;
 }
 

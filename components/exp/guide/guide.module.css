@@ -21,7 +21,7 @@
 .progress {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--type-meta);
   letter-spacing: 0.04em;
   color: var(--bench-text);
   opacity: 0.78;
@@ -33,7 +33,7 @@
   display: block;
   margin-top: 3px;
   color: var(--ink-2);
-  font-size: 11px;
+  font-size: var(--type-meta);
   line-height: 1.45;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -65,7 +65,7 @@
 
 .stepTitle {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--type-meta);
   line-height: 1.4;
   color: var(--bench-text);
   opacity: 0.62;
@@ -151,7 +151,7 @@
 }
 
 .nextWhy {
-  font-size: 11px;
+  font-size: var(--type-meta);
   line-height: 1.4;
   color: rgba(255, 255, 255, .74);
 }
@@ -163,7 +163,7 @@
   padding: 1px 5px;
   border: 1px solid rgba(255, 255, 255, .32);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   line-height: 1.5;
   color: rgba(255, 255, 255, .88);
 }
@@ -228,7 +228,7 @@
   background: transparent;
   color: var(--bench-text);
   font: inherit;
-  font-size: 11px;
+  font-size: var(--type-meta);
   text-align: left;
   cursor: pointer;
   opacity: 0.5;
@@ -262,7 +262,7 @@
 .timelineCheck {
   flex: 0 0 20px;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--type-meta);
   text-align: center;
 }
 
@@ -281,7 +281,7 @@
   flex: 0 0 auto;
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   opacity: 0.6;
 }
 
@@ -289,7 +289,7 @@
   flex: 0 0 auto;
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   color: var(--river-100);
 }
 
@@ -341,7 +341,7 @@
   border-radius: 50%;
   color: var(--river-100);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--type-meta);
   line-height: 1;
 }
 
@@ -434,7 +434,7 @@
 
 .resultSub {
   color: var(--bench-text);
-  font-size: 10px;
+  font-size: var(--type-meta);
   line-height: 1.3;
   opacity: 0.85;
 }
@@ -443,7 +443,7 @@
 .resultNext {
   /* 旧值 var(--river-100)=#e6e9f7 在纸白底上几乎看不见，改深墨 */
   color: var(--bench-text);
-  font-size: 11px;
+  font-size: var(--type-meta);
   line-height: 1.35;
   animation: guide-next 220ms ease-out;
 }
@@ -466,7 +466,7 @@
   border: 1px solid var(--danger);
   color: var(--danger);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   line-height: 1.4;
   white-space: nowrap;
 }
@@ -479,7 +479,7 @@
   background: transparent;
   color: var(--danger);
   font: inherit;
-  font-size: 11px;
+  font-size: var(--type-meta);
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 140ms ease;
@@ -500,7 +500,7 @@
   margin-left: auto;
   color: var(--bench-text);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   opacity: 0.45;
   white-space: nowrap;
 }
@@ -522,7 +522,7 @@
   align-items: center;
   gap: 6px;
   min-height: 30px;
-  font-size: 11px;
+  font-size: var(--type-meta);
   color: var(--bench-text);
   cursor: pointer;
   list-style: none;
@@ -545,7 +545,7 @@
 
 .otherCount {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   opacity: 0.6;
 }
 
@@ -564,7 +564,7 @@
   background: rgba(246, 247, 245, 0.90);
   color: var(--bench-text);
   font: inherit;
-  font-size: 11px;
+  font-size: var(--type-meta);
   line-height: 1.45;
   text-align: left;
   cursor: pointer;
@@ -596,7 +596,7 @@
 .otherMeta {
   display: block;
   margin-top: 2px;
-  font-size: 10px;
+  font-size: var(--type-meta);
   opacity: 0.6;
 }
 
@@ -618,7 +618,7 @@
   gap: 6px;
   min-height: 30px;
   color: var(--bench-text);
-  font-size: 11px;
+  font-size: var(--type-meta);
   cursor: pointer;
   list-style: none;
   opacity: 0.72;
@@ -643,21 +643,21 @@
   border: 1px solid var(--danger);
   color: var(--danger);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--type-meta);
   opacity: 1;
 }
 
 .whyTitle {
   margin: 4px 0 2px;
   color: var(--ink);
-  font-size: 11px;
+  font-size: var(--type-meta);
   line-height: 1.5;
 }
 
 .whyText {
   margin: 2px 0;
   color: var(--bench-text);
-  font-size: 10px;
+  font-size: var(--type-meta);
   line-height: 1.6;
   opacity: 0.72;
 }
@@ -669,7 +669,7 @@
 .whyWarn {
   margin: 4px 0 0;
   color: var(--danger);
-  font-size: 10px;
+  font-size: var(--type-meta);
   line-height: 1.5;
 }
 
@@ -767,7 +767,7 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.16);
   color: #fff;
-  font-size: 11px;
+  font-size: var(--type-meta);
   line-height: 1.5;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -860,7 +860,7 @@
   min-height: 28px;
   padding: 0 8px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: var(--type-meta);
   white-space: nowrap;
   cursor: pointer;
 }

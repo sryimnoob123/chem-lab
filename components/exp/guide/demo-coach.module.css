@@ -139,7 +139,7 @@
 .controlNote {
   color: var(--ink-2);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--type-meta);
   letter-spacing: 0.04em;
 }
 
@@ -150,7 +150,7 @@
   border-radius: 999px;
   background: var(--paper);
   color: var(--ink);
-  font-size: 11px;
+  font-size: var(--type-meta);
   cursor: pointer;
   transition:
     transform 140ms cubic-bezier(0.23, 1, 0.32, 1),

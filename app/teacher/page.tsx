@@ -90,8 +90,8 @@ export default async function TeacherOverviewPage({ searchParams }: { searchPara
         <Link className="btn btn--primary" href="/exp/exp01?teach=1" data-demo-id="teacher-demo-open">
           课堂演示
         </Link>
-        <a className="btn btn--secondary" href="/teacher">
-          刷新
+        <a className="tch-refresh" href="/teacher">
+          刷新数据
         </a>
       </PageHead>
 

@@ -105,16 +105,13 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         <Reveal as="div" className="cat-head" index={0}>
           <span className="cat-head__rule" aria-hidden="true" />
           <h1>我的实验</h1>
-          <p>
-            本学期重点三个，做完整流程。
-            <span className="mono"> 已开放 {debugAll ? navExperiments.length : featured.length}</span>
-          </p>
+          {/* 只说状态，不复述「重点三个、做完整流程」——卡片本身就说明了 */}
+          <p className="mono">已开放 {debugAll ? navExperiments.length : featured.length}</p>
         </Reveal>
 
         <Reveal as="section" className="cat-featured" index={1} aria-labelledby="cat-featured-head">
           <div className="cat-featured__head">
             <h2 id="cat-featured-head">重点实验</h2>
-            <p>每一步都有动画和反馈，错了可以原地重做。</p>
           </div>
           <ul className="cat-featured__list">
             {featured.map((item) => (

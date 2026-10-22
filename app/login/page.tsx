@@ -145,9 +145,7 @@ export default function LoginPage() {
                     data-demo-id="demo-login-teacher-passcode"
                   />
                 </label>
-              ) : (
-                <p className="login__foot">教师端免口令，点下面按钮直接进后台</p>
-              )}
+              ) : null}
             </>
           )}
 
@@ -168,15 +166,17 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* 现场演示提示：直接告诉评委用哪个账号（用户 2026-10-22 要求） */}
-        <p className="login__foot" data-demo-id="demo-login-hint">
-          演示账号：20250101 / 周若曦
-        </p>
-
-        <p className="login__foot">
-          <Link href="/">返回门户</Link>
-          <span className="mono">03600004 · 2026 秋</span>
-        </p>
+        {/* 原来「演示账号」和「返回门户 / 课程号」是上下两行小字（堆叠），
+            2026-10-23 收成一行：三件都是辅助信息，同一行分左右即可。 */}
+        <div className="login__foot login__foot-row">
+          <span className="mono" data-demo-id="demo-login-hint">
+            演示账号 20250101/周若曦
+          </span>
+          <span className="login__foot-end">
+            <Link href="/">返回门户</Link>
+            <span className="mono">03600004 · 2026 秋</span>
+          </span>
+        </div>
       </div>
 
       <LoginScreenStyles />

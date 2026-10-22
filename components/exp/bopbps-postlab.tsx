@@ -13,8 +13,8 @@ const S = {
     padding: 18,
     boxShadow: "0 1px 2px rgba(18,35,59,.05), 0 8px 24px rgba(18,35,59,.05)",
   } as const,
-  label: { fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase" as const, color: "#7b8a9c", fontWeight: 600 },
-  body: { fontSize: 14, lineHeight: 1.75, color: "#3d4d61", margin: 0 },
+  label: { fontSize: "var(--type-meta)", letterSpacing: ".08em", color: "var(--ink-2)", fontWeight: 500 },
+  body: { fontSize: "var(--type-body)", lineHeight: 1.65, color: "var(--ink-2)", margin: 0 },
 };
 
 /** BOPPPS 后测（P · Post-assessment）：报告页顶部三题，提交后给分与逐题解析 */
@@ -46,7 +46,7 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
     <section style={{ ...S.card, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <div style={S.label}>P · 后测（{c.post.length} 题）</div>
-        <div className="mono" style={{ fontSize: 12, color: done ? (score >= 67 ? "#1a7f4b" : "#9a6a12") : "#7b8a9c" }}>
+        <div className="mono" style={{ fontSize: "var(--type-meta)", color: done ? (score >= 67 ? "#1a7f4b" : "#9a6a12") : "var(--ink-2)" }}>
           {done ? `${score} / 100` : `${Object.keys(picked).length}/${c.post.length}`}
         </div>
       </div>
@@ -61,7 +61,7 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
                 className="mono"
                 style={{
                   flex: "none",
-                  fontSize: 11,
+                  fontSize: "var(--type-meta)",
                   color: "#1f5fa8",
                   background: "#eaf2fb",
                   border: "1px solid #d3e3f6",
@@ -71,7 +71,7 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
               >
                 {q.competency}
               </span>
-              <p style={{ ...S.body, color: "#12233b", fontWeight: 500 }}>{q.stem}</p>
+              <p style={{ ...S.body, color: "var(--ink)", fontWeight: 500 }}>{q.stem}</p>
             </div>
             <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
               {q.options.map((o) => {
@@ -93,9 +93,9 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
                       padding: "9px 12px",
                       borderRadius: 10,
                       cursor: done ? "default" : "pointer",
-                      fontSize: 13.5,
+                      fontSize: "var(--type-body)",
                       lineHeight: 1.6,
-                      color: "#22303f",
+                      color: "var(--ink)",
                       background: isAnswer ? "#e6f6ed" : isWrong ? "#fdeceb" : on ? "#eaf2fb" : "#fff",
                       border: `1px solid ${isAnswer ? "#a9dcc0" : isWrong ? "#f0b8b3" : on ? "#9dc0e8" : "#dbe5f0"}`,
                     }}
@@ -109,7 +109,7 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
               })}
             </div>
             {done ? (
-              <p style={{ ...S.body, marginTop: 8, fontSize: 13, color: ok ? "#1a7f4b" : "#9a6a12", whiteSpace: "pre-line" }}>
+              <p style={{ ...S.body, marginTop: 8, color: ok ? "#1a7f4b" : "#9a6a12", whiteSpace: "pre-line" }}>
                 {ok ? "✓ 正确 · " : `答案 ${q.answer} · `}
                 {q.explanation}
               </p>
@@ -118,11 +118,11 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
         );
       })}
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 16, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 16, flexWrap: "wrap" }}>
         {done ? (
           <>
-            <span style={{ fontSize: 13, color: "#7b8a9c" }}>
-              后测完成 · 得分 {score} / 100（计入过程性评价的后测环节）
+            <span style={{ fontSize: "var(--type-meta)", color: "var(--ink-2)" }}>
+              后测完成 · 得分 {score} / 100
             </span>
             <button
               type="button"
@@ -149,12 +149,12 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
             >
               提交后测
             </button>
-            <span style={{ fontSize: 13, color: "#7b8a9c" }}>{answered ? "提交后看逐题解析" : "答完 3 题后提交"}</span>
+            <span style={{ fontSize: "var(--type-meta)", color: "var(--ink-2)" }}>{answered ? "提交后看逐题解析" : "答完 3 题后提交"}</span>
           </>
         )}
       </div>
 
-      <p style={{ ...S.body, marginTop: 12, fontSize: 12.5, color: "#7b8a9c" }}>{c.summary}</p>
+      <p style={{ ...S.body, marginTop: 12, fontSize: "var(--type-meta)", color: "var(--ink-2)" }}>{c.summary}</p>
     </section>
   );
 }

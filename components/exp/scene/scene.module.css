@@ -40,7 +40,7 @@
   margin: 0 0 8px;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--line);
-  font-size: 11px;
+  font-size: var(--type-meta);
   font-weight: 500;
   letter-spacing: 0.08em;
   color: var(--ink-2);
@@ -110,7 +110,7 @@
 
 .bottleFormula {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--type-meta);
   color: var(--ink-2);
   text-align: center;
 }
@@ -286,7 +286,7 @@
 .dropTag {
   fill: #fff;
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: var(--type-meta);
   font-weight: 500;
 }
 
@@ -532,7 +532,7 @@
   border-radius: 2px;
   background: var(--river-700);
   color: #fff;
-  font-size: 10px;
+  font-size: var(--type-meta);
   line-height: 16px;
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -849,7 +849,7 @@
 }
 
 .toolLabel {
-  font-size: 9px;
+  font-size: var(--type-meta);
   fill: var(--ink-2);
   letter-spacing: 0.02em;
   pointer-events: none;
@@ -901,7 +901,7 @@
 }
 
 .sinkLabel {
-  font-size: 9px;
+  font-size: var(--type-meta);
   fill: var(--ink-2);
   pointer-events: none;
   user-select: none;

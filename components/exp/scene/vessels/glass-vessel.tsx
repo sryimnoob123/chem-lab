@@ -208,7 +208,7 @@ function BeakerTicks() {
         <g key={row.y}>
           <line x1="116" y1={row.y} x2="130" y2={row.y} strokeWidth="0.9" />
           {row.label ? (
-            <text x="112" y={row.y + 3} textAnchor="end" fontSize="8">
+            <text x="112" y={row.y + 3} textAnchor="end" fontSize="10">
               {row.label}
             </text>
           ) : null}

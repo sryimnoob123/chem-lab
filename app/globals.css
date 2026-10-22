@@ -142,7 +142,19 @@
   --font-kai: "LXGW WenKai", "KaiTi", "STKaiti", serif;
   --font-mono: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
 
-  /* 字阶（本页只用 12 / 14 / 31 / 49 四档） */
+  /* ------------------------------------------------------------------
+   * 排版 4 级 + 间距刻度（2026-10-23 全站统一）
+   * 只用这四档，别再加第 5 种：大标题 / 中标题 / 正文 / 辅助。
+   * 辅助档 12px 是全站下限 —— 9/10/11px 一律不再出现（1366×768 上也读不清）。
+   * 数字读数（分数、读数）走同档字号 + 等宽 tabular-nums，不另开字阶。
+   * ------------------------------------------------------------------ */
+  /* 大标题：一屏一处，页面焦点。首页 hero 自己放到 40-56（同一档角色，落地页放大） */
+  --type-display: clamp(24px, 2.4vw, 32px);
+  --type-title: 20px; /* 中标题：区块标题 */
+  --type-body: 14px; /* 正文：可读的最小字号 */
+  --type-meta: 12px; /* 辅助：标签 / 计数 / 单位 / 键位 */
+
+  /* 字阶（兼容旧引用：值不变，语义档见上） */
   --text-12: 12px;
   --text-13: 13px;
   --text-14: 14px;
@@ -152,6 +164,20 @@
   --text-31: 31px;
   --text-39: 39px;
   --text-49: 49px;
+
+  /* 间距刻度：4 / 8 / 12 / 16 / 24 / 32 / 48，页面内只用这几档 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  /* 行高：标题紧、正文松、辅助中等 */
+  --lh-tight: 1.25;
+  --lh-meta: 1.5;
+  --lh-body: 1.65;
 
   /* 兼容旧骨架 */
   --bg: var(--paper);
@@ -1028,7 +1054,7 @@ button {
 
   .step-rail__link {
     left: 2px;
-    font-size: 10px;
+    font-size: var(--type-meta);
     gap: 2px;
   }
 
@@ -1125,7 +1151,7 @@ button {
 
   .hero-caption {
     padding-top: 6px;
-    font-size: 10px;
+    font-size: var(--type-meta);
   }
 
   .callout {
@@ -1170,7 +1196,7 @@ button {
   }
 
   .ledger thead th {
-    font-size: 10px;
+    font-size: var(--type-meta);
   }
 
   .ledger .ledger__title {
@@ -1187,7 +1213,7 @@ button {
   }
 
   .ledger .ledger__index {
-    font-size: 10px;
+    font-size: var(--type-meta);
   }
 
   .site-footer {
@@ -1214,7 +1240,7 @@ button {
 
 @media (max-width: 390px) {
   .step-rail__link {
-    font-size: 9px;
+    font-size: var(--type-meta);
   }
 }
 
@@ -1479,7 +1505,7 @@ button {
 
 .tch-page-title {
   margin: 0;
-  font-size: var(--text-25);
+  font-size: var(--type-display);
   line-height: 1.25;
   font-weight: 500;
   letter-spacing: -0.01em;
