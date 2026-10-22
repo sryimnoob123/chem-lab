@@ -121,8 +121,10 @@ export function IncidentBanner({
         <header className={styles.incidentHead}>
           <span className={styles.incidentLevel}>{LEVEL_TAG[level]}</span>
           {level === "L1" ? null : (
-            <span className={styles.incidentIcon} aria-hidden="true">
-              !
+            // 图标逐级递进（用户 2026-10-22：四级要一眼分清）：
+            // L2 感叹号（提醒你扣分了）→ L3 三角警告（危险动作）→ L4 叉（本次实验终止）
+            <span className={styles.incidentIcon} data-icon={level} aria-hidden="true">
+              {level === "L2" ? "!" : level === "L3" ? "⚠" : "✕"}
             </span>
           )}
           <span className={styles.incidentTitle}>{safeTitle}</span>

@@ -71,6 +71,7 @@ for (const t of TRAPS) {
     if (!banner) return null;
     const style = getComputedStyle(banner);
     const rect = banner.getBoundingClientRect();
+    const icon = banner.querySelector("[data-icon]");
     // 找到压暗层（opacity < .5 的固定定位遮罩）
     const dim = [...document.querySelectorAll("div")].find((el) => {
       const s = getComputedStyle(el);
@@ -85,8 +86,10 @@ for (const t of TRAPS) {
       level: banner.getAttribute("data-level"),
       text: (banner.textContent ?? "").replace(/\s+/g, " ").slice(0, 90),
       bg: style.backgroundColor,
-      borderColor: style.borderTopColor,
+      borderLeft: style.borderLeftColor,
       height: Math.round(rect.height),
+      icon: icon ? { level: icon.getAttribute("data-icon"), text: (icon.textContent ?? "").trim(), size: Math.round(icon.getBoundingClientRect().width) } : null,
+      animation: `${style.animationName} ${style.animationDuration}`,
       hasDim: Boolean(dim),
       dimOpacity: dim ? getComputedStyle(dim).opacity : null,
       hasRedFrame: Boolean(redFrame),
@@ -99,7 +102,7 @@ for (const t of TRAPS) {
     环节: `事故 ${t.level}（${t.name}）`,
     结果: ok ? "PASS" : "FAIL",
     说明: visual
-      ? `data-level=${visual.level} · 高 ${visual.height}px · bg=${visual.bg} · dim=${visual.hasDim}(${visual.dimOpacity}) · 红框=${visual.hasRedFrame}`
+      ? `level=${visual.level} · 高 ${visual.height}px · 左边框=${visual.borderLeft} · 图标=${visual.icon ? `${visual.icon.text}(${visual.icon.size}px)` : "无"} · 动画=${visual.animation} · dim=${visual.hasDim}(${visual.dimOpacity}) · 红框=${visual.hasRedFrame}`
       : "没找到事故条",
     截图: file,
   });

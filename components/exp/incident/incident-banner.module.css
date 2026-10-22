@@ -77,6 +77,26 @@
   line-height: 1;
 }
 
+/* 图标随等级加重（用户 2026-10-22）：L2 小号琥珀 → L3 中号红 → L4 大号红底白字。 */
+.incidentIcon[data-icon="L3"] {
+  flex-basis: 18px;
+  width: 18px;
+  height: 18px;
+  border-color: var(--danger);
+  color: var(--danger);
+  font-size: 11px;
+}
+
+.incidentIcon[data-icon="L4"] {
+  flex-basis: 20px;
+  width: 20px;
+  height: 20px;
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--paper);
+  font-size: 12px;
+}
+
 .incidentTitle {
   min-width: 0;
   color: var(--ink);
@@ -221,12 +241,41 @@
    =================================================================== */
 
 .incidentBanner[data-level="L2"] {
-  border-left-color: var(--warn);
+  /* L2 比 L1 更重：左侧条从琥珀压向橙红（混色，不写字面量），并加 2px 轻抖。
+     四级抖动幅度刻意拉开：L1 不抖 / L2 ±2px / L3 ±4px / L4 ±8px。 */
+  border-left-color: color-mix(in srgb, var(--warn) 55%, var(--danger));
+  animation: ix-incident-l2 420ms var(--ease-out, ease-out) 1 both;
+}
+
+@keyframes ix-incident-l2 {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  45% {
+    transform: translate(calc(-50% - 2px), 0);
+  }
+  60% {
+    transform: translate(calc(-50% + 2px), 0);
+  }
+  75% {
+    transform: translate(calc(-50% - 1px), 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 
 .incidentBanner[data-level="L2"] .incidentLevel {
-  color: var(--warn);
+  color: color-mix(in srgb, var(--warn) 55%, var(--danger));
 }
+
+/* L2 的图标用感叹号、L3 用三角警告、L4 用叉，逐级加重（见 IncidentBanner.tsx）。 */
 
 /* ===================================================================
    L3 严重：局部暗场（只这一块用 bench-ink-dark）+ 280ms 轻震
@@ -311,6 +360,38 @@
   border-left: 3px solid var(--danger);
   background: rgba(246, 247, 245, 0.99);
   box-shadow: 0 16px 34px rgba(74, 87, 104, 0.22);
+  /* L4 抖动幅度最大（±8px），配合全屏压暗做"终止"的强信号 */
+  animation: ix-incident-l4 620ms var(--ease-out, ease-out) 1 both;
+}
+
+@keyframes ix-incident-l4 {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.98);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  32% {
+    transform: translate(calc(-50% - 8px), 0) scale(1);
+  }
+  44% {
+    transform: translate(calc(-50% + 8px), 0) scale(1);
+  }
+  56% {
+    transform: translate(calc(-50% - 5px), 0) scale(1);
+  }
+  68% {
+    transform: translate(calc(-50% + 4px), 0) scale(1);
+  }
+  80% {
+    transform: translate(calc(-50% - 2px), 0) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
 }
 
 .incidentBanner[data-level="L4"] .incidentLevel {
@@ -325,7 +406,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .incidentBanner,
+  .incidentBanner[data-level="L2"],
   .incidentBanner[data-level="L3"],
+  .incidentBanner[data-level="L4"],
   .incidentDeduct {
     animation: none;
   }
