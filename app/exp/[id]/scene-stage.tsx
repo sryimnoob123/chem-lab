@@ -206,6 +206,12 @@ export function SceneStage({
    * 只有移动超过阈值才算"拖"，原地按下松手仍按普通点击处理（点选模式）。
    */
   const pointerDragRef = useRef<{ id: string; pointerId: number; moved: boolean } | null>(null);
+  /**
+   * 跟手的拖动影子（用户 2026-10-22 报"瓶子拖不动"）：
+   * 之前只给源按钮加 scale(.98)，鼠标移 150px 瓶子只动 2px —— 视觉上等于没拖起来。
+   * 现在拖出阈值后渲染一个 fixed 定位的瓶子副本跟着指针走，源按钮留在架上变淡。
+   */
+  const [dragGhost, setDragGhost] = useState<{ x: number; y: number; reagentId: string } | null>(null);
 
   const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -283,13 +289,14 @@ export function SceneStage({
                   onCaption(null);
                 }}
                 onPointerMove={(event) => {
-                  // 段 2 移动：超过阈值才算出拖，实时高亮落区（锥形瓶）。
+                  // 段 2 移动：超过阈值才算出拖，实时高亮落区（锥形瓶）+ 影子跟手。
                   const drag = pointerDragRef.current;
                   if (!drag || drag.pointerId !== event.pointerId) return;
                   if (!drag.moved) {
                     if (Math.abs(event.movementX) + Math.abs(event.movementY) < 3) return;
                     drag.moved = true;
                   }
+                  setDragGhost({ x: event.clientX, y: event.clientY, reagentId: drag.id });
                   const hit = document.elementFromPoint(event.clientX, event.clientY);
                   flow.setOverFlask(Boolean(hit?.closest('[data-demo-id="demo-scene-drop-flask"]')));
                 }}
@@ -298,6 +305,7 @@ export function SceneStage({
                   const drag = pointerDragRef.current;
                   if (!drag || drag.pointerId !== event.pointerId) return;
                   pointerDragRef.current = null;
+                  setDragGhost(null);
                   event.currentTarget.releasePointerCapture?.(event.pointerId);
                   flow.setOverFlask(false);
                   if (!drag.moved) {
@@ -308,6 +316,7 @@ export function SceneStage({
                 }}
                 onPointerCancel={() => {
                   pointerDragRef.current = null;
+                  setDragGhost(null);
                   flow.endDrag();
                 }}
                 onClick={() => {
@@ -477,6 +486,26 @@ export function SceneStage({
       </div>
 
       <PourFX pour={flow.pour} onDone={flow.clearPour} />
+
+      {/* 跟手的拖动影子：只在拖出阈值后出现，fixed 定位跟着指针，不抢事件 */}
+      {dragGhost ? (
+        <div
+          className={styles.dragGhost}
+          style={{ left: dragGhost.x, top: dragGhost.y }}
+          aria-hidden="true"
+          data-demo-id="demo-drag-ghost"
+        >
+          <span className={styles.dragGhostBottle}>
+            <span
+              className={styles.dragGhostFill}
+              style={{ background: getSceneReagent(dragGhost.reagentId)?.colorHex ?? "#DCE9F2" }}
+            />
+          </span>
+          <span className={styles.dragGhostName}>
+            {getSceneReagent(dragGhost.reagentId)?.name ?? ""}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

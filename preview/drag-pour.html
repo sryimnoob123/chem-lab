@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>拖拽倒入 · 交互预览</title>
+<style>
+  :root {
+    --paper: #f6f7f5;
+    --ink: #2c3644;
+    --ink-2: rgba(74, 87, 104, 0.62);
+    --line: rgba(74, 87, 104, 0.3);
+    --line-soft: rgba(74, 87, 104, 0.16);
+    --river: #1d4e89;
+    --jade: #0b5e52;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: system-ui, "Noto Sans SC", "PingFang SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    overflow: hidden;
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 26px 12px;
+  }
+  .tip { margin: 0; font-size: 13px; color: var(--ink-2); letter-spacing: 0.02em; }
+  .tip strong { color: var(--ink); font-weight: 600; }
+  .reset {
+    height: 32px;
+    padding: 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 160ms ease, transform 120ms ease, border-color 160ms ease;
+  }
+  .reset:hover { border-color: rgba(74, 87, 104, 0.5); background: #fbfcfb; }
+  .reset:active { transform: scale(0.97); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: 22px;
+    padding: 4px 26px 26px;
+    height: calc(100vh - 62px);
+  }
+  .rack, .bench {
+    border: 1px solid var(--line-soft);
+    background: #fff;
+    border-radius: 3px;
+  }
+  .rack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 14px 18px;
+    overflow: auto;
+  }
+  .rack h2 {
+    margin: 0 0 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--ink-2);
+  }
+  .bottle {
+    display: grid;
+    grid-template-columns: 54px 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 8px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: grab;
+    touch-action: none;
+    transition: opacity 160ms ease, transform 120ms ease, border-color 160ms ease, background 160ms ease;
+  }
+  .bottle:hover { border-color: var(--line-soft); background: rgba(74, 87, 104, 0.035); }
+  .bottle[data-dragging="true"] { opacity: 0.55; transform: scale(0.98); cursor: grabbing; }
+  .bottle svg { width: 54px; height: 66px; display: block; overflow: visible; }
+  .bottle .name { display: flex; flex-direction: column; gap: 2px; }
+  .bottle .name em { font-style: normal; font-size: 10px; color: var(--ink-2); font-family: ui-monospace, monospace; }
+
+  .bench { display: grid; place-items: center; padding: 6px 10px; overflow: hidden; }
+  .stage { width: 100%; height: 100%; max-height: 640px; display: block; }
+  .stage text { font-family: system-ui, "Noto Sans SC", sans-serif; }
+  .glass { fill: rgba(255, 255, 255, 0.42); stroke: rgba(74, 87, 104, 0.46); stroke-width: 1.6; }
+  .glass-inner { fill: none; stroke: rgba(74, 87, 104, 0.12); stroke-width: 3.5; }
+  .mouth { fill: none; stroke: rgba(74, 87, 104, 0.5); stroke-width: 1.6; }
+  .shine { stroke: rgba(74, 87, 104, 0.13); stroke-width: 3; fill: none; stroke-linecap: round; }
+  .shadow { fill: rgba(74, 87, 104, 0.07); }
+  .vessel-label { font-size: 12px; fill: rgba(74, 87, 104, 0.72); }
+  .vessel-label.dim { font-size: 10px; fill: rgba(74, 87, 104, 0.45); }
+  .liquid { opacity: 0.85; }
+  .surface { opacity: 0.92; }
+  .table { stroke: rgba(74, 87, 104, 0.34); stroke-width: 1.2; }
+  .hot { fill: transparent; cursor: copy; }
+
+  .layer { position: fixed; inset: 0; pointer-events: none; z-index: 40; }
+
+  .ghost {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 62px;
+    pointer-events: none;
+    transform: translate(-50%, -62%) rotate(-9deg);
+    filter: drop-shadow(0 10px 16px rgba(30, 42, 56, 0.18));
+    will-change: transform;
+    z-index: 41;
+  }
+  .ghost svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+  .stream {
+    position: fixed;
+    width: 2.6px;
+    border-radius: 3px;
+    transform-origin: 50% 0;
+    animation: streamGrow 380ms cubic-bezier(0.32, 0.02, 0.66, 1) both;
+    z-index: 40;
+  }
+  @keyframes streamGrow {
+    0% { transform: scaleY(0.08); opacity: 0.9; }
+    55% { transform: scaleY(1); opacity: 0.92; }
+    100% { transform: scaleY(1); opacity: 0; }
+  }
+
+  .ripple {
+    position: fixed;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    transform: translate(-50%, -50%) scale(0.16);
+    opacity: 0.85;
+    animation: rippleOut 430ms ease-out both;
+    z-index: 40;
+  }
+  @keyframes rippleOut {
+    to { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+  }
+
+  .flash {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 4px rgba(74, 87, 104, 0.08);
+    transform: translate(-50%, -50%);
+    animation: flashOut 320ms ease-out both;
+    z-index: 40;
+  }
+  @keyframes flashOut { to { opacity: 0; transform: translate(-50%, -50%) scale(2.2); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stream, .ripple, .flash { animation-duration: 1ms !important; }
+  }
+</style>
+</head>
+<body>
+<header class="bar">
+  <p class="tip"><strong>拖住左侧试剂瓶</strong>，放到右侧器皿上 —— 松手即倒。</p>
+  <button class="reset" id="reset" type="button">重置</button>
+</header>
+
+<main class="layout">
+  <section class="rack" aria-label="试剂架">
+    <h2>试剂架</h2>
+    <button class="bottle" type="button" data-reagent="water" data-name="蒸馏水">
+      <svg viewBox="0 0 46 66" aria-hidden="true">
+        <path class="glass" d="M18 4h10v12c7 2.4 11 8 11 15v22a7 7 0 0 1-7 7H14a7 7 0 0 1-7-7V31c0-7 4-12.6 11-15Z" />
+        <path d="M20 6h6" stroke="rgba(74,87,104,.45)" stroke-width="1.4" />
+        <path class="liquid" data-liquid="water" fill="#a9d3e8" d="M9 40h28v12a7 7 0 0 1-7 7H16a7 7 0 0 1-7-7Z" />
+        <path d="M12 22c2-4 5-6.4 10-7" stroke="rgba(74,87,104,.13)" stroke-width="2.6" fill="none" stroke-linecap="round" />
+      </svg>
+      <span class="name">蒸馏水<em>H₂O</em></span>
+    </button>
+    <button class="bottle" type="button" data-reagent="naoh" data-name="氢氧化钠">
+      <svg viewBox="0 0 46 66" aria-hidden="true">
+        <path class="glass" d="M18 4h10v12c7 2.4 11 8 11 15v22a7 7 0 0 1-7 7H14a7 7 0 0 1-7-7V31c0-7 4-12.6 11-15Z" />
+        <path d="M20 6h6" stroke="rgba(74,87,104,.45)" stroke-width="1.4" />
+        <path class="liquid" data-liquid="naoh" fill="#b7dcc6" d="M9 40h28v12a7 7 0 0 1-7 7H16a7 7 0 0 1-7-7Z" />
+        <path d="M12 22c2-4 5-6.4 10-7" stroke="rgba(74,87,104,.13)" stroke-width="2.6" fill="none" stroke-linecap="round" />
+      </svg>
+      <span class="name">氢氧化钠<em>NaOH</em></span>
+    </button>
+    <button class="bottle" type="button" data-reagent="hcl" data-name="盐酸">
+      <svg viewBox="0 0 46 66" aria-hidden="true">
+        <path class="glass" d="M18 4h10v12c7 2.4 11 8 11 15v22a7 7 0 0 1-7 7H14a7 7 0 0 1-7-7V31c0-7 4-12.6 11-15Z" />
+        <path d="M20 6h6" stroke="rgba(74,87,104,.45)" stroke-width="1.4" />
+        <path class="liquid" data-liquid="hcl" fill="#ebd3b7" d="M9 40h28v12a7 7 0 0 1-7 7H16a7 7 0 0 1-7-7Z" />
+        <path d="M12 22c2-4 5-6.4 10-7" stroke="rgba(74,87,104,.13)" stroke-width="2.6" fill="none" stroke-linecap="round" />
+      </svg>
+      <span class="name">盐酸<em>HCl</em></span>
+    </button>
+  </section>
+
+  <section class="bench" aria-label="实验台">
+    <svg class="stage" viewBox="0 0 760 380" role="img" aria-label="实验台：烧杯、试管 A、试管 B、容量瓶 100 mL">
+      <defs>
+        <clipPath id="clip-beaker"><path d="M72 138 V272 Q72 288 90 288 H176 Q194 288 194 272 V138 Z" /></clipPath>
+        <clipPath id="clip-tube-a"><path d="M242 110 V256 A18 22 0 0 0 278 256 V110 Z" /></clipPath>
+        <clipPath id="clip-tube-b"><path d="M312 110 V256 A18 22 0 0 0 348 256 V110 Z" /></clipPath>
+        <clipPath id="clip-flask"><path d="M424 150 C 392 166 382 194 382 222 C 382 262 408 284 440 284 C 472 284 498 262 498 222 C 498 194 488 166 456 150 Z" /></clipPath>
+      </defs>
+
+      <line class="table" x1="46" y1="300" x2="716" y2="300" />
+
+      <ellipse class="shadow" cx="133" cy="296" rx="66" ry="6" />
+      <ellipse class="shadow" cx="260" cy="292" rx="26" ry="4.6" />
+      <ellipse class="shadow" cx="330" cy="292" rx="26" ry="4.6" />
+      <ellipse class="shadow" cx="440" cy="292" rx="62" ry="6" />
+
+      <!-- 烧杯 -->
+      <g class="vessel" data-vessel="beaker" data-level="0.08" data-color="#a9d3e8">
+        <g clip-path="url(#clip-beaker)">
+          <rect class="liquid" x="72" y="276" width="122" height="12" fill="#a9d3e8" />
+          <ellipse class="surface" cx="133" cy="276" rx="60" ry="3.4" fill="#a9d3e8" />
+        </g>
+        <path class="glass" d="M72 138 V272 Q72 288 90 288 H176 Q194 288 194 272 V138" />
+        <path class="glass-inner" d="M188 148 V270 Q188 282 174 282 H92" />
+        <path class="shine" d="M84 154 V262" />
+        <ellipse class="mouth" cx="133" cy="138" rx="61" ry="5" />
+        <path class="hot" data-hot="beaker" d="M60 118 H206 V302 H60 Z" />
+        <text class="vessel-label" x="133" y="322" text-anchor="middle">烧杯</text>
+        <text class="vessel-label dim" x="133" y="340" text-anchor="middle" data-label="beaker">空</text>
+      </g>
+
+      <!-- 试管 A -->
+      <g class="vessel" data-vessel="tubeA" data-level="0" data-color="#a9d3e8">
+        <g clip-path="url(#clip-tube-a)">
+          <rect class="liquid" x="242" y="278" width="36" height="0" fill="#a9d3e8" />
+          <ellipse class="surface" cx="260" cy="278" rx="17" ry="2.4" fill="#a9d3e8" opacity="0" />
+        </g>
+        <path class="glass" d="M242 110 V256 A18 22 0 0 0 278 256 V110" />
+        <path class="glass-inner" d="M274 118 V254" />
+        <path class="shine" d="M249 124 V246" />
+        <ellipse class="mouth" cx="260" cy="110" rx="18" ry="3.4" />
+        <path class="hot" data-hot="tubeA" d="M232 92 H288 V292 H232 Z" />
+        <text class="vessel-label" x="260" y="322" text-anchor="middle">试管 A</text>
+        <text class="vessel-label dim" x="260" y="340" text-anchor="middle" data-label="tubeA">空</text>
+      </g>
+
+      <!-- 试管 B -->
+      <g class="vessel" data-vessel="tubeB" data-level="0" data-color="#a9d3e8">
+        <g clip-path="url(#clip-tube-b)">
+          <rect class="liquid" x="312" y="278" width="36" height="0" fill="#a9d3e8" />
+          <ellipse class="surface" cx="330" cy="278" rx="17" ry="2.4" fill="#a9d3e8" opacity="0" />
+        </g>
+        <path class="glass" d="M312 110 V256 A18 22 0 0 0 348 256 V110" />
+        <path class="glass-inner" d="M344 118 V254" />
+        <path class="shine" d="M319 124 V246" />
+        <ellipse class="mouth" cx="330" cy="110" rx="18" ry="3.4" />
+        <path class="hot" data-hot="tubeB" d="M302 92 H358 V292 H302 Z" />
+        <text class="vessel-label" x="330" y="322" text-anchor="middle">试管 B</text>
+        <text class="vessel-label dim" x="330" y="340" text-anchor="middle" data-label="tubeB">空</text>
+      </g>
+
+      <!-- 容量瓶 -->
+      <g class="vessel" data-vessel="flask" data-level="0" data-color="#a9d3e8">
+        <g clip-path="url(#clip-flask)">
+          <rect class="liquid" x="382" y="282" width="116" height="0" fill="#a9d3e8" />
+          <ellipse class="surface" cx="440" cy="282" rx="56" ry="3.2" fill="#a9d3e8" opacity="0" />
+        </g>
+        <path class="glass" d="M424 86 V150 C 392 166 382 194 382 222 C 382 262 408 284 440 284 C 472 284 498 262 498 222 C 498 194 488 166 456 150 V86" />
+        <path class="glass-inner" d="M492 214 C 492 250 470 276 442 276" />
+        <line class="mouth" x1="424" y1="86" x2="456" y2="86" />
+        <line class="mouth" x1="430" y1="118" x2="450" y2="118" stroke="rgba(74,87,104,.22)" />
+        <path class="shine" d="M396 200 C 394 226 402 246 416 258" />
+        <text class="vessel-label dim" x="440" y="112" text-anchor="middle">100</text>
+        <path class="hot" data-hot="flask" d="M364 78 H516 V294 H364 Z" />
+        <text class="vessel-label" x="440" y="322" text-anchor="middle">容量瓶 100 mL</text>
+        <text class="vessel-label dim" x="440" y="340" text-anchor="middle" data-label="flask">空</text>
+      </g>
+    </svg>
+  </section>
+</main>
+
+<div class="layer" id="layer" aria-hidden="true"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const INK = "rgba(74,87,104,";
+  const LIQUID = { water: "#a9d3e8", naoh: "#b7dcc6", hcl: "#ebd3b7" };
+  const STREAM_RGB = { water: "169,211,232", naoh: "183,220,198", hcl: "235,211,183" };
+
+  /** 每个器皿的液体几何（与 SVG 里 rect/surface 一一对应）。 */
+  const VESSELS = {
+    beaker: { bottom: 288, topMax: 150, x: 72, w: 122, mouthY: 138, add: 0.2 },
+    tubeA: { bottom: 278, topMax: 130, x: 242, w: 36, mouthY: 112, add: 0.22 },
+    tubeB: { bottom: 278, topMax: 130, x: 312, w: 36, mouthY: 112, add: 0.22 },
+    flask: { bottom: 282, topMax: 152, x: 382, w: 116, mouthY: 150, add: 0.16 },
+  };
+  const MAX_LEVEL = 0.92;
+
+  const layer = document.getElementById("layer");
+  const stage = document.querySelector(".stage");
+  const rack = document.querySelector(".rack");
+  const state = {}; // vesselId -> { level, colors: [] }
+  let activeGhost = null;
+  let drag = null;
+
+  const svgPoint = (id, y) => {
+    const group = document.querySelector('[data-vessel="' + id + '"]');
+    const box = group.getBoundingClientRect();
+    return { x: box.left + box.width / 2, y: box.top + (box.height * (y == null ? 0.5 : y)) };
+  };
+
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+  function mixColors(colors) {
+    if (!colors.length) return "#a9d3e8";
+    let r = 0, g = 0, b = 0;
+    colors.forEach((hex) => {
+      const n = parseInt(hex.slice(1), 16);
+      r += (n >> 16) & 255;
+      g += (n >> 8) & 255;
+      b += n & 255;
+    });
+    const count = colors.length;
+    const to2 = (v) => Math.round(v / count).toString(16).padStart(2, "0");
+    return "#" + to2(r) + to2(g) + to2(b);
+  }
+
+  function paintVessel(id, level) {
+    state[id] = state[id] || { level: 0, colors: [] };
+    state[id].level = level;
+    const geo = VESSELS[id];
+    const group = document.querySelector('[data-vessel="' + id + '"]');
+    const rect = group.querySelector(".liquid");
+    const surface = group.querySelector(".surface");
+    const label = document.querySelector('[data-label="' + id + '"]');
+    const color = mixColors(state[id].colors);
+    const height = Math.round((geo.bottom - geo.topMax) * level);
+    const top = geo.bottom - height;
+
+    rect.setAttribute("y", String(top));
+    rect.setAttribute("height", String(height));
+    rect.setAttribute("fill", color);
+    surface.setAttribute("cy", String(top));
+    surface.setAttribute("fill", color);
+    surface.setAttribute("opacity", height > 3 ? "0.92" : "0");
+    group.setAttribute("data-level", level.toFixed(3));
+    group.setAttribute("data-color", color);
+    if (label) {
+      const ml = Math.round(level * 100);
+      label.textContent = level > 0.02 ? ml + " mL" : "空";
+    }
+  }
+
+  function animateLevel(id, to) {
+    const from = (state[id] && state[id].level) || 0;
+    const start = performance.now();
+    const duration = 320;
+    return new Promise((resolve) => {
+      function step(now) {
+        const t = clamp((now - start) / duration, 0, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        paintVessel(id, from + (to - from) * eased);
+        if (t < 1) requestAnimationFrame(step);
+        else resolve();
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  function makeGhost(bottle) {
+    const ghost = document.createElement("div");
+    ghost.className = "ghost";
+    ghost.setAttribute("data-drag-ghost", "");
+    ghost.innerHTML = bottle.querySelector("svg").outerHTML;
+    layer.appendChild(ghost);
+    return ghost;
+  }
+
+  function startDrag(event, bottle) {
+    const rect = bottle.getBoundingClientRect();
+    const ghost = makeGhost(bottle);
+    activeGhost = ghost;
+    drag = {
+      bottle,
+      reagent: bottle.dataset.reagent,
+      home: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+      pointerId: event.pointerId,
+    };
+    ghost.style.left = event.clientX + "px";
+    ghost.style.top = event.clientY + "px";
+    bottle.setAttribute("data-dragging", "true");
+    bottle.setPointerCapture?.(event.pointerId);
+    document.body.style.cursor = "grabbing";
+  }
+
+  function moveGhost(event) {
+    if (!activeGhost) return;
+    activeGhost.style.left = event.clientX + "px";
+    activeGhost.style.top = event.clientY + "px";
+  }
+
+  function hitVessel(x, y) {
+    const hits = document.querySelectorAll("[data-hot]");
+    for (const hot of hits) {
+      const id = hot.getAttribute("data-hot");
+      const box = hot.getBoundingClientRect();
+      if (x >= box.left - 14 && x <= box.right + 14 && y >= box.top - 14 && y <= box.bottom + 14) {
+        return id;
+      }
+    }
+    return null;
+  }
+
+  function makeStream(from, to, color, delay) {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy);
+    const angle = (Math.atan2(dy, dx) * 180) / Math.PI - 90;
+    const stream = document.createElement("div");
+    stream.className = "stream";
+    stream.setAttribute("data-pour-stream", "");
+    stream.style.left = from.x - 1.5 + "px";
+    stream.style.top = from.y + "px";
+    stream.style.height = length + "px";
+    stream.style.background = "linear-gradient(to bottom, rgba(" + color + ",0.95), rgba(" + color + ",0.35))";
+    stream.style.transform = "rotate(" + angle + "deg)";
+    stream.style.animationDelay = delay + "ms";
+    layer.appendChild(stream);
+    window.setTimeout(() => stream.remove(), 380 + delay + 260);
+  }
+
+  function flyGhost(ghost, from, to, duration, rotate, opacity) {
+    return new Promise((resolve) => {
+      const anim = ghost.animate(
+        [
+          { transform: ghost.style.transform || "translate(-50%,-62%) rotate(-9deg)", opacity: 1 },
+          { transform: "translate(calc(-50% + " + (to.x - from.x) + "px), calc(-50% + " + (to.y - from.y) + "px)) rotate(" + rotate + "deg)", opacity: opacity == null ? 1 : opacity },
+        ],
+        { duration, easing: "cubic-bezier(.3,.9,.35,1)", fill: "forwards" },
+      );
+      anim.finished.then(() => resolve()).catch(() => resolve());
+    });
+  }
+
+  async function pourInto(ghost, vesselId, reagent, home) {
+    const geo = VESSELS[vesselId];
+    const box = document.querySelector('[data-vessel="' + vesselId + '"]').getBoundingClientRect();
+    const cx = box.left + box.width / 2;
+    // 停在水面上方（不压住器皿口），液流从瓶口落到液面
+    const target = { x: cx, y: box.top - 62 };
+    const land = { x: cx, y: box.top + 30 };
+    const start = { x: parseFloat(ghost.style.left), y: parseFloat(ghost.style.top) };
+
+    // 1) 280ms 贝塞尔弧线上抬，飞到器皿上方
+    ghost.setAttribute("data-fly-bottle", "");
+    ghost.style.transition = "none";
+    const arc = ghost.animate(
+      [
+        { transform: "translate(-50%,-62%) rotate(-9deg)", offset: 0 },
+        {
+          transform:
+            "translate(calc(-50% + " + (target.x - start.x) * 0.6 + "px), calc(-50% + " +
+            ((target.y - start.y) * 0.6 - 52) + "px)) rotate(-18deg)",
+          offset: 0.5,
+        },
+        {
+          transform:
+            "translate(calc(-50% + " + (target.x - start.x) + "px), calc(-50% + " + (target.y - start.y) + "px)) rotate(-26deg)",
+          offset: 1,
+        },
+      ],
+      { duration: 280, easing: "cubic-bezier(.25,.85,.35,1)", fill: "forwards" },
+    );
+    await arc.finished.catch(() => {});
+
+    // 2) 180ms 倾斜到 -58°
+    arc.cancel();
+    ghost.style.left = start.x + "px";
+    ghost.style.top = start.y + "px";
+    ghost.style.transform =
+      "translate(calc(-50% + " + (target.x - start.x) + "px), calc(-50% + " + (target.y - start.y) + "px)) rotate(-26deg)";
+    ghost.style.transition = "transform 180ms ease-in-out";
+    void ghost.getBoundingClientRect();
+    ghost.style.transform =
+      "translate(calc(-50% + " + (target.x - start.x) + "px), calc(-50% + " + (target.y - start.y) + "px)) rotate(-58deg)";
+    await new Promise((resolve) => setTimeout(resolve, 190));
+
+    // 3) 3 条液流（380ms，错开 90ms）+ 涟漪 + 液面上升
+    const color = STREAM_RGB[reagent] || STREAM_RGB.water;
+    const gr = ghost.getBoundingClientRect();
+    const mouth = { x: gr.right - 13, y: gr.top + 34 };
+    for (let index = 0; index < 3; index += 1) {
+      makeStream({ x: mouth.x + (index - 1) * 3, y: mouth.y }, { x: land.x + (index - 1) * 4, y: land.y }, color, index * 90);
+    }
+    const ripple = document.createElement("div");
+    ripple.className = "ripple";
+    ripple.style.left = land.x + "px";
+    ripple.style.top = land.y + "px";
+    ripple.style.width = "64px";
+    ripple.style.height = "18px";
+    ripple.style.color = "rgba(" + color + ",0.55)";
+    layer.appendChild(ripple);
+    window.setTimeout(() => ripple.remove(), 520);
+
+    const flash = document.createElement("div");
+    flash.className = "flash";
+    flash.style.left = land.x + "px";
+    flash.style.top = land.y + "px";
+    layer.appendChild(flash);
+    window.setTimeout(() => flash.remove(), 360);
+
+    const current = (state[vesselId] && state[vesselId].level) || 0;
+    state[vesselId] = state[vesselId] || { level: 0, colors: [] };
+    state[vesselId].colors.push(LIQUID[reagent] || LIQUID.water);
+    await animateLevel(vesselId, Math.min(MAX_LEVEL, current + geo.add));
+
+    // 4) 瓶子飞回原位并淡出
+    ghost.style.transition = "transform 260ms cubic-bezier(.4,0,.2,1), opacity 260ms ease-out";
+    ghost.style.transform =
+      "translate(calc(-50% + " + (home.x - start.x) + "px), calc(-50% + " + (home.y - start.y) + "px)) rotate(-9deg)";
+    ghost.style.opacity = "0";
+    await new Promise((resolve) => setTimeout(resolve, 280));
+    ghost.remove();
+    if (activeGhost === ghost) activeGhost = null;
+  }
+
+  function finishDrag(event) {
+    if (!drag || !activeGhost) return;
+    const ghost = activeGhost;
+    const vesselId = hitVessel(event.clientX, event.clientY);
+    drag.bottle.setAttribute("data-dragging", "false");
+    document.body.style.cursor = "";
+    if (!vesselId) {
+      const home = drag.home;
+      const start = { x: parseFloat(ghost.style.left), y: parseFloat(ghost.style.top) };
+      ghost.style.transition = "transform 240ms cubic-bezier(.4,0,.2,1), opacity 240ms ease-out";
+      ghost.style.transform =
+        "translate(calc(-50% + " + (home.x - start.x) + "px), calc(-50% + " + (home.y - start.y) + "px)) rotate(-9deg)";
+      ghost.style.opacity = "0";
+      window.setTimeout(() => ghost.remove(), 260);
+      activeGhost = null;
+      drag = null;
+      return;
+    }
+    const reagent = drag.reagent;
+    const bottle = drag.bottle;
+    const snapshot = { ...drag };
+    drag = null;
+    pourInto(ghost, vesselId, reagent, snapshot.home).finally(() => {
+      bottle.setAttribute("data-dragging", "false");
+      snapshot.bottle.blur?.();
+    });
+  }
+
+  rack.addEventListener("pointerdown", (event) => {
+    const bottle = event.target.closest(".bottle");
+    if (!bottle || event.button !== 0) return;
+    event.preventDefault();
+    startDrag(event, bottle);
+  });
+  window.addEventListener("pointermove", (event) => moveGhost(event), { passive: true });
+  window.addEventListener("pointerup", (event) => finishDrag(event));
+  window.addEventListener("pointercancel", (event) => finishDrag(event));
+
+  document.getElementById("reset").addEventListener("click", () => {
+    document.querySelectorAll(".vessel").forEach((group) => {
+      const id = group.getAttribute("data-vessel");
+      state[id] = { level: id === "beaker" ? 0.08 : 0, colors: id === "beaker" ? [LIQUID.water] : [] };
+      paintVessel(id, state[id].level);
+    });
+    document.querySelectorAll("[data-drag-ghost]").forEach((node) => node.remove());
+    document.querySelectorAll(".stream, .ripple, .flash").forEach((node) => node.remove());
+    document.querySelectorAll('.bottle[data-dragging="true"]').forEach((node) => node.setAttribute("data-dragging", "false"));
+    activeGhost = null;
+    drag = null;
+  });
+
+  Object.keys(VESSELS).forEach((id) => {
+    state[id] = { level: id === "beaker" ? 0.08 : 0, colors: id === "beaker" ? [LIQUID.water] : [] };
+    paintVessel(id, state[id].level);
+  });
+
+  // 供自动化断言读取（不改变交互）
+  window.__PREVIEW__ = {
+    levels: () => Object.fromEntries(Object.keys(VESSELS).map((id) => [id, Number(document.querySelector('[data-vessel="' + id + '"]').getAttribute("data-level"))])),
+    rectOf: (id) => document.querySelector('[data-vessel="' + id + '"]').getBoundingClientRect().toJSON(),
+  };
+})();
+</script>
+</body>
+</html>

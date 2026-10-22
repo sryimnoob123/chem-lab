@@ -1,0 +1,24 @@
+﻿import { chromium } from "@playwright/test";
+const BASE = "http://127.0.0.1:3001";
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+const page = await ctx.newPage();
+await page.request.post(`${BASE}/api/session`, { headers: { "content-type": "application/json" }, data: { studentNo: "20250101", name: "周若曦" } });
+await page.goto(`${BASE}/exp/exp03?force=1`, { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(2500);
+await page.getByRole("button", { name: /跳过/ }).first().click().catch(() => {});
+await page.waitForTimeout(600);
+const src = await page.locator('[data-demo-id="demo-scene-reagent-water"]').first().boundingBox();
+const beaker = await page.locator('[data-demo-id="demo-scene-vessel-beaker"]').first().boundingBox();
+const sx = src.x + src.width / 2, sy = src.y + src.height / 2;
+const tx = beaker.x + beaker.width / 2, ty = beaker.y + beaker.height / 2;
+await page.mouse.move(sx, sy);
+await page.mouse.down();
+for (let i = 1; i <= 12; i++) { await page.mouse.move(sx + ((tx - sx) * i) / 12, sy + ((ty - sy) * i) / 12); await page.waitForTimeout(30); }
+await page.waitForTimeout(300);
+const g = await page.locator('[data-demo-id="demo-drag-ghost"]').first().boundingBox();
+console.log("影子盒:", JSON.stringify({ x: Math.round(g.x), y: Math.round(g.y), w: Math.round(g.width), h: Math.round(g.height) }));
+await page.screenshot({ path: "C:\\Users\\14681\\AppData\\Local\\Temp\\chemlab-shots\\preview-3d\\ghost-zoom.png", clip: { x: Math.max(0, g.x - 120), y: Math.max(0, g.y - 120), width: 380, height: 300 } });
+console.log("saved");
+await page.mouse.up();
+await browser.close();

@@ -570,6 +570,44 @@
   pointer-events: none;
 }
 
+/* 飞过去倒的瓶子（用户 2026-10-22 点名要的那一段）：
+   从试剂架起飞 → 器皿上方倾斜 −58° → 倒完飞回淡出。
+   初始位置由 pour.tsx 的 from 写入 left/top，动画只动 transform。 */
+.pourBottle {
+  position: absolute;
+  width: 30px;
+  height: 46px;
+  border: 2px solid var(--river-700, #3f5f7a);
+  border-radius: 3px;
+  background: rgba(252, 253, 252, 0.98);
+  transform-origin: 50% 88%;
+  box-shadow: 0 8px 18px rgba(22, 32, 44, 0.26);
+  opacity: 1;
+  will-change: transform;
+}
+
+.pourBottleNeck {
+  position: absolute;
+  top: -8px;
+  left: 9px;
+  width: 10px;
+  height: 8px;
+  border: 2px solid var(--river-700, #3f5f7a);
+  border-bottom: 0;
+  border-radius: 2px 2px 0 0;
+  background: inherit;
+}
+
+.pourBottleFill {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
+  height: 58%;
+  border-radius: 0 0 2px 2px;
+  opacity: 0.9;
+}
+
 .pourDrop {
   position: absolute;
   width: 7px;

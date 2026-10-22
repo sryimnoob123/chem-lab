@@ -3,11 +3,15 @@
 /**
  * 试剂加入动画（asset-pipeline 独占）
  *
- * 一次加入 = 4 段，总时长约 700ms：
- *   0ms    瓶身倾转（rotate -14° → 0，300ms）
- *   0ms    2~3 滴试剂沿二次贝塞尔飞向器皿（每滴 420ms，错开 90ms）
- *   360ms  落点涟漪（圆环 scale .3→1 + opacity 1→0，420ms）
- *   400ms  液面抬升（scaleY .04→1，260ms，缓出）
+ * 用户 2026-10-22 口径："拖进来之后要有一个瓶子飞过去、倾斜、倒进去，
+ * 不是水凭空出现在瓶里。" 所以一次加入 = 5 段，总时长约 1150ms：
+ *
+ *   0ms     试剂瓶从架上（from）飞到器皿上方（290ms，缓出）
+ *   290ms   瓶身倾转 −58°（180ms）——"举起来倒"的姿态
+ *   430ms   2~3 条液流从瓶口落到器皿（每条 380ms，错开 90ms）
+ *   620ms   落点涟漪（圆环 scale .3→1 + opacity 1→0，380ms）
+ *   640ms   液面抬升（scaleY .12→1，260ms，缓出）
+ *   900ms   瓶子飞回架上并淡出（250ms）
  *
  * 全部用 WAAPI `el.animate()`，不引库；下一次加入会 cancel 上一次的
  * 全部 Animation + timer；`prefers-reduced-motion` 下不注册动画（1 帧切换）。
@@ -25,15 +29,21 @@ export type PourGeom = {
 
 export type PourState = PourGeom & { key: number };
 
-const FLIGHT_MS = 300;
-const STAGGER_MS = 70;
-const RIPPLE_DELAY = 250;
+const FLY_MS = 290;
+const TILT_MS = 180;
+const DROP_START = 430;
+const DROP_FLIGHT_MS = 380;
+const STAGGER_MS = 90;
+const RIPPLE_DELAY = 620;
 const RIPPLE_MS = 380;
-const RISE_DELAY = 270;
+const RISE_DELAY = 640;
 const RISE_MS = 260;
-const TOTAL_MS = 700;
+const RETURN_DELAY = 900;
+const RETURN_MS = 250;
+const TOTAL_MS = 1160;
 
 const DROP_COUNT = 3;
+const TILT_DEG = -58;
 
 /** 落点校正：exp09 的投放热区是旧布局，和 SVG 里锥形瓶的位置不一致；
  *  优先用实验台 SVG（viewBox 360×640）里锥形瓶瓶口的真实位置，找不到就退回父组件给的 to。 */
@@ -54,10 +64,10 @@ function anchorOf(root: HTMLElement, fallback: { x: number; y: number }) {
 const reduced = (): boolean =>
   typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** 二次贝塞尔采样：从瓶口先微微上抬再落进器皿。 */
-function bezier(from: { x: number; y: number }, to: { x: number; y: number }, t: number) {
+/** 瓶子飞行轨迹：先微微上抬再落到器皿上方（二次贝塞尔采样）。 */
+function flyPath(from: { x: number; y: number }, to: { x: number; y: number }, t: number) {
   const cx = (from.x + to.x) / 2;
-  const cy = Math.min(from.y, to.y) - 36;
+  const cy = Math.min(from.y, to.y) - 70;
   const u = 1 - t;
   return {
     x: u * u * from.x + 2 * u * t * cx + t * t * to.x,
@@ -104,6 +114,7 @@ export function PourFX({ pour, onDone }: { pour: PourState | null; onDone: () =>
     const drops = Array.from(root.querySelectorAll<HTMLElement>("[data-pour-drop]"));
     const ripple = root.querySelector<HTMLElement>("[data-pour-ripple]");
     const liquid = root.querySelector<HTMLElement>("[data-pour-liquid]");
+    const flying = root.querySelector<HTMLElement>("[data-pour-bottle]");
     const anims: Animation[] = [];
 
     // 落点校正到 SVG 里锥形瓶瓶口；同时按实验台缩放调整涟漪/液面尺寸
@@ -121,25 +132,79 @@ export function PourFX({ pour, onDone }: { pour: PourState | null; onDone: () =>
       liquid.style.height = `${h}px`;
     }
 
-    drops.forEach((drop, index) => {
-      const step = 8;
+    // 瓶子飞行的终点：器皿正上方（瓶口朝下，留出倾倒空间）
+    const hover = { x: to.x, y: to.y - 64 };
+
+    if (flying) {
+      flying.style.left = `${pour.from.x}px`;
+      flying.style.top = `${pour.from.y}px`;
       const frames: Keyframe[] = [];
-      for (let i = 0; i <= step; i += 1) {
-        const t = i / step;
-        const p = bezier(pour.from, to, t);
+      const STEP = 14;
+      for (let i = 0; i <= STEP; i += 1) {
+        const t = i / STEP;
+        const p = flyPath(pour.from, hover, t);
         frames.push({
-          transform: `translate(${(p.x - pour.from.x).toFixed(1)}px, ${(p.y - pour.from.y).toFixed(1)}px) scale(${(1 - t * 0.35).toFixed(3)})`,
-          opacity: i === 0 ? 1 : 0.95,
+          transform: `translate(${(p.x - pour.from.x).toFixed(1)}px, ${(p.y - pour.from.y).toFixed(1)}px) rotate(0deg)`,
           offset: t,
         });
       }
+      // 到达后倾斜
+      frames.push({
+        transform: `translate(${(hover.x - pour.from.x).toFixed(1)}px, ${(hover.y - pour.from.y).toFixed(1)}px) rotate(${TILT_DEG}deg)`,
+        offset: 1,
+      });
       anims.push(
-        drop.animate(frames, {
-          duration: FLIGHT_MS,
-          delay: index * STAGGER_MS,
-          easing: "linear",
+        flying.animate(frames, {
+          duration: FLY_MS + TILT_MS,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
           fill: "both",
         }),
+      );
+      // 倒完飞回并淡出
+      anims.push(
+        flying.animate(
+          [
+            {
+              transform: `translate(${(hover.x - pour.from.x).toFixed(1)}px, ${(hover.y - pour.from.y).toFixed(1)}px) rotate(${TILT_DEG}deg)`,
+              opacity: 1,
+            },
+            { transform: "translate(0px, 0px) rotate(0deg)", opacity: 0 },
+          ],
+          {
+            duration: RETURN_MS,
+            delay: RETURN_DELAY,
+            easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+            fill: "both",
+          },
+        ),
+      );
+    }
+
+    // 液流：从倾倒后的瓶口落到器皿液面
+    const mouth = { x: hover.x + 6, y: hover.y + 16 };
+    drops.forEach((drop, index) => {
+      drop.style.left = `${pour.from.x - 3.5}px`;
+      drop.style.top = `${pour.from.y - 5}px`;
+      const dx = mouth.x - pour.from.x;
+      const dy = mouth.y - pour.from.y;
+      anims.push(
+        drop.animate(
+          [
+            { transform: "translate(0px, 0px) scale(0.4)", opacity: 0 },
+            { transform: `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(1)`, opacity: 1, offset: 0.34 },
+            {
+              transform: `translate(${(mouth.x - pour.from.x).toFixed(1)}px, ${(to.y - pour.from.y).toFixed(1)}px) scale(0.7)`,
+              opacity: 0.9,
+              offset: 1,
+            },
+          ],
+          {
+            duration: DROP_FLIGHT_MS,
+            delay: DROP_START + index * STAGGER_MS,
+            easing: "cubic-bezier(0.4, 0, 0.6, 1)",
+            fill: "both",
+          },
+        ),
       );
     });
 
@@ -203,6 +268,11 @@ export function PourFX({ pour, onDone }: { pour: PourState | null; onDone: () =>
 
   return (
     <div ref={rootRef} className={styles.pourLayer} aria-hidden="true" data-pour-key={pour.key}>
+      {/* 飞过去的瓶子：从试剂架出发，到器皿上方倾斜，倒完飞回 */}
+      <span data-pour-bottle className={styles.pourBottle} style={{ borderColor: color }}>
+        <span className={styles.pourBottleNeck} style={{ borderColor: color }} />
+        <span className={styles.pourBottleFill} style={{ background: color }} />
+      </span>
       {Array.from({ length: DROP_COUNT }, (_, i) => (
         <span
           key={i}

@@ -1,0 +1,27 @@
+﻿import { chromium } from "@playwright/test";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+const BASE = "http://127.0.0.1:3001";
+const OUT = join(tmpdir(), "chemlab-shots", "preview-3d");
+mkdirSync(OUT, { recursive: true });
+const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await ctx.newPage();
+const errs = [];
+page.on("pageerror", (e) => errs.push(String(e.message).slice(0, 150)));
+page.on("console", (m) => { if (m.type() === "error") errs.push(m.text().slice(0, 150)); });
+await page.request.post(`${BASE}/api/session`, { headers: { "content-type": "application/json" }, data: { studentNo: "20250101", name: "周若曦" } });
+await page.goto(`${BASE}/exp/exp09?force=1&scene=3d`, { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(4500);
+await page.getByRole("button", { name: /跳过/ }).first().click().catch(() => {});
+await page.waitForTimeout(1500);
+const info = await page.evaluate(() => {
+  const c = document.querySelector("canvas");
+  return { hasCanvas: !!c, w: c?.width ?? 0, h: c?.height ?? 0, webgl: !!c?.getContext("webgl2") };
+});
+console.log("canvas:", JSON.stringify(info));
+console.log("errors:", errs.length, JSON.stringify(errs.slice(0, 3)));
+await page.screenshot({ path: join(OUT, "exp09-3d.png") });
+console.log("shot:", join(OUT, "exp09-3d.png"));
+await browser.close();

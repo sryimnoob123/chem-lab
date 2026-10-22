@@ -21,7 +21,7 @@ import {
   SNAP_MS,
   type DropVerdict,
 } from "@/components/exp/guide/drop-resolve";
-import { tiltBottle, type PourState } from "@/components/exp/scene/pour";
+import { type PourState } from "@/components/exp/scene/pour";
 import { getSceneReagent } from "@/lib/scene/reagents";
 
 export type DropMode = "drag" | "click" | "event";
@@ -102,9 +102,28 @@ export function useDropFlow({ stageRef, resolve, onPour, onAccept, onReject }: D
       const targetRect = target?.getBoundingClientRect();
       const landing = bottleRect && targetRect ? centerOf(targetRect) : undefined;
 
+      /**
+       * 倒向哪个器皿（2026-10-22 用户报"瓶子飞到中间去了"）：
+       * TARGET_SELECTOR 是覆盖整个台面的大热区，中心常常不在任何器皿上。
+       * 松手点落在哪个器皿就从哪个器皿进去；落在空白才回退到热区中心。
+       *
+       * 注意用 elementsFromPoint 逐层穿透：大热区按钮盖在 SVG 之上，
+       * 单用 elementFromPoint 只会拿到那层按钮，永远找不到器皿。
+       */
+      const dropVessel =
+        point && typeof document !== "undefined"
+          ? (document
+              .elementsFromPoint(point.x, point.y)
+              .map((el) => el.closest<HTMLElement>('[data-demo-id^="demo-scene-vessel"]'))
+              .find((el): el is HTMLElement => Boolean(el)) ?? null)
+          : null;
+      const vesselRect = dropVessel?.getBoundingClientRect() ?? null;
+      const pourTargetRect = vesselRect ?? targetRect;
+
       if (verdict.kind === "accept") {
         busyRef.current = true;
-        tiltBottle(bottle);
+        // 2026-10-22：不再让源按钮原地倾斜 —— 改由 PourFX 里一个"飞过去的瓶子"完成
+        // 举瓶→倾斜→倒→飞回，源按钮只留一个轻微的被拿起反馈。
         if (!reduced) {
           const wrap = stage.querySelector('[class*="apparatusWrap"]');
           animate(
@@ -117,7 +136,7 @@ export function useDropFlow({ stageRef, resolve, onPour, onAccept, onReject }: D
             { duration: SNAP_MS, easing: SNAP_EASING },
           );
         }
-        if (bottleRect && targetRect) {
+        if (bottleRect && pourTargetRect) {
           setPour({
             key: Date.now(),
             color: getSceneReagent(reagentId)?.colorHex ?? "#DCE9F2",
@@ -126,9 +145,10 @@ export function useDropFlow({ stageRef, resolve, onPour, onAccept, onReject }: D
               x: bottleRect.left + bottleRect.width / 2 - stageRect.left,
               y: bottleRect.top + 8 - stageRect.top,
             },
+            // 落点 = 真实器皿的液面高度（器皿顶部往下 45%），不是大热区中心
             to: {
-              x: targetRect.left + targetRect.width / 2 - stageRect.left,
-              y: targetRect.top + targetRect.height * 0.18 - stageRect.top,
+              x: pourTargetRect.left + pourTargetRect.width / 2 - stageRect.left,
+              y: pourTargetRect.top + pourTargetRect.height * 0.45 - stageRect.top,
             },
           });
         }

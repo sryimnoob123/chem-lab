@@ -17,8 +17,10 @@ import { ACTION_VERB, clip, firstClause } from "./copy";
 
 /** 吸附落位（"我接住了"）：160ms，见 motion.css 的 --snap。 */
 export const SNAP_MS = 160;
-/** 倒入动画总时长：与 components/exp/scene/pour.tsx 的 TOTAL_MS 对齐。 */
-export const POUR_MS = 700;
+/** 倒入动画总时长：与 components/exp/scene/pour.tsx 的 TOTAL_MS 对齐。
+ *  2026-10-22 从 700ms 拉到 1160ms —— 现在多了"瓶子飞过去 + 倾斜 + 倒完飞回"两段，
+ *  时长不同步会让步骤在动画播完前推进（画面被切、用户看着像水凭空出现）。 */
+export const POUR_MS = 1160;
 /** 拒收回弹 + 抖动：240ms，见 motion.css 的 --shake。 */
 export const REJECT_MS = 240;
 
