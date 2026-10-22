@@ -82,7 +82,7 @@ export default async function TeacherOverviewPage({ searchParams }: { searchPara
 
   return (
     <>
-      <PageHead title="学情总览" sub="03600004 · 能源科学与技术学院 · 2 个班">
+      <PageHead title="学情总览" sub="03600004 · 新能源与智能制造学院 · 2 个班">
         <span className="tch-updated">
           数据更新于 <span className="mono">{formatClock(new Date())}</span>
         </span>

@@ -59,6 +59,7 @@ export function GlassVessel({ vessel, contents, liquidOverride }: GlassVesselPro
   const glassId = `glass-${uid}`;
   const depthId = `depth-${uid}`;
   const clipId = `clip-${uid}`;
+  const shadowId = `shadow-${uid}`;
   const scale = VESSEL_SCALE[kind];
   const body = bodyPath(kind);
 
@@ -76,14 +77,21 @@ export function GlassVessel({ vessel, contents, liquidOverride }: GlassVesselPro
 
   return (
     <g transform={`translate(${vessel.x} ${vessel.y}) scale(${scale})`} className={styles.art}>
-      {/* 接地阴影：器皿坐在台面上，而不是浮着 */}
+      {/* 接地阴影：器皿坐在台面上，而不是浮着。
+          用径向渐变（中心深、边缘全透明），比纯色椭圆更像真实投影，也不用 filter。 */}
+      <defs>
+        <radialGradient id={shadowId}>
+          <stop offset="0%" stopColor="#39485A" stopOpacity="0.22" />
+          <stop offset="55%" stopColor="#39485A" stopOpacity="0.1" />
+          <stop offset="100%" stopColor="#39485A" stopOpacity="0" />
+        </radialGradient>
+      </defs>
       <ellipse
         cx={cx}
         cy={BASE_Y[kind] ?? 184}
-        rx={surfaceRx * 0.88}
-        ry={3.6}
-        fill="var(--glass-shadow)"
-        opacity={0.55}
+        rx={surfaceRx * 1.12}
+        ry={8}
+        fill={`url(#${shadowId})`}
       />
       <defs>
         {/* 玻璃体：左上淡、右下略深，给一点圆柱感 */}
@@ -128,6 +136,7 @@ export function GlassVessel({ vessel, contents, liquidOverride }: GlassVesselPro
       />
 
       <MouthDetail kind={kind} />
+      <Graduations kind={kind} />
 
       {/* 器皿高光：左上一条主色细线（替代旧的白色高光） */}
       <path d={sheenPath(kind)} className={styles.sheen} />
@@ -185,6 +194,35 @@ export function GlassVessel({ vessel, contents, liquidOverride }: GlassVesselPro
 
       {/* 第三层：底部弧形反光（画在液体之上，弧线才露得出来） */}
       <path d={reflectArc(kind)} fill="none" className={styles.reflect} strokeWidth={1.2} strokeLinecap="round" />
+    </g>
+  );
+}
+
+/**
+ * 刻度：烧杯 20/40/60/80 mL 四条主刻度 + 一条半格线。
+ * 纸白底上刻度线要淡（墨 0.45），否则像贴纸；数字只在两条主刻度上出现，避免糊。
+ */
+function Graduations({ kind }: { kind: SceneVessel["kind"] }) {
+  if (kind !== "beaker") return null;
+  const rows: readonly { y: number; label?: string }[] = [
+    { y: 78, label: "80" },
+    { y: 100 },
+    { y: 122, label: "40" },
+    { y: 144 },
+  ];
+  return (
+    <g className={styles.graduation} aria-hidden="true">
+      {rows.map((row) => (
+        <g key={row.y}>
+          <line x1="115" y1={row.y} x2="130" y2={row.y} strokeWidth="0.9" />
+          <line x1="115" y1={row.y + 7} x2="122" y2={row.y + 7} strokeWidth="0.7" opacity="0.45" />
+          {row.label ? (
+            <text x="110" y={row.y + 3} textAnchor="end" fontSize="8" opacity="0.7">
+              {row.label}
+            </text>
+          ) : null}
+        </g>
+      ))}
     </g>
   );
 }

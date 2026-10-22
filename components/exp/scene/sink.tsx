@@ -72,6 +72,7 @@ export function Sink({ x, y, running = false, highlight = false, onUse }: SinkPr
       className={styles.sink}
       style={{ transform: `translate(${x}px, ${y}px)` }}
       data-demo-id="demo-scene-sink"
+      data-drop-kind="sink"
       data-hover={hovered ? "true" : "false"}
       data-pressed={pressed ? "true" : "false"}
       data-hot={highlight ? "true" : "false"}
@@ -120,16 +121,16 @@ export function Sink({ x, y, running = false, highlight = false, onUse }: SinkPr
         {/* 槽底（梯形，往里缩） */}
         <path
           d={`M${SKEW} ${DEPTH} H${SINK_W - SKEW} L${SINK_W - SKEW - 10} ${SINK_H} H${SKEW + 10} Z`}
-          fill="#e3e8ee"
+          fill="var(--sink-basin)"
         />
         {/* 左右内壁 */}
         <path
           d={`M0 0 L${SKEW} ${DEPTH} L${SKEW + 10} ${SINK_H} L0 ${SINK_H - DEPTH} Z`}
-          fill="#eef2f6"
+          fill="var(--sink-wall)"
         />
         <path
           d={`M${SINK_W} 0 L${SINK_W - SKEW} ${DEPTH} L${SINK_W - SKEW - 10} ${SINK_H} L${SINK_W} ${SINK_H - DEPTH} Z`}
-          fill="#eef2f6"
+          fill="var(--sink-wall)"
           opacity={0.6}
         />
         {/* 落水口 */}

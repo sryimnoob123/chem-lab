@@ -11,6 +11,14 @@ import { ToolTray } from "./tool-tray";
 import { Sink } from "./sink";
 import { ActionLayer, type SceneAction } from "./actions/action-layer";
 import type { SceneToolId } from "@/lib/scene/tools";
+import { BENCH } from "./bench-layout";
+import {
+  useBenchDrag,
+  ZERO_OFFSET,
+  type BenchBounds,
+  type BenchOffset,
+  type BenchTarget,
+} from "./use-bench-drag";
 
 /** 现象动画时长（与 CSS keyframes 对齐）。 */
 const FX_MS: Record<SceneFx, number> = {
@@ -135,8 +143,11 @@ export function BenchScene({
   const [offsets, setOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
   /** 拖动偏移的快照：回位动画要读当前值，不能只在渲染期用 state */
   const offsetsRef = useRef<Record<string, { dx: number; dy: number }>>({});
+  /** 归位动画进行中：这段时间内不许 offsets 同步把器皿又写回拖动位置（会打断回弹）。 */
+  const resettingRef = useRef(false);
   // offsets（React state）→ DOM transform：唯一写入口，避免和 React 的属性管理打架
   useEffect(() => {
+    if (resettingRef.current) return;
     for (const [id, offset] of Object.entries(offsets)) {
       const node = vesselRefs.current[id];
       if (node) node.style.transform = `translate(${offset.dx}px, ${offset.dy}px)`;
@@ -155,19 +166,29 @@ export function BenchScene({
   useEffect(() => {
     if (layoutKey === undefined) return;
     const current = offsetsRef.current;
+    if (!Object.keys(current).length) return;
+    resettingRef.current = true;
     for (const [id, offset] of Object.entries(current)) {
       if (!offset.dx && !offset.dy) continue;
       const node = vesselRefs.current[id];
       if (!node) continue;
-      node.animate(
+      const anim = node.animate(
         [
           { transform: `translate(${offset.dx}px, ${offset.dy}px)` },
           { transform: "translate(0px, 0px)" },
         ],
         { duration: 400, easing: "cubic-bezier(.23, 1, .32, .1)" },
       );
+      // 动画结束后把 inline transform 落成 0：否则后续任何一次 offsets 同步都会把它写回原位
+      anim.onfinish = () => {
+        node.style.transform = "translate(0px, 0px)";
+      };
     }
-    if (Object.keys(current).length) setOffsets({});
+    setOffsets({});
+    const timer = window.setTimeout(() => {
+      resettingRef.current = false;
+    }, 460);
+    return () => window.clearTimeout(timer);
   }, [layoutKey]);
   /**
    * 命中框 = 实测的器皿绘制框（2026-10-22 用户反馈"框有点偏移，没在正中间"）。
@@ -201,6 +222,78 @@ export function BenchScene({
     document.addEventListener("click", swallow, { capture: true, once: true });
     window.setTimeout(() => document.removeEventListener("click", swallow, { capture: true }), 400);
   }, []);
+
+  /**
+   * 可拖范围＝台面本身（用户 2026-10-22：以前为了省事写死 ±340 的方块，现在放开）。
+   * 只挡两件不合理的事：拖出画布找不回来、把器皿按到台面以下或举到天上去。
+   */
+  const dragBounds = useCallback((id: string): BenchBounds => {
+    const vessel = SCENE_VESSELS.find((item) => item.id === id);
+    const w = vessel?.w ?? 90;
+    const h = vessel?.h ?? 120;
+    const baseX = vessel?.x ?? 0;
+    const baseY = vessel?.y ?? 0;
+    /**
+     * 可拖范围 = 整个可见台面（取实时 viewBox，不写死常量）。
+     * 上一版按「台面线 340 到前沿 430」算，器皿往下最多走 90 单位就顶住 ——
+     * 指针还在往下走，器皿不动了，手感就是「拖着拖着不跟手」。
+     * 现在只挡两件真正不合理的事：拖出画布（找不回来）、把器皿拖到看不见的位置。
+     */
+    const vb = svgRef.current?.viewBox.baseVal;
+    const left = vb && vb.width > 0 ? vb.x : 370;
+    const top = vb && vb.height > 0 ? vb.y : 0;
+    const right = left + (vb && vb.width > 0 ? vb.width : 794);
+    const bottom = top + (vb && vb.height > 0 ? vb.height : 560);
+    const margin = 8;
+    return {
+      minX: left + margin - baseX,
+      maxX: right - w - margin - baseX,
+      minY: top + margin - baseY,
+      maxY: bottom - h - margin - baseY,
+    };
+  }, [svgRef]);
+
+  /**
+   * 拖动结束后浏览器会补发一个 click：如果漏掉，它会把刚写出的文案盖掉
+   * （用户 2026-10-22 报「洗完看不到结果条」）。document 级 swallow 之外再加一道时间闩，
+   * 300ms 内的点击一律当作拖动的余波丢掉。
+   */
+  const dragEndedAtRef = useRef(0);
+  const justDragged = useCallback(() => Date.now() - dragEndedAtRef.current < 320, []);
+
+  /**
+   * 松手：落到洗涤槽＝洗（洗完归位）；落在台面上＝换位置，位置留在那；
+   * 落在别的器皿上或台面外＝回弹 + 一句话（不静默）。
+   */
+  const handleVesselDrop = useCallback(
+    (id: string, target: BenchTarget, offset: BenchOffset): BenchOffset | void => {
+      dragEndedAtRef.current = Date.now();
+      if (target.kind === "sink") {
+        onDropToSink?.(id);
+        /**
+         * 放在槽里洗，别立刻弹回原地（用户 2026-10-22：动作要在落点上发生）。
+         * 位置留在槽里 → 冲洗/刷洗/倒水整段动画都在槽口播放；
+         * 这一步做完 stepIndex 变 → layoutKey 变化把器皿滑回基准位（400ms 缓动）。
+         */
+        setOffsets((prev) => ({ ...prev, [id]: offset }));
+        return offset;
+      }
+      if (target.kind === "bench") {
+        setOffsets((prev) => ({ ...prev, [id]: offset }));
+        return offset;
+      }
+      onDropToNowhere?.(id);
+      return undefined;
+    },
+    [onDropToNowhere, onDropToSink],
+  );
+
+  const drag = useBenchDrag({
+    svgRef,
+    bounds: dragBounds,
+    onDrop: handleVesselDrop,
+    onDragged: swallowNextClick,
+  });
   const [hitBoxes, setHitBoxes] = useState<Record<string, { x: number; y: number; w: number; h: number }>>({});
   useLayoutEffect(() => {
     const measure = () => {
@@ -288,7 +381,6 @@ export function BenchScene({
   // 宽度 528 → 780：右半原来全空着，现在放工具区，场景铺满工作区（用户 2026-10-22）
   // 底部空白收紧（186→126）：器皿与工具之间别隔那么死，整块台面更饱满（用户 2026-10-22）
   const benchViewBox = `370 ${contentTop - 12} 780 ${434 - contentTop + 126}`;
-  const benchWidth = 780;
 
   useEffect(() => {
     if (!reaction) return;
@@ -331,14 +423,71 @@ export function BenchScene({
       }}
     >
       <svg ref={svgRef} className={styles.benchSvg} viewBox={benchViewBox} role="img" aria-label="实验台：玻璃器皿与分析天平">
+        {/* 拿起时的接地投影：径向渐变画，不用 filter（拖动中不能有贵特效） */}
+        <defs>
+          <radialGradient id="benchLiftShadow">
+            <stop offset="0%" stopColor="#1E2A38" stopOpacity="0.26" />
+            <stop offset="62%" stopColor="#1E2A38" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="#1E2A38" stopOpacity="0" />
+          </radialGradient>
+          {/* 台面接缝的内阴影：从上往下淡出，给台面「凹进墙里」的那道暗 */}
+          <linearGradient id="benchSeam" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--bench-seam)" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="var(--bench-seam)" stopOpacity="0" />
+          </linearGradient>
+          {/* 台账纸网格：26×26 一格，只有 1px 细线。
+              平移 5/9 —— 否则网格线正好落在器皿底沿（340 = 26×13 附近），
+              看着像台面上多了一条搁板。 */}
+          <pattern id="benchGrid" width="26" height="26" patternUnits="userSpaceOnUse" patternTransform="translate(5 9)">
+            <path d="M26 0 H0 V26" fill="none" stroke="var(--bench-grid)" strokeWidth="1" />
+          </pattern>
+          {/* 台面纵深：上浅下深一点，像顶灯照在台面上 */}
+          <linearGradient id="benchDepth" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.55" />
+            <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0" />
+            <stop offset="100%" stopColor="#39485A" stopOpacity="0.035" />
+          </linearGradient>
+        </defs>
         {/* 台面（铁架台已删除：exp01/exp03 都不用滴定台，空夹子会被当成"这是什么"） */}
         <g aria-hidden="true">
-          <rect x="370" y="340" width="570" height="80" fill="var(--bench)" />
-          <line x1="370" y1="340" x2="940" y2="340" stroke="var(--line)" strokeWidth="1" />
-          <text x="924" y="402" textAnchor="end" className={styles.benchMark}>
-            实验台
-          </text>
+          {/*
+            整块舞台就是台面（略微俯视）：暖白台面 + 极淡台账网格 + 前沿一条厚度。
+            之前那条「墙与台面的接缝」画在器皿高度中间，横线从玻璃里穿过去，像贴了条胶带 ——
+            去掉。纵深靠「前沿 + 上浅下深的台面渐变」表达。
+          */}
+          <rect x="370" y={contentTop - 12} width="780" height={560 - contentTop} fill="var(--bench-top)" />
+          <rect
+            x="370"
+            y={contentTop - 12}
+            width="780"
+            height={560 - contentTop}
+            fill="url(#benchDepth)"
+          />
+          {/* 极淡网格：26 单位一格，只当纸感，不当装饰 */}
+          <rect
+            x="370"
+            y={contentTop - 12}
+            width="780"
+            height={560 - contentTop}
+            fill="url(#benchGrid)"
+            opacity="0.45"
+          />
+          {/* 前沿（台面厚度） */}
+          <rect x="370" y="532" width="780" height="28" fill="var(--bench-edge)" />
+          <line x1="370" y1="532" x2="1150" y2="532" stroke="var(--bench-line)" strokeWidth="1" opacity="0.8" />
+          <rect x="370" y="524" width="780" height="8" fill="url(#benchSeam)" />
         </g>
+
+        {/* 台面落点：落在台面任何位置 = 换了位置就留在那（用户 2026-10-22：放开拖拽范围）。
+            放在器皿之前渲染，器皿永远在它上面，不会抢走点击。 */}
+        <rect
+          data-drop-kind="bench"
+          x={BENCH.left}
+          y={BENCH.top - 96}
+          width={BENCH.right - BENCH.left}
+          height={BENCH.front - BENCH.top + 96}
+          fill="transparent"
+        />
 
         {/* 分析天平（称量类实验的识别物，静态外形；读数在 step-demo 文案里表达） */}
         {instrument === "balance" ? (
@@ -415,7 +564,7 @@ export function BenchScene({
         {/* 工具托盘 + 洗涤槽：动作要在场景里做，不能靠点卡片一步过（用户 2026-10-22） */}
         {toolIds && toolIds.length > 0 && onSelectTool ? (
           <ToolTray
-            area={{ x: 842, y: 410, w: 302, h: 182 }}
+            area={{ x: 578, y: 424, w: 560, h: 112 }}
             toolIds={toolIds}
             activeTool={activeTool}
             onSelectTool={onSelectTool}
@@ -465,13 +614,6 @@ export function BenchScene({
           const isCue = cueVesselId === vessel.id && !isDropHover;
           /** 拖拽时其它器皿也淡淡描一圈：告诉学生"这些都能落"，不用命中猜。 */
           const isDropCandidate = Boolean(draggingReagentId) && droppable && !isDropHover;
-          const badge = isDropHover
-            ? dropHoverValid
-              ? `落进 ${vessel.label}`
-              : `${vessel.label} 不行`
-            : isCue
-              ? "点这里"
-              : null;
 
           /**
            * key 只在「这个器皿拿到反馈」时变：让 ix-snap / ix-shake 能重播，
@@ -484,6 +626,8 @@ export function BenchScene({
               }}
               key={`${vessel.id}${fb ? `-${feedback?.key}` : ""}`}
               data-demo-id={`demo-scene-vessel-${vessel.id}`}
+              data-drop-kind="vessel"
+              data-vessel-id={vessel.id}
               className={`ix ${styles.vessel} ${droppable ? styles.droppable : styles.static} ${
                 fb === "success" ? "ix-snap" : fb === "reject" ? "ix-shake" : ""
               }`}
@@ -496,79 +640,12 @@ export function BenchScene({
               data-cue={cueVesselId === vessel.id ? "true" : "false"}
               data-feedback={fb ?? undefined}
               onPointerDown={(event) => {
-                // 拖动器皿：用 document 级监听。
-                // 之前在 SVG <g> 上 setPointerCapture 不可靠（元素一重渲染 capture 就失效），
-                // 而每帧 setState 又会把整棵 SVG 重渲染到卡死 —— 用户报了三次「拖不动」。
-                if (event.button !== 0) return;
+                // 拖动器皿：跟手/落点/回弹全交给 use-bench-drag。
+                // 关键——拖动过程中不 setState、不重渲染，一帧只写一次 transform。
+                if (event.pointerType === "mouse" && event.button !== 0) return;
                 event.stopPropagation();
                 setPressedId(vessel.id);
-
-                const startX = event.clientX;
-                const startY = event.clientY;
-                const base = offsets[vessel.id] ?? { dx: 0, dy: 0 };
-                const scale = svgRef.current
-                  ? svgRef.current.getBoundingClientRect().width / benchWidth
-                  : 1;
-                let moved = false;
-                let last = { dx: base.dx, dy: base.dy };
-
-                const onMove = (moveEvent: PointerEvent) => {
-                  const dxPx = moveEvent.clientX - startX;
-                  const dyPx = moveEvent.clientY - startY;
-                  if (!moved && Math.hypot(dxPx, dyPx) < 4) return;
-                  moved = true;
-                  // ±340：够得着洗槽（容量瓶 693 → 洗槽 392 差 301），
-                  // 又不至于一路拖出画布外拉不回来（用户 2026-10-22）
-                  const clamp = (value: number) => Math.max(-340, Math.min(340, value));
-                  last = {
-                    dx: clamp(base.dx + dxPx / scale),
-                    dy: clamp(base.dy + dyPx / scale),
-                  };
-                  // 拖动中只写 DOM，不动 React state
-                  // 用 inline style：SVG 的 transform 属性会被 CSS（.vessel 的 transform /
-                  // transform-box）覆盖，实测属性写进去了但画面纹丝不动。inline 优先级最高。
-                  const node = vesselRefs.current[vessel.id];
-                  if (node) node.style.transform = `translate(${last.dx}px, ${last.dy}px)`;
-                };
-
-                const finish = () => {
-                  document.removeEventListener("pointermove", onMove);
-                  document.removeEventListener("pointerup", finish);
-                  setPressedId(null);
-                  if (!moved) return;
-                  // 拖动真的动过 → 吞掉紧随的补偿 click（否则成功文案被覆盖）
-                  swallowNextClick();
-
-                  // 目的地式拖动（用户 2026-10-22：自由拖动 bug 太多）：
-                  // 拖到洗涤槽 = 洗，拖到天平 = 称，其余落点给一句说明；
-                  // 不管成不成，器皿都弹回原位，不留在半路。
-                  const centerX = vessel.x + vessel.w / 2 + last.dx;
-                  const centerY = vessel.y + vessel.h / 2 + last.dy;
-                  // 洗槽是个大目标，别按点到点判：器皿中心进到槽的包围盒（含 50 的余量）就算
-                  const inSink =
-                    !!sink &&
-                    centerX > sink.x - 50 &&
-                    centerX < sink.x + 210 &&
-                    centerY > sink.y - 60 &&
-                    centerY < sink.y + 150;
-
-                  const restore = () => {
-                    const node = vesselRefs.current[vessel.id];
-                    if (node) node.style.transform = "";
-                    setOffsets((prev) => ({ ...prev, [vessel.id]: { dx: 0, dy: 0 } }));
-                  };
-
-                  if (inSink) {
-                    restore();
-                    onDropToSink?.(vessel.id);
-                    return;
-                  }
-                  restore();
-                  onDropToNowhere?.(vessel.id);
-                };
-
-                document.addEventListener("pointermove", onMove);
-                document.addEventListener("pointerup", finish);
+                drag.begin(event, vessel.id, offsets[vessel.id] ?? ZERO_OFFSET);
               }}
               aria-label={
                 droppable
@@ -581,6 +658,8 @@ export function BenchScene({
                 // 「这一步要…拖工具到器皿上」的提示写到 caption 上，
                 // 直接盖掉刚出来的成功文案（1.0599 g / 切线 100.0 mL 都看不到）。
                 event.stopPropagation();
+                // 拖动刚结束的补偿 click：不算「点了一下器皿」
+                if (justDragged()) return;
                 setActiveVesselId(vessel.id);
                 // 手上拿着工具（水龙头/毛刷/洗瓶/玻璃棒）→ 对这台器皿使用它，
                 // 用完自动放下。手空着才走原来的「执行当前建议动作」。
@@ -615,13 +694,42 @@ export function BenchScene({
                 onDropReagent(vessel.id);
               }}
             >
+              {/* 拿起时的接地投影：径向渐变椭圆，拖动中零成本（不用 filter） */}
+              <ellipse
+                className={styles.liftShadow}
+                cx={vessel.x + vessel.w / 2}
+                cy={vessel.y + vessel.h + 4}
+                rx={vessel.w * 0.6}
+                ry={Math.max(7, vessel.w * 0.13)}
+              />
               <g ref={(el) => { artRefs.current[vessel.id] = el; }}>
-                <VesselArt
-                  vessel={vessel}
-                  contents={contents[vessel.id] ?? []}
-                  outcome={activeOutcome}
-                  fxKey={reaction?.key ?? 0}
-                />
+                <g className={styles.vesselLift}>
+                  <VesselArt
+                    vessel={vessel}
+                    contents={contents[vessel.id] ?? []}
+                    outcome={activeOutcome}
+                    fxKey={reaction?.key ?? 0}
+                  />
+                </g>
+              </g>
+              {/* 名称/内容跟着器皿走：拖到哪，标签跟到哪（原来标签是固定坐标，器皿一动就对不上） */}
+              <g aria-hidden="true" pointerEvents="none">
+                <text
+                  x={vessel.x + vessel.w / 2}
+                  y={(LABEL_POSITION[vessel.id] ?? { y: 356, contentY: 368 }).y}
+                  textAnchor="middle"
+                  className={styles.vesselName}
+                >
+                  {vessel.label}
+                </text>
+                <text
+                  x={vessel.x + vessel.w / 2}
+                  y={(LABEL_POSITION[vessel.id] ?? { y: 356, contentY: 368 }).contentY}
+                  textAnchor="middle"
+                  className={styles.vesselContents}
+                >
+                  {describeContents(contents[vessel.id] ?? [])}
+                </text>
               </g>
               {/* 成功光环 / 拒收红环（一次性，动画结束由 onAnimationEnd 清掉） */}
               {fb === "success" ? (
@@ -632,17 +740,26 @@ export function BenchScene({
               ) : null}
               {/* 目标环只在「拖到它上面 / 悬停它」时出现：选中态用 focusRing 描边，
                   不再整排器皿一起闪虚线（2026-10-22 用户口径：只跟被操作的那一台互动）。 */}
-              {isDropHover ? (
-                <rect
-                  className={dropHoverValid ? styles.dropRing : styles.dropRingBad}
-                  data-drop-target="true"
-                  x={ringX}
-                  y={ringY}
-                  width={ringW}
-                  height={ringH}
-                  rx={10}
-                />
-              ) : null}
+              {/* 拖拽落点环：常驻渲染，显隐由 data-drop / data-drop-hover 驱动。
+                  为什么不做成条件渲染：拖动中每帧 setState 会重渲染整棵 SVG —— 用户报的「卡顿、不跟手」就是这个。 */}
+              <rect
+                className={styles.dropRing}
+                data-ring="ok"
+                x={ringX}
+                y={ringY}
+                width={ringW}
+                height={ringH}
+                rx={10}
+              />
+              <rect
+                className={styles.dropRingBad}
+                data-ring="bad"
+                x={ringX}
+                y={ringY}
+                width={ringW}
+                height={ringH}
+                rx={10}
+              />
               {isDropCandidate ? (
                 <rect
                   className={styles.dropRingSoft}
@@ -664,15 +781,24 @@ export function BenchScene({
                   rx={10}
                 />
               ) : null}
-              {badge ? (
-                <g
-                  className={styles.dropBadge}
-                  pointerEvents="none"
-                  data-badge={isDropHover && !dropHoverValid ? "bad" : "ok"}
-                >
-                  <rect x={vessel.x + vessel.w / 2 - 46} y={ringY - 26} width={92} height={22} rx={11} />
+              {/* 落点提示气泡：松手会落进哪一台 / 哪一台放不了 */}
+              <g className={styles.dropBadge} data-badge="ok" pointerEvents="none" aria-hidden="true">
+                <rect x={vessel.x + vessel.w / 2 - 46} y={ringY - 26} width={92} height={22} rx={11} />
+                <text x={vessel.x + vessel.w / 2} y={ringY - 10} textAnchor="middle">
+                  落进 {vessel.label}
+                </text>
+              </g>
+              <g className={styles.dropBadge} data-badge="bad" pointerEvents="none" aria-hidden="true">
+                <rect x={vessel.x + vessel.w / 2 - 46} y={ringY - 26} width={92} height={22} rx={11} />
+                <text x={vessel.x + vessel.w / 2} y={ringY - 10} textAnchor="middle">
+                  {vessel.label} 不行
+                </text>
+              </g>
+              {isCue ? (
+                <g className={styles.dropBadge} pointerEvents="none" aria-hidden="true">
+                  <rect x={vessel.x + vessel.w / 2 - 30} y={ringY - 26} width={60} height={22} rx={11} />
                   <text x={vessel.x + vessel.w / 2} y={ringY - 10} textAnchor="middle">
-                    {badge}
+                    点这里
                   </text>
                 </g>
               ) : null}
@@ -713,22 +839,6 @@ export function BenchScene({
 
         {/* 动作层：洗涤 / 搅拌 / 转移 / 称量等动作统一在这里播（可复用底层） */}
         <ActionLayer action={action} offsets={offsets} onDone={onActionDone ?? noop} />
-
-        {/* 器皿标签：名称 + 当前内容 */}
-        {vessels.map((vessel) => {
-          const pos = LABEL_POSITION[vessel.id] ?? { y: 356, contentY: 368 };
-          const cx = vessel.x + vessel.w / 2;
-          return (
-            <g key={`label-${vessel.id}`} aria-hidden="true">
-              <text x={cx} y={pos.y} textAnchor="middle" className={styles.vesselName}>
-                {vessel.label}
-              </text>
-              <text x={cx} y={pos.contentY} textAnchor="middle" className={styles.vesselContents}>
-                {describeContents(contents[vessel.id] ?? [])}
-              </text>
-            </g>
-          );
-        })}
       </svg>
 
       {/* 事故特效层挂载点：绝对定位在舞台内 */}

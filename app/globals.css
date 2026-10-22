@@ -73,6 +73,18 @@
   --bench-line: #d5dce4;
   --bench-text: #4a5768;
 
+  /* 实验台台面（2026-10-22）：背墙 / 台面 / 前沿三层，器皿才有「站在台上」的落地感。
+     台面比背墙暖半度（#fbfbf8 vs #eef1ee），接缝压一道淡墨内阴影。 */
+  --bench-wall: #eef1ee;
+  --bench-top: #fbfbf8;
+  --bench-edge: #e6e9e4;
+  --bench-seam: rgba(58, 72, 90, 0.16);
+  --bench-grid: rgba(74, 87, 104, 0.05);
+
+  /* 洗涤槽：台面开孔，槽底比台面深一档，内壁更亮，才有"凹进去"的盆感 */
+  --sink-basin: #dde4ea;
+  --sink-wall: #e8edf2;
+
   /* 暗场（只在事故 L3/L4 反差、以及演示浮层等需要深底的局部使用） */
   --bench-ink-dark: #0e1620;
   --bench-2-dark: #1a2531;

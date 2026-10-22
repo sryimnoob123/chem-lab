@@ -287,3 +287,9 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
 2. **进阶学习解锁**：做完 exp01 后「进阶学习 / 拼接式方案」仍是「即将开放」。
    已有 `app/plan/` 与 `/api/plans`，需要一条「完成一个实验 → 解锁」的判定 + 文案。
 3. 看板里仍有 JS 侧 `clip()` 上限（`mission-copy.ts` 的 MISSION_HOW_MAX=42），超长文案仍会被切。
+
+## 2026-10-22 晚（webapp）
+- P0 选主题：`lib/plan/topics.ts` + `app/plan/topic-picker.tsx` + 素材置顶。证据：/plan 选「工业纯碱总碱度」→ 参考方案 100 分 / 24 条全过。
+- P1 点评：`lib/plan/llm-assess.ts` 统一 `{provider,text,points,questions}`，`PLAN_ASSESS_PROVIDER` 可切 coze/ark，缺省 mock；`POST /api/plan/assess`；/plan 右侧显示片段级要点 + 追问。
+- exp01 动作层已接线（洗涤/搅拌/滴加/转移/称量/观察/加热），用户在最新口径里要求「不在 2D 上继续投入」，故暂停美化，留待 2.5D 一次性改造复用。
+- 检查：tsc 0 error / vitest 547 passed / build 通过；本地提交 ee6ed96，tag `pre-deploy`，**未 push**（需用户点头）。

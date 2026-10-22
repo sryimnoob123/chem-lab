@@ -35,7 +35,6 @@ import {
   hintTierFor,
 } from "@/components/exp/guide/hint-ladder";
 // 新手教学（Lead 交付）：不传 open = 没看过就自动弹，看过不再打扰。
-import { ExperimentOnboarding } from "@/components/exp/onboarding";
 import { GhostCursor, GHOST_HIDDEN, type GhostState } from "@/components/demo/ghost-cursor";
 import {
   ErrorToast,
@@ -239,6 +238,22 @@ const TOOL_VIOLATION: Readonly<Record<string, Readonly<Record<string, string>>>>
   cloth: { volumetric: "step1-wipe", flask: "step1-wipe" },
   // 凉的还没凉就抢着转移 → 容量瓶热应力炸裂（L3，扣 8 + 碎裂特效）
   rod: { volumetric: "step1-poke" },
+};
+
+/**
+ * 动作播放期间底部那行字（用户 2026-10-22：动作过程不能没有回应）。
+ * 播完由 choose() 清掉，再由调用方的成功文案接上 —— 先演，后说。
+ */
+const ACTION_CAPTION: Readonly<Record<SceneAction["kind"], string>> = {
+  rinse: "自来水冲 → 刷洗 → 倒水 → 沥干…",
+  dilute: "沿瓶壁加水，接近刻度改用滴管…",
+  stir: "玻璃棒搅拌，固体逐渐溶解…",
+  transfer: "液体转移中…",
+  drops: "逐滴加入，盯住凹液面…",
+  weigh: "托盘下沉，示数稳定中…",
+  read: "读数中…",
+  observe: "观察现象…",
+  heat: "加热升温…",
 };
 
 export function Workbench({
@@ -871,6 +886,8 @@ export function Workbench({
       return;
     }
     actionBusyRef.current = true;
+    // 动作一开始就把底部那行换成「正在做什么」，顺手清掉上一步残留的提示
+    setSceneCaption(ACTION_CAPTION[action.kind] ?? null);
     void api.play(action).then((ok) => {
       actionBusyRef.current = false;
       if (ok) run();
@@ -1063,7 +1080,9 @@ export function Workbench({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
-      const target = event.target as HTMLElement | null;
+      // 事件目标是 window / document 时没有 closest（合成事件、扩展脚本都会这样），
+      // 直接 .closest 会抛 "target.closest is not a function" 把 dev overlay 点红。
+      const target = event.target instanceof Element ? event.target : null;
       if (
         target?.closest(
           "input, textarea, select, [contenteditable='true'], [contenteditable='']",
@@ -1312,7 +1331,11 @@ export function Workbench({
             内容说的是开头的事、和当前步对不上（用户 2026-10-22 报）。
             进度 > 0 说明已经上手过了，直接给看板/建议动作卡的动态引导。
           */}
-          {autoDemo || ui.exp.stepIndex > 0 ? null : <ExperimentOnboarding expId={expId} />}
+          {/*
+            旧「第 1/4 步 · 开始前先看一眼」弹窗已删（用户 2026-10-22）：
+            它每次进实验都盖住半个台面；它讲的「怎么拖、怎么看结果」现在由场景目标环 +
+            底部「现在该做」+ 动作播报承担。同一个页面只留一套「告诉我该干什么」的机制。
+          */}
           <SceneStage
             expId={expId}
             onCaption={handleSceneCaption}
@@ -1349,13 +1372,15 @@ export function Workbench({
             onQuickAction={(vesselId) => {
               // 点画面里的天平 / 器皿：和按 1 一样，直接用当前建议动作
               if (!suggested || ui.exp.done) return;
+              // 先取源器皿，再更新「上一次碰过的器皿」（顺序反了，转移动作的 from 永远等于目标）
+              const fromVessel = lastVesselRef.current;
               if (vesselId !== "balance" && vesselId !== "ph") lastVesselRef.current = vesselId;
               chooseWithAction(
                 suggested.choiceId,
                 actionForChoice(suggested, {
                   vesselId: actionVessel(vesselId),
                   tool: activeTool,
-                  from: lastVesselRef.current,
+                  from: fromVessel,
                 }),
               );
             }}
@@ -1367,11 +1392,29 @@ export function Workbench({
                 setSceneCaption("实验已经结束，不用再加试剂了");
                 return;
               }
-              // 试剂落到器皿上就执行当前这一步的动作 —— 不再用 type 卡人。
-              // 「拖了却被拒绝」是用户明确否掉的体验（2026-10-22）：面板上的每样东西都要有用。
-              if (suggested) {
+              /**
+               * 试剂落到器皿上 → 执行这一步。
+               * 但只对「真的是加试剂」的步骤生效：称量/调平/读数这类步骤，倒一瓶 Na₂CO₃ 过去
+               * 就把天平校准做完了，等于跳过操作（2026-10-22 实测：第 2 步被一瓶试剂顶过去）。
+               */
+              const REAGENT_TYPES: readonly string[] = [
+                "dilute",
+                "dissolve",
+                "addDrops",
+                "titrate",
+                "heat",
+                "evaporate",
+                "transfer",
+              ];
+              if (suggested && REAGENT_TYPES.includes(suggested.type)) {
                 choose(suggested.choiceId);
                 setSceneCaption(`${reagentName}加入${vesselLabel}：这一步做完了`);
+                return;
+              }
+              if (suggested) {
+                setSceneCaption(
+                  `${reagentName}这一步用不上：这一步要「${guideName(suggested.label)}」`,
+                );
                 return;
               }
               setSceneCaption(`${reagentName}已加入${vesselLabel}：看左侧下一步`);
@@ -1387,12 +1430,18 @@ export function Workbench({
                 choose(violation);
                 return;
               }
+              /**
+               * 转移类动作的源器皿 = 动这次之前手上那台（上一次点过/拖过的）。
+               * 必须先把 from 取出来再更新 lastVesselRef —— 先更新的话 from 永远等于目标器皿，
+               * actionForChoice 判 from===vessel 返回 null，第 6 步「移液管转移」就没有动画（2026-10-22 实测）。
+               */
+              const fromVessel = lastVesselRef.current;
               lastVesselRef.current = vesselId;
               // 2) 工具对得上当前建议动作 → 先播动作，播完再判分
               if (suggested && !ui.exp.done && TOOL_TYPES[tool].includes(suggested.type)) {
                 chooseWithAction(
                   suggested.choiceId,
-                  actionForChoice(suggested, { vesselId, tool, from: lastVesselRef.current }),
+                  actionForChoice(suggested, { vesselId, tool, from: fromVessel }),
                 );
                 return;
               }
@@ -1401,7 +1450,7 @@ export function Workbench({
                 const usedLine = `${getSceneTool(tool)?.label ?? "这个工具"}用上了：${getSceneVessel(vesselId)?.label ?? "器皿"}这一步完成`;
                 chooseWithAction(
                   suggested.choiceId,
-                  actionForChoice(suggested, { vesselId, tool, from: lastVesselRef.current }),
+                  actionForChoice(suggested, { vesselId, tool, from: fromVessel }),
                   () => setSceneCaption(usedLine),
                 );
                 return;
@@ -1410,9 +1459,8 @@ export function Workbench({
             }}
             onDropToNowhere={(vesselId) => {
               // 器皿已弹回原位；告诉学生能往哪拖，别以为操作丢了
-              setSceneCaption(
-                `${vesselId === "volumetric" ? "容量瓶" : "器皿"}已放回原位：能拖的落点只有洗涤槽和天平`,
-              );
+              const label = getSceneVessel(vesselId)?.label ?? "器皿";
+              setSceneCaption(`${label}已放回原位：在台面上松手＝换位置，拖进洗涤槽＝洗`);
             }}
             onSinkUse={() => {
               // 洗槽 = 水龙头：先拿起来，再点要洗的器皿

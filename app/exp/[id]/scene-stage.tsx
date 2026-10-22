@@ -34,6 +34,31 @@ const EXP03_BENCH_VESSELS = ["beaker", "volumetric", "tube-a", "tube-b"];
 const EXP09_BENCH_VESSELS = ["beaker", "volumetric"];
 
 /**
+ * 「这一步怎么动手」——只说操作方式，不重复判据（用户 2026-10-22：光说动作名不算指引）。
+ * 点空白时的提示按动作类型换说法，别再一律「拖工具到器皿上」（称量步这么说是错的）。
+ */
+function howToFor(type?: string | null): string {
+  switch (type) {
+    case "weigh":
+    case "readInstrument":
+      return "点台面上的天平";
+    case "wash":
+      return "把器皿拖进洗涤槽";
+    case "dissolve":
+      return "拿洗瓶或玻璃棒，点要用的器皿";
+    case "transfer":
+      return "拿移液管或玻璃棒，点目标器皿";
+    case "dilute":
+      return "拿量筒或洗瓶，点容量瓶";
+    case "heat":
+    case "evaporate":
+      return "把器皿放到电热套上";
+    default:
+      return "看左上角任务看板给的操作方式";
+  }
+}
+
+/**
  * 3D 试点（?scene=3d）：three.js 场景只在客户端加载，ssr:false；
  * 加载失败/不支持 WebGL 时组件内部给降级提示，去掉参数即回 2D，2D 路径零改动。
  */
@@ -305,11 +330,33 @@ export function SceneStage({
    */
   const pointerDragRef = useRef<{ id: string; pointerId: number; moved: boolean } | null>(null);
   /**
-   * 跟手的拖动影子（用户 2026-10-22 报"瓶子拖不动"）：
-   * 之前只给源按钮加 scale(.98)，鼠标移 150px 瓶子只动 2px —— 视觉上等于没拖起来。
-   * 现在拖出阈值后渲染一个 fixed 定位的瓶子副本跟着指针走，源按钮留在架上变淡。
+   * 跟手的拖动影子（性能版，2026-10-22）：
+   * 旧实现每个 pointermove 都 setDragGhost(x, y) —— 一次拖拽能把这块 800 行的组件
+   * 重渲染上百次，手感就是「有延迟、不跟手」。现在 state 只在「影子出现/消失」时变一次，
+   * 位置在 rAF 里直接写 transform（一帧最多一次），全程不触发 React 渲染。
    */
-  const [dragGhost, setDragGhost] = useState<{ x: number; y: number; reagentId: string } | null>(null);
+  const [ghostReagent, setGhostReagent] = useState<string | null>(null);
+  const dragGhostRef = useRef<HTMLDivElement | null>(null);
+  const ghostPos = useRef({ x: 0, y: 0 });
+  const ghostFrame = useRef(0);
+
+  const moveGhost = (x: number, y: number) => {
+    ghostPos.current = { x, y };
+    if (ghostFrame.current) return;
+    ghostFrame.current = window.requestAnimationFrame(() => {
+      ghostFrame.current = 0;
+      const node = dragGhostRef.current;
+      if (node) {
+        node.style.transform = `translate3d(${ghostPos.current.x - 14}px, ${ghostPos.current.y - 18}px, 0)`;
+      }
+    });
+  };
+
+  const clearGhost = () => {
+    if (ghostFrame.current) window.cancelAnimationFrame(ghostFrame.current);
+    ghostFrame.current = 0;
+    setGhostReagent(null);
+  };
 
   const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -346,6 +393,24 @@ export function SceneStage({
       if (id) return id;
     }
     return null;
+  };
+
+  /**
+   * 拖拽中的落点高亮：直接改 SVG 属性（data-drop），不 setState。
+   * 台上每台器皿的环与气泡都由属性驱动，命中哪台亮哪台 —— 一次拖拽 React 一次都不重渲染。
+   */
+  const paintDropHover = (hitId: string | null) => {
+    if (typeof document === "undefined") return;
+    const painted = document.querySelectorAll<HTMLElement>('[data-drop-kind="vessel"][data-drop]');
+    painted.forEach((el) => {
+      delete el.dataset.drop;
+    });
+    if (!hitId) return;
+    const el = Array.from(document.querySelectorAll<HTMLElement>('[data-drop-kind="vessel"]')).find(
+      (node) => node.dataset.vesselId === hitId || node.dataset.demoId === `demo-scene-vessel-${hitId}`,
+    );
+    if (!el) return;
+    el.dataset.drop = !cueVesselId || cueVesselId === hitId ? "ok" : "bad";
   };
 
   /** 落位：先记下落点器皿（反馈只给它），再交给 flow 播倾倒。 */
@@ -508,7 +573,7 @@ export function SceneStage({
         // 而且这条提示会覆盖掉真正的成功文案，7 步全程可见 —— review 报的 blocker）
         nudge(
           expId && isBenchScene
-            ? `这一步要「${suggestedName ?? "按看板提示操作"}」：拖下方的工具到器皿上，或把器皿拖进洗涤槽`
+            ? `这一步要「${suggestedName ?? "按看板提示操作"}」：${howToFor(suggestedType)}`
             : `这一步要「${suggestedName ?? "按看板提示操作"}」：看左上角任务看板给的操作方式`,
         );
       }}
@@ -556,27 +621,33 @@ export function SceneStage({
                   onCaption(null);
                 }}
                 onPointerMove={(event) => {
-                  // 段 2 移动：超过阈值才算出拖，实时高亮落区（锥形瓶）+ 影子跟手。
+                  // 段 2 移动：超过阈值才算出拖。全程只写 DOM，不 setState（性能硬指标）。
                   const drag = pointerDragRef.current;
                   if (!drag || drag.pointerId !== event.pointerId) return;
                   if (!drag.moved) {
                     if (Math.abs(event.movementX) + Math.abs(event.movementY) < 3) return;
                     drag.moved = true;
+                    setGhostReagent(drag.id);
                   }
-                  setDragGhost({ x: event.clientX, y: event.clientY, reagentId: drag.id });
-                  const hit = document.elementFromPoint(event.clientX, event.clientY);
-                  flow.setOverFlask(Boolean(hit?.closest('[data-demo-id="demo-scene-drop-flask"]')));
-                  // 指针压在哪台器皿上，就让哪台亮 + 报名字（落在空白则为 null）
-                  setOverVesselId(vesselAt({ x: event.clientX, y: event.clientY }));
+                  moveGhost(event.clientX, event.clientY);
+                  if (isBenchScene) {
+                    // 台面场景：落点高亮直接改属性，命中哪台亮哪台
+                    paintDropHover(vesselAt({ x: event.clientX, y: event.clientY }));
+                  } else {
+                    const hit = document.elementFromPoint(event.clientX, event.clientY);
+                    flow.setOverFlask(Boolean(hit?.closest('[data-demo-id="demo-scene-drop-flask"]')));
+                    setOverVesselId(vesselAt({ x: event.clientX, y: event.clientY }));
+                  }
                 }}
                 onPointerUp={(event) => {
                   // 段 3 落位：用松手坐标提交，吸附/倾倒/回弹都由 useDropFlow 播。
                   const drag = pointerDragRef.current;
                   if (!drag || drag.pointerId !== event.pointerId) return;
                   pointerDragRef.current = null;
-                  setDragGhost(null);
+                  clearGhost();
                   event.currentTarget.releasePointerCapture?.(event.pointerId);
                   flow.setOverFlask(false);
+                  paintDropHover(null);
                   if (!drag.moved) {
                     flow.endDrag();
                     return;
@@ -585,7 +656,8 @@ export function SceneStage({
                 }}
                 onPointerCancel={() => {
                   pointerDragRef.current = null;
-                  setDragGhost(null);
+                  clearGhost();
+                  paintDropHover(null);
                   flow.endDrag();
                 }}
                 onClick={() => {
@@ -787,22 +859,27 @@ export function SceneStage({
         </button>
       ) : null}
 
-      {/* 跟手的拖动影子：只在拖出阈值后出现，fixed 定位跟着指针，不抢事件 */}
-      {dragGhost ? (
+      {/* 跟手的拖动影子：只在拖出阈值后出现，位置由 rAF 写 transform（不重渲染） */}
+      {ghostReagent ? (
         <div
+          ref={(node) => {
+            dragGhostRef.current = node;
+            if (!node) return;
+            // 首帧就放到指针处（用 ref 回调写，避免渲染期读 ref）
+            node.style.transform = `translate3d(${ghostPos.current.x - 14}px, ${ghostPos.current.y - 18}px, 0)`;
+          }}
           className={styles.dragGhost}
-          style={{ left: dragGhost.x, top: dragGhost.y }}
           aria-hidden="true"
           data-demo-id="demo-drag-ghost"
         >
           <span className={styles.dragGhostBottle}>
             <span
               className={styles.dragGhostFill}
-              style={{ background: getSceneReagent(dragGhost.reagentId)?.colorHex ?? "#DCE9F2" }}
+              style={{ background: getSceneReagent(ghostReagent)?.colorHex ?? "#DCE9F2" }}
             />
           </span>
           <span className={styles.dragGhostName}>
-            {getSceneReagent(dragGhost.reagentId)?.name ?? ""}
+            {getSceneReagent(ghostReagent)?.name ?? ""}
           </span>
         </div>
       ) : null}

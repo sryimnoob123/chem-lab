@@ -779,7 +779,11 @@
    用 transform 居中并带一点倾斜，看起来像"抓在手里"。 */
 .dragGhost {
   position: fixed;
+  left: 0;
+  top: 0;
   z-index: 9999;
+  /* 位置由 rAF 写 transform（一帧一次）；这里绝不能有 transform 过渡，否则会慢半拍 */
+  will-change: transform;
   display: flex;
   align-items: center;
   gap: 7px;

@@ -133,7 +133,13 @@ export function ToolTray({ area, toolIds, activeTool, onSelectTool, onUseTool }:
   const [hovered, setHovered] = useState<SceneToolId | null>(null);
   const [pressed, setPressed] = useState<SceneToolId | null>(null);
   const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
-  const startRef = useRef<{ x: number; y: number } | null>(null);
+  /**
+   * 一次按下→抬起的会话放在 ref 里（2026-10-22 修）：
+   * 之前 pointerup 里读 React 的 dragging 状态判断「这是不是拖动」，
+   * 快速点击时两次事件落在同一帧、状态还没重渲染 → 直接 return，工具永远拿不起来
+   * （用户报「连玻璃棒都没有」就是这条）。ref 一定是最新的。
+   */
+  const sessionRef = useRef<{ id: SceneToolId; x: number; y: number; moved: boolean } | null>(null);
   /** 刚刚是一次拖动（不是点击）：用来吞掉拖动后的 click */
   const draggedRef = useRef(false);
 
@@ -161,8 +167,16 @@ export function ToolTray({ area, toolIds, activeTool, onSelectTool, onUseTool }:
 
   return (
     <g className={styles.toolTray} data-demo-id="demo-tool-tray">
-      {/* 导轨底：一条横向凹槽，工具坐在里面 */}
+      {/* 导轨底：一只搪瓷托盘（不是一张 UI 卡片）——底色比台面深半档，压一道内阴影 + 一圈边沿 */}
       <rect x={area.x} y={area.y} width={area.w} height={area.h} rx={14} className={styles.toolTrayBase} />
+      <rect
+        x={area.x + 3}
+        y={area.y + 3}
+        width={area.w - 6}
+        height={area.h - 6}
+        rx={11}
+        className={styles.toolTrayInset}
+      />
       <line
         x1={area.x + 22}
         y1={area.y + area.h - 14}
@@ -198,33 +212,34 @@ export function ToolTray({ area, toolIds, activeTool, onSelectTool, onUseTool }:
               event.stopPropagation();
               event.preventDefault();
               (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
-              startRef.current = { x: event.clientX, y: event.clientY };
+              sessionRef.current = { id: tool.id, x: event.clientX, y: event.clientY, moved: false };
               setPressed(tool.id);
-              setDragging(tool.id);
-              setGhost({ x: base.x, y: base.y });
-              // 注意：这里**不能**调 onSelectTool —— pointerup 里会用 active 取反，
-              // 按下时先选中、抬起时又 toggle 回 null，等于工具永远拿不起来（2026-10-22 实测）。
+              // 注意：这里**不能**调 onSelectTool —— 抬起时还会 toggle，
+              // 按下就选中等于「选中又取消」，工具永远拿不起来（2026-10-22 实测）。
             }}
             onPointerMove={(event) => {
-              if (dragging !== tool.id) return;
+              const session = sessionRef.current;
+              if (!session || session.id !== tool.id) return;
+              if (!session.moved) {
+                if (Math.hypot(event.clientX - session.x, event.clientY - session.y) < 4) return;
+                session.moved = true;
+                setDragging(tool.id);
+                setGhost({ x: base.x, y: base.y });
+              }
               event.stopPropagation();
-              const start = startRef.current;
-              if (!start) return;
-              if (Math.hypot(event.clientX - start.x, event.clientY - start.y) < 4) return;
               const point = toSvg(event.currentTarget as Element, event.clientX, event.clientY);
               if (point) setGhost(point);
             }}
             onPointerUp={(event) => {
-              if (dragging !== tool.id) return;
+              const session = sessionRef.current;
+              if (!session || session.id !== tool.id) return;
               event.stopPropagation();
-              const start = startRef.current;
-              const moved = start ? Math.hypot(event.clientX - start.x, event.clientY - start.y) : 0;
+              sessionRef.current = null;
               setDragging(null);
               setPressed(null);
               setGhost(null);
-              startRef.current = null;
-              draggedRef.current = moved >= 4;
-              if (moved < 4) {
+              draggedRef.current = session.moved;
+              if (!session.moved) {
                 // 位移太小 = 一次点击：走「点选后再点器皿」
                 onSelectTool(active ? null : tool.id);
                 return;
@@ -238,19 +253,18 @@ export function ToolTray({ area, toolIds, activeTool, onSelectTool, onUseTool }:
               onSelectTool(null);
             }}
             onPointerCancel={() => {
+              sessionRef.current = null;
               setDragging(null);
               setPressed(null);
               setGhost(null);
-              startRef.current = null;
             }}
             onClick={(event) => {
               event.stopPropagation();
-              // 拖动结束后的 click 吞掉，只有真正的点击才切换「拿起/放下」
+              // 拖动 / 刚在 pointerup 里处理过的点击：吞掉，避免又 toggle 回去
               if (draggedRef.current) {
                 draggedRef.current = false;
                 return;
               }
-              onSelectTool(active ? null : tool.id);
             }}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
@@ -262,10 +276,13 @@ export function ToolTray({ area, toolIds, activeTool, onSelectTool, onUseTool }:
             {/* 抬起 / 按下只作用于这一层：外层 <g> 的 transform 是拖拽位置（属性），
                 不能被 CSS transform 覆盖，否则工具会跳回原点。 */}
             <g className={styles.toolArt}>
+              {/* 接地影：工具立在托盘里，不是浮在图标层上（两层椭圆＝柔和，不用 filter） */}
+              <ellipse cx={0} cy={22} rx={14} ry={3.2} fill="rgba(57, 72, 90, 0.07)" />
+              <ellipse cx={0} cy={22} rx={8} ry={2.2} fill="rgba(57, 72, 90, 0.07)" />
               {/* 命中区（比图形大一圈，触控友好） */}
               <rect x={-30} y={-42} width={60} height={80} fill="transparent" />
               {art(tool, active)}
-              <text className={styles.toolLabel} x={0} y={34} textAnchor="middle">
+              <text className={styles.toolLabel} x={0} y={38} textAnchor="middle">
                 {tool.label}
               </text>
             </g>

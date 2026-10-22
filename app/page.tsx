@@ -25,7 +25,7 @@ export default function Cover() {
           />
           <span className="cover-bar__names">
             <span className="cover-bar__cn">河南大学</span>
-            <span className="cover-bar__sub">化学化工学院</span>
+            <span className="cover-bar__sub">新能源与智能制造学院</span>
           </span>
         </div>
         <div className="cover-bar__right">
@@ -38,7 +38,7 @@ export default function Cover() {
           <span className="cover-hero__rule" aria-hidden="true" />
           <h1 className="cover-hero__title" data-demo-id="demo-home-hero-title">无机及分析化学实验</h1>
           <p className="cover-hero__sub">
-            河南大学 · 化学化工学院 · 03600004 · 36 学时 · 10 个实验
+            河南大学 · 新能源与智能制造学院 · 03600004 · 36 学时 · 10 个实验
           </p>
           <p className="cover-hero__slogan" data-demo-id="demo-home-readout">把每一次读数，写进同一本台账。</p>
 
@@ -56,7 +56,7 @@ export default function Cover() {
 
       <div className="cover-foot">
         <span className="cover-foot__motto">明德新民　止于至善</span>
-        <span className="cover-foot__org">化学化工学院</span>
+        <span className="cover-foot__org">新能源与智能制造学院</span>
       </div>
 
       <style>{`

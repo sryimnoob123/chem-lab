@@ -14,7 +14,7 @@ export const EXPERIMENT = {
   no: "09",
   code: "03600004",
   title: "酸碱标准溶液的配制与浓度比较",
-  college: "能源科学与技术学院",
+  college: "新能源与智能制造学院",
   course: "无机及分析化学实验",
   teacher: "刘建彩",
   hours: 3,

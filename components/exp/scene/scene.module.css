@@ -173,6 +173,10 @@
   display: block;
   width: 100%;
   height: auto;
+  /* 拖动器皿/工具时：不许选中文字、不许触发页面滚动（触控也一样） */
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 
 .benchMark {
@@ -807,8 +811,15 @@
  * ------------------------------------------------------------------ */
 
 .toolTrayBase {
-  fill: rgba(74, 87, 104, 0.05);
-  stroke: rgba(74, 87, 104, 0.14);
+  fill: rgba(74, 87, 104, 0.045);
+  stroke: rgba(74, 87, 104, 0.18);
+  stroke-width: 1.2;
+}
+
+/* 托盘内沿：一圈淡墨，托盘的厚度就出来了（不做渐变，拖动时也不掉帧） */
+.toolTrayInset {
+  fill: none;
+  stroke: rgba(74, 87, 104, 0.1);
   stroke-width: 1;
 }
 
@@ -913,5 +924,91 @@
   .sinkStream,
   .sinkRipple {
     animation: none;
+  }
+}
+
+/* ================= 拖动跟手层（2026-10-22） =================
+   - 拖动中只改 data-lifted / data-drop 两个属性，不重渲染；
+   - 位移由 JS 一帧写一次 transform，这里绝不能有 transform 过渡（会让器皿慢半拍）；
+   - 抬起感 = 轻微放大（内层 vesselLift）+ 渐变椭圆投影，不用 filter（拖动中跑滤镜会掉帧）。 */
+.vesselLift {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.vessel[data-lifted="true"] {
+  will-change: transform;
+}
+
+.vessel[data-lifted="true"] .vesselLift {
+  transform: scale(1.04);
+}
+
+.liftShadow {
+  fill: url(#benchLiftShadow);
+  opacity: 0;
+  transition: opacity 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.vessel[data-lifted="true"] .liftShadow {
+  opacity: 1;
+}
+
+/* 拖动中把贵特效降级：滤镜、阴影、毛玻璃一律停（用户硬指标：拖一下卡，演示就废了） */
+.vessel[data-lifted="true"] * {
+  filter: none !important;
+}
+
+.benchSvg[data-drag] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 落点环：常驻渲染，显隐交给属性（拖动中改属性，零重渲染） */
+.vessel [data-ring] {
+  opacity: 0;
+  /* .dropRing 自带 hintPulse 循环动画（动画会盖掉 opacity 声明），常驻环必须关掉它 */
+  animation: none;
+  transition: opacity 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.vessel[data-drop="ok"] [data-ring="ok"],
+.vessel[data-drop-hover="valid"] [data-ring="ok"] {
+  opacity: 1;
+}
+
+.vessel[data-drop="bad"] [data-ring="bad"],
+.vessel[data-drop-hover="invalid"] [data-ring="bad"] {
+  opacity: 1;
+}
+
+/* 落点气泡同理：默认不显示，data-drop 一设就出来 */
+.dropBadge {
+  opacity: 0;
+  transition: opacity 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.vessel[data-drop="ok"] .dropBadge[data-badge="ok"],
+.vessel[data-drop-hover="valid"] .dropBadge[data-badge="ok"] {
+  opacity: 1;
+}
+
+.vessel[data-drop="bad"] .dropBadge[data-badge="bad"],
+.vessel[data-drop-hover="invalid"] .dropBadge[data-badge="bad"] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vesselLift,
+  .liftShadow,
+  .vessel [data-ring],
+  .dropBadge {
+    transition: none;
+  }
+
+  .vessel[data-lifted="true"] .vesselLift {
+    transform: none;
   }
 }
