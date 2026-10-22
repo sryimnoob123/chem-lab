@@ -408,10 +408,8 @@ export function Workbench({
           detail: `创建记录失败（HTTP ${runRes.status}）`,
           canRetry: true,
         });
-        retryRef.current = () => {
-          bootstrapRef.current = null;
-          void bootstrap();
-        };
+        // 自引用会踩 TDZ（eslint: accessed before it is declared），重试直接刷新页面最稳
+        retryRef.current = () => window.location.reload();
         return null;
       }
       const data = await runRes.json().catch(() => null);
@@ -427,10 +425,7 @@ export function Workbench({
       // 网络层失败同样要出声：不然看起来只是「点了没反应」
       const detail = errorMessage(error);
       setSystemError({ message: "没连上记录服务：现在做的操作不会被保存", detail: detail.message, canRetry: true });
-      retryRef.current = () => {
-        bootstrapRef.current = null;
-        void bootstrap();
-      };
+      retryRef.current = () => window.location.reload();
       return null;
     }
   }, [demoReadonly, expId, sendAction, sendDrop]);

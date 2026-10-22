@@ -1,0 +1,648 @@
+/**
+ * /plan 拼接式方案 —— 先评分、后校验；素材库按实验阶段分组。
+ *
+ * 取色只走 token（--paper / --ink / --line / --river-700 / --jade-600 / --danger / --warn），
+ * 深浅差用 color-mix 兑 --ink 或 --card，不写字面量色值。
+ * 实测对比度（纸白 #F6F7F5 底）：ink 15.30 / ink-2 6.85 / river-700 10.85 / jade-600 4.80 /
+ * danger 5.06 / warn 60%+ink 5.40，正文与状态字全部 ≥4.5。
+ * 动效只动 transform / opacity，≤300ms，曲线 --ease-out。
+ */
+
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 22px clamp(14px, 3vw, 26px) 56px;
+}
+
+/* ── 页头 ─────────────────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.back {
+  font-size: var(--text-12);
+  color: var(--river-700);
+  text-decoration: none;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-20);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.who {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--ink-2);
+}
+
+.lead {
+  max-width: 74ch;
+  margin: 8px 0 16px;
+  font-size: var(--text-13);
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+/* ── 卡片 ─────────────────────────────────────────────────────────── */
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card, #fff);
+  padding: 14px;
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent),
+    0 8px 24px color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
+.panelHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: var(--text-14);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--ink-2);
+}
+
+/* ── 评分卡 ───────────────────────────────────────────────────────── */
+.score {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.scoreTop {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.scoreNum {
+  font-family: var(--font-mono);
+  font-size: var(--text-39);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreNum[data-tone="ok"] {
+  color: var(--jade-600);
+}
+
+.scoreNum[data-tone="warn"] {
+  color: color-mix(in srgb, var(--warn) 60%, var(--ink));
+}
+
+.scoreNum[data-tone="block"] {
+  color: var(--danger);
+}
+
+.scoreMax {
+  margin-left: 2px;
+  font-size: var(--text-16);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.verdictBox {
+  min-width: 0;
+}
+
+.verdict {
+  margin: 0;
+  font-size: var(--text-16);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.counts {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 6px 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+}
+
+.countPass {
+  color: color-mix(in srgb, var(--jade-600) 85%, var(--ink));
+}
+
+.countBlock {
+  color: var(--danger);
+}
+
+.countWarn {
+  color: color-mix(in srgb, var(--warn) 60%, var(--ink));
+}
+
+/* 哪里对 / 哪里不对 */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.sideTitle {
+  margin: 0 0 8px;
+  font-size: var(--text-13);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.passList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.passChip {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--jade-100);
+  color: color-mix(in srgb, var(--jade-600) 80%, var(--ink));
+  font-size: var(--text-12);
+  line-height: 1.4;
+}
+
+.issueList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.issue {
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-left-style: solid;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.issue[data-level="block"] {
+  border-left-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 5%, var(--card, #fff));
+}
+
+.issue[data-level="warn"] {
+  border-left-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 7%, var(--card, #fff));
+}
+
+.issueText {
+  margin: 0;
+  font-size: var(--text-13);
+  font-weight: 600;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.mark {
+  margin-right: 4px;
+  color: var(--danger);
+}
+
+.markWarn {
+  margin-right: 4px;
+  color: color-mix(in srgb, var(--warn) 60%, var(--ink));
+}
+
+.issueHint {
+  margin: 3px 0 0;
+  font-size: var(--text-12);
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.okLine {
+  margin: 0;
+  font-size: var(--text-13);
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--jade-600) 85%, var(--ink));
+}
+
+/* 校验明细（原生 details，默认收起） */
+.details {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  list-style: none;
+  cursor: pointer;
+  font-size: var(--text-13);
+  font-weight: 600;
+  color: var(--river-700);
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary:focus-visible {
+  outline: 2px solid var(--river-700);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.chevron {
+  display: inline-block;
+  transition: transform 180ms var(--ease-out);
+}
+
+.details[open] .chevron {
+  transform: rotate(90deg);
+}
+
+.labelOpen {
+  display: inline;
+}
+
+.details[open] .labelOpen {
+  display: none;
+}
+
+.labelShut {
+  display: none;
+}
+
+.details[open] .labelShut {
+  display: inline;
+}
+
+.detailsBody {
+  padding-top: 4px;
+}
+
+/* ── 两栏 ─────────────────────────────────────────────────────────── */
+.cols {
+  display: grid;
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.right {
+  display: grid;
+  gap: 14px;
+}
+
+/* ── 素材库 ───────────────────────────────────────────────────────── */
+.kinds {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+
+.kind {
+  min-height: 34px;
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card, #fff);
+  color: var(--ink-2);
+  font-size: var(--text-12);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out);
+}
+
+.kind[aria-pressed="true"] {
+  border-color: var(--river-700);
+  background: var(--river-700);
+  color: var(--card, #fff);
+}
+
+.kind:active {
+  transform: scale(0.97);
+}
+
+.groups {
+  display: grid;
+  gap: 14px;
+  max-height: 600px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.group {
+  display: grid;
+  gap: 6px;
+}
+
+.groupHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: var(--text-13);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.groupCount {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.groupCount[data-on="true"] {
+  color: var(--river-700);
+  font-weight: 500;
+}
+
+.pieceList {
+  display: grid;
+  gap: 6px;
+}
+
+.piece {
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card, #fff);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out);
+}
+
+.piece[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--river-700) 45%, var(--line));
+  background: var(--river-100);
+}
+
+.piece:active {
+  transform: scale(0.98);
+}
+
+.piece:focus-visible {
+  outline: 2px solid var(--river-700);
+  outline-offset: 2px;
+}
+
+.pieceTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--text-13);
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.tick {
+  flex: 0 0 auto;
+  font-size: var(--text-12);
+  color: var(--jade-600);
+}
+
+.pieceSub {
+  margin: 2px 0 0;
+  font-size: var(--text-12);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* ── 我的方案 ─────────────────────────────────────────────────────── */
+.planList {
+  display: grid;
+  gap: 2px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.planIdx {
+  min-width: 20px;
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.planTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-13);
+  color: var(--ink);
+}
+
+.planTools {
+  display: flex;
+  gap: 4px;
+}
+
+.mini {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card, #fff);
+  color: var(--ink-2);
+  font-size: var(--text-12);
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out);
+}
+
+.mini:active {
+  transform: scale(0.97);
+}
+
+.mini:focus-visible {
+  outline: 2px solid var(--river-700);
+  outline-offset: 2px;
+}
+
+.empty {
+  margin: 12px 0 0;
+  font-size: var(--text-13);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.saveMsg {
+  align-self: center;
+  font-size: var(--text-12);
+  color: var(--ink-2);
+}
+
+.saveMsg[data-state="ok"] {
+  color: color-mix(in srgb, var(--jade-600) 85%, var(--ink));
+}
+
+.saveMsg[data-state="err"] {
+  color: var(--danger);
+}
+
+/* ── 参数 ─────────────────────────────────────────────────────────── */
+.params {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.paramRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--text-13);
+  color: var(--ink-2);
+}
+
+.paramLabel {
+  min-width: 190px;
+}
+
+.input {
+  width: 110px;
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card, #fff);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-13);
+}
+
+.check {
+  width: 18px;
+  height: 18px;
+}
+
+.remark {
+  margin: 8px 0 0;
+  font-size: var(--text-13);
+  line-height: 1.75;
+  color: var(--ink-2);
+  white-space: pre-line;
+}
+
+/* ── 指针设备才给 hover；触控不留粘住的态 ─────────────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  .back:hover {
+    text-decoration: underline;
+  }
+
+  .piece:hover {
+    border-color: var(--ink-2);
+  }
+
+  .mini:hover {
+    border-color: var(--ink-2);
+    color: var(--ink);
+  }
+
+  .kind:hover {
+    border-color: var(--ink-2);
+  }
+
+  .summary:hover {
+    color: var(--river-900);
+  }
+}
+
+/* 触控 / 窄屏：筛选与行内小按钮都抬到 44px */
+@media (hover: none), (pointer: coarse), (max-width: 720px) {
+  .kind,
+  .mini {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@media (max-width: 900px) {
+  .cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .groups {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 720px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .paramRow {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .paramLabel {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kind,
+  .piece,
+  .mini,
+  .chevron {
+    transition: none;
+  }
+
+  .details[open] .chevron {
+    transform: none;
+  }
+}

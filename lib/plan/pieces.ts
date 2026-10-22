@@ -208,6 +208,53 @@ export const PIECES_BY_ID: Readonly<Record<string, PlanPiece>> = Object.freeze(
   Object.fromEntries(PIECES.map((p) => [p.id, p])),
 );
 
+/* ── 主题分组（2026-10-22）────────────────────────────────────────────
+ * 产品口径：素材按「实验环节」出题，再拼接。按 kind 平铺时学生不知道先想哪一步，
+ * 所以按 exp10 的真实流程切三段：标定 → 总碱度 → 通用器材与记录。
+ * 只加这一份映射，不动 PIECES 结构；每块只属于一个阶段，组内顺序即建议拼接顺序。 */
+export type PlanGroupId = "standardization" | "alkalinity" | "general";
+
+export interface PlanGroup {
+  id: PlanGroupId;
+  /** 素材库分节标题 */
+  title: string;
+  /** 该阶段的块 id，顺序即建议拼接顺序 */
+  pieceIds: readonly string[];
+}
+
+export const PLAN_GROUPS: readonly PlanGroup[] = [
+  {
+    id: "standardization",
+    title: "① HCl 标定",
+    pieceIds: [
+      "piece-weighing-bottle", "piece-desiccator",
+      "piece-step-weigh", "piece-na2co3-primary", "piece-param-drying",
+      "piece-hcl-conc", "piece-cylinder-10", "piece-step-dissolve",
+      "piece-volumetric-250", "piece-step-dilute", "piece-param-conc",
+      "piece-param-sample", "piece-methyl-orange", "piece-mixed-indicator",
+      "piece-step-boil",
+    ],
+  },
+  {
+    id: "alkalinity",
+    title: "② 总碱度测定",
+    pieceIds: [
+      "piece-naoh-sat", "piece-boiled-water", "piece-khp",
+      "piece-phenolphthalein", "piece-param-endpoint",
+      "piece-step-near-endpoint", "piece-step-half-drop",
+    ],
+  },
+  {
+    id: "general",
+    title: "③ 通用器材与记录",
+    pieceIds: [
+      "piece-analytical-balance", "piece-burette-acid", "piece-burette-base", "piece-pipette-25",
+      "piece-flask-250", "piece-step-rinse", "piece-step-degas",
+      "piece-step-parallel", "piece-param-parallel", "piece-step-blank",
+    ],
+  },
+];
+
 export function getPiece(id: string): PlanPiece | undefined {
   return PIECES_BY_ID[id];
 }

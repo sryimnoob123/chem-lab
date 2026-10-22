@@ -1,17 +1,23 @@
 "use client";
 
+/**
+ * 拼接式方案设计（客户端外壳）—— 状态、保存、方案列表。
+ *
+ * 页面顺序（2026-10-22 口径）：先评分、后校验。
+ *   顶部  ScorePanel（总分 + 一句话结论 + 哪里对/哪里不对 + 可展开的校验明细）
+ *   左栏  PieceLibrary（按实验阶段分组出题）
+ *   右栏  我的方案 / 参数 / 方案点评
+ * 规则判定全在 lib/plan/rules.ts，组件只渲染。
+ */
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { PIECE_KINDS, PIECES, REFERENCE_PLAN, type PieceKind, type PlanInput } from "@/lib/plan/pieces";
+import { REFERENCE_PLAN, getPiece, type PieceKind, type PlanInput } from "@/lib/plan/pieces";
 import { validate } from "@/lib/plan/rules";
 import { offlineAssessment } from "@/lib/plan/assess";
-
-const KIND_LABEL: Record<PieceKind, string> = {
-  apparatus: "器材",
-  reagent: "试剂",
-  step: "步骤",
-  param: "参数",
-};
+import { PieceLibrary } from "./piece-library";
+import { ScorePanel } from "./score-panel";
+import s from "./plan.module.css";
 
 const DEFAULT_PARAMS: Record<string, string | number | boolean> = { ...REFERENCE_PLAN.params };
 
@@ -24,7 +30,7 @@ const PRETTY_PARAM: { key: string; label: string; kind: "number" | "bool" }[] = 
 export function PlanDesigner({ studentNo }: { studentNo: string }) {
   const [pieces, setPieces] = useState<string[]>([]);
   const [params, setParams] = useState<Record<string, string | number | boolean>>(DEFAULT_PARAMS);
-  const [kind, setKind] = useState<PieceKind>("apparatus");
+  const [kind, setKind] = useState<PieceKind | null>(null);
   const [saved, setSaved] = useState<"idle" | "saving" | "ok" | "err">("idle");
   const [saveMsg, setSaveMsg] = useState("");
 
@@ -32,7 +38,8 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
   const report = useMemo(() => validate(plan), [plan]);
   const assessment = useMemo(() => offlineAssessment(plan, report), [plan, report]);
 
-  const add = (id: string) => setPieces((p) => (p.includes(id) ? p : [...p, id]));
+  const toggle = (id: string) =>
+    setPieces((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const remove = (id: string) => setPieces((p) => p.filter((x) => x !== id));
   const move = (id: string, dir: -1 | 1) =>
     setPieces((p) => {
@@ -61,7 +68,11 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
           assessmentOffline: true,
         }),
       });
-      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; planId?: string; error?: string };
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        planId?: string;
+        error?: string;
+      };
       if (res.ok && body.ok) {
         setSaved("ok");
         setSaveMsg(`已保存方案 ${body.planId ?? ""}`);
@@ -75,109 +86,66 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
     }
   };
 
-  const list = PIECES.filter((p) => p.kind === kind);
-  const scoreTone = report.score >= 90 ? "#1a7f4b" : report.score >= 60 ? "#9a6a12" : "#a33";
-
   return (
-    <main style={{ maxWidth: 1180, margin: "0 auto", padding: "22px clamp(14px,3vw,26px) 56px" }}>
-      <header style={{ display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap" }}>
-        <Link href="/experiments" className="mono" style={{ fontSize: 12, color: "#1f5fa8", textDecoration: "none" }}>
+    <main className={s.page}>
+      <header className={s.topbar}>
+        <Link href="/experiments" className={s.back}>
           ← 实验列表
         </Link>
-        <h1 style={{ fontSize: 22, margin: 0, letterSpacing: "-.01em" }}>进阶学习 · 实验 10</h1>
-        <span className="mono" style={{ fontSize: 12, color: "#7b8a9c" }}>
-          学号 {studentNo}
-        </span>
+        <h1 className={s.title}>进阶学习 · 实验 10</h1>
+        <span className={s.who}>学号 {studentNo}</span>
       </header>
-      <p style={{ fontSize: 13.5, color: "#4a5c72", lineHeight: 1.7, margin: "8px 0 16px" }}>
-        把左侧素材按流程顺序放进右侧方案，规则引擎会逐条校验（21 条规则），拼对给可行方案与评分。参数默认取参考值，可改。
+      <p className={s.lead}>
+        素材按实验环节分三段：① HCl 标定 → ② 总碱度测定 → ③ 通用器材与记录。点块加入方案、上下调序，顶部随时给分。
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,340px) minmax(0,1fr)", gap: 16, alignItems: "start" }}>
-        {/* 左：素材库 */}
-        <section style={card}>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-            {PIECE_KINDS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setKind(k)}
-                data-demo-id={`demo-design-tab-${k}`}
-                style={{
-                  ...chip,
-                  background: kind === k ? "#1f5fa8" : "#fff",
-                  color: kind === k ? "#fff" : "#3d4d61",
-                  borderColor: kind === k ? "#1f5fa8" : "#dbe5f0",
-                }}
-              >
-                {KIND_LABEL[k]}
-              </button>
-            ))}
-          </div>
-          <div style={{ display: "grid", gap: 6, maxHeight: 560, overflow: "auto" }}>
-            {list.map((p) => {
-              const on = pieces.includes(p.id);
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  data-demo-id={p.demoId}
-                  onClick={() => (on ? remove(p.id) : add(p.id))}
-                  style={{
-                    textAlign: "left",
-                    padding: "8px 10px",
-                    minHeight: 44,
-                    borderRadius: 10,
-                    cursor: "pointer",
-                    border: `1px solid ${on ? "#9dc0e8" : "#e3eaf3"}`,
-                    background: on ? "#eaf2fb" : "#fff",
-                  }}
-                >
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: "#12233b" }}>
-                    {p.title} {on ? <span style={{ color: "#1a7f4b", fontSize: 11 }}>✓ 已加入</span> : null}
-                  </div>
-                  <div style={{ fontSize: 11.5, color: "#7b8a9c", lineHeight: 1.5 }}>{p.sub}</div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+      <ScorePanel report={report} pieceCount={pieces.length} />
 
-        {/* 右：方案 + 校验 */}
-        <section style={{ display: "grid", gap: 14 }}>
-          <div style={card}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <strong style={{ fontSize: 14 }}>我的方案</strong>
-              <span className="mono" style={{ fontSize: 12, color: "#7b8a9c" }} data-demo-id="demo-design-piece-count">
+      <div className={s.cols}>
+        <PieceLibrary selected={pieces} kind={kind} onKind={setKind} onToggle={toggle} />
+
+        <div className={s.right}>
+          <section className={s.panel} aria-label="我的方案">
+            <div className={s.panelHead}>
+              <h2 className={s.panelTitle}>我的方案</h2>
+              <span className={s.mono} data-demo-id="demo-design-piece-count">
                 {pieces.length} 项
-              </span>
-              <span
-                className="mono"
-                data-demo-id="demo-design-score"
-                style={{ fontSize: 13, fontWeight: 700, color: scoreTone, marginLeft: "auto" }}
-              >
-                {report.score} / 100 · {report.feasible ? "可行" : "不可行"}
               </span>
             </div>
 
             {pieces.length === 0 ? (
-              <p style={{ fontSize: 13, color: "#7b8a9c", margin: "12px 0 0" }}>还没有素材。从左边点选，或先载入参考方案。</p>
+              <p className={s.empty}>还没有素材。从左边 ① HCl 标定 开始挑，或先载入参考方案。</p>
             ) : (
-              <ol style={{ margin: "10px 0 0", paddingLeft: 18, display: "grid", gap: 4 }}>
+              <ol className={s.planList}>
                 {pieces.map((id, i) => {
-                  const p = PIECES.find((x) => x.id === id);
+                  const title = getPiece(id)?.title ?? id;
                   return (
-                    <li key={id} style={{ fontSize: 13, color: "#22303f" }}>
-                      <span style={{ display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                        <span className="mono" style={{ color: "#7b8a9c", fontSize: 11 }}>{String(i + 1).padStart(2, "0")}</span>
-                        {p?.title ?? id}
-                        <button type="button" onClick={() => move(id, -1)} style={mini} aria-label="上移">
+                    <li key={id} className={s.planRow}>
+                      <span className={s.planIdx}>{String(i + 1).padStart(2, "0")}</span>
+                      <span className={s.planTitle}>{title}</span>
+                      <span className={s.planTools}>
+                        <button
+                          type="button"
+                          className={s.mini}
+                          onClick={() => move(id, -1)}
+                          aria-label={`上移 ${title}`}
+                        >
                           ↑
                         </button>
-                        <button type="button" onClick={() => move(id, 1)} style={mini} aria-label="下移">
+                        <button
+                          type="button"
+                          className={s.mini}
+                          onClick={() => move(id, 1)}
+                          aria-label={`下移 ${title}`}
+                        >
                           ↓
                         </button>
-                        <button type="button" onClick={() => remove(id)} style={mini} aria-label="移除">
+                        <button
+                          type="button"
+                          className={s.mini}
+                          onClick={() => remove(id)}
+                          aria-label={`移除 ${title}`}
+                        >
                           ✕
                         </button>
                       </span>
@@ -187,147 +155,83 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
               </ol>
             )}
 
-            <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+            <div className={s.actions}>
               <button
                 type="button"
                 data-demo-id="demo-design-reference"
+                className="btn btn--secondary"
                 onClick={() => {
                   setPieces([...REFERENCE_PLAN.pieces]);
                   setParams({ ...REFERENCE_PLAN.params });
                 }}
-                className="btn btn--secondary"
-                style={{ minHeight: 44, padding: "0 14px" }}
               >
                 载入参考方案
               </button>
               <button
                 type="button"
                 data-demo-id="demo-design-clear"
+                className="btn btn--secondary"
                 onClick={() => {
                   setPieces([]);
                   setSaved("idle");
                   setSaveMsg("");
                 }}
-                className="btn btn--secondary"
-                style={{ minHeight: 44, padding: "0 14px" }}
               >
                 清空
               </button>
               <button
                 type="button"
                 data-demo-id="demo-design-save"
+                className="btn btn--primary"
                 onClick={save}
                 disabled={saved === "saving" || !pieces.length}
-                className="btn btn--primary"
-                style={{ minHeight: 44, padding: "0 18px" }}
               >
                 {saved === "saving" ? "保存中…" : "保存方案"}
               </button>
               {saveMsg ? (
-                <span
-                  data-demo-id="demo-design-save-msg"
-                  style={{ fontSize: 12.5, color: saved === "ok" ? "#1a7f4b" : "#a33", alignSelf: "center" }}
-                >
+                <span className={s.saveMsg} data-state={saved} data-demo-id="demo-design-save-msg">
                   {saveMsg}
                 </span>
               ) : null}
             </div>
-          </div>
+          </section>
 
-          <div style={card}>
-            <strong style={{ fontSize: 14 }}>参数</strong>
-            <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+          <section className={s.panel} aria-label="参数">
+            <h2 className={s.panelTitle}>参数</h2>
+            <div className={s.params}>
               {PRETTY_PARAM.map((p) => (
-                <label key={p.key} style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 13, color: "#3d4d61" }}>
-                  <span style={{ minWidth: 190 }}>{p.label}</span>
+                <label key={p.key} className={s.paramRow}>
+                  <span className={s.paramLabel}>{p.label}</span>
                   {p.kind === "number" ? (
                     <input
                       type="number"
+                      className={s.input}
                       data-demo-id={`demo-design-param-${p.key}`}
                       value={String(params[p.key] ?? "")}
-                      onChange={(e) => setParams((s) => ({ ...s, [p.key]: Number(e.target.value) }))}
-                      style={{ width: 110, minHeight: 36, padding: "4px 8px", borderRadius: 8, border: "1px solid #dbe5f0" }}
+                      onChange={(e) =>
+                        setParams((st) => ({ ...st, [p.key]: Number(e.target.value) }))
+                      }
                     />
                   ) : (
                     <input
                       type="checkbox"
+                      className={s.check}
                       data-demo-id={`demo-design-param-${p.key}`}
                       checked={Boolean(params[p.key])}
-                      onChange={(e) => setParams((s) => ({ ...s, [p.key]: e.target.checked }))}
+                      onChange={(e) => setParams((st) => ({ ...st, [p.key]: e.target.checked }))}
                     />
                   )}
                 </label>
               ))}
             </div>
-          </div>
+          </section>
 
-          <div style={card} data-demo-id="demo-design-issues">
-            <strong style={{ fontSize: 14 }}>
-              校验 · 通过 {report.passed.length} 条 / 问题 {report.issues.length} 条
-            </strong>
-            {report.issues.length === 0 ? (
-              <p style={{ fontSize: 13, color: "#1a7f4b", margin: "10px 0 0" }}>✓ 21 条规则全部通过，方案可执行。</p>
-            ) : (
-              <ul style={{ margin: "10px 0 0", paddingLeft: 0, listStyle: "none", display: "grid", gap: 8 }}>
-                {report.issues.map((it) => (
-                  <li
-                    key={it.ruleId}
-                    style={{
-                      border: `1px solid ${it.level === "block" ? "#f0b8b3" : "#f3e2bd"}`,
-                      background: it.level === "block" ? "#fdeceb" : "#fdf6e7",
-                      borderRadius: 10,
-                      padding: "8px 10px",
-                    }}
-                  >
-                    <div style={{ fontSize: 13, fontWeight: 600, color: it.level === "block" ? "#a33" : "#9a6a12" }}>
-                      {it.level === "block" ? "✕" : "!"} {it.text}
-                    </div>
-                    <div style={{ fontSize: 12, color: "#5b6b7d", marginTop: 3 }}>{it.hint}</div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div style={card}>
-            <strong style={{ fontSize: 14 }}>方案点评</strong>
-            <p style={{ fontSize: 13, color: "#3d4d61", lineHeight: 1.75, margin: "8px 0 0", whiteSpace: "pre-line" }}>
-              {assessment.text}
-            </p>
-          </div>
-        </section>
+          <section className={s.panel} aria-label="方案点评">
+            <h2 className={s.panelTitle}>方案点评</h2>
+            <p className={s.remark}>{assessment.text}</p>
+          </section>
+        </div>
       </div>
     </main>
   );
 }
-
-const card = {
-  border: "1px solid #dbe5f0",
-  borderRadius: 14,
-  background: "#fff",
-  padding: 14,
-  boxShadow: "0 1px 2px rgba(18,35,59,.05), 0 8px 24px rgba(18,35,59,.05)",
-} as const;
-
-const chip = {
-  minHeight: 34,
-  padding: "4px 12px",
-  borderRadius: 999,
-  border: "1px solid #dbe5f0",
-  background: "#fff",
-  fontSize: 12.5,
-  fontWeight: 600,
-  cursor: "pointer",
-} as const;
-
-const mini = {
-  minWidth: 24,
-  minHeight: 24,
-  padding: "0 6px",
-  borderRadius: 6,
-  border: "1px solid #e3eaf3",
-  background: "#fff",
-  cursor: "pointer",
-  fontSize: 11,
-  color: "#5b6b7d",
-} as const;
