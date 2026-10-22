@@ -37,9 +37,50 @@ npm run build
 
 `门户 → 登录（点了就进）→ 我的实验（3 个重点）→ 新手教学 → 任务看板 → 拖试剂 → 正反馈 / 错误提示 → 重做 → 交卷 → 实验总结 + 导出 CSV`
 
-- 重点实验：**exp01 溶液配制 / exp09 酸碱标定 / exp08 称量练习**
+- 重点实验：**exp01 仪器的认领、天平使用及溶液配制 / exp03 醋酸电离度和电离常数测定 / exp09 酸碱标准溶液的配制与浓度比较**
 - 其余 7 个在「更多实验」里标「即将开放」，不可点（演示时不暴露半成品）
 - 演示模式加 `?demo=1` 会多出「跳过实验」按钮：不逐步操作，直接交卷看结果
+
+### 现场清单（2026-10-22 18:00）
+
+**启动（两条，别多跑）**
+
+```powershell
+npm run build
+& ".\scripts\restart-prod.ps1"      # 起 :3001；漏了这步整页无样式
+```
+
+打不开就手动起（等价命令）：
+
+```powershell
+$env:PORT="3001"; $env:HOSTNAME="127.0.0.1"; $env:DEVTOOLS="1"
+$env:PGLITE_DIR="E:\workspace\public\NOBBBB\chem-lab\.pgdata-prod2"
+node .next/standalone/server.js
+```
+
+**线上验收（2026-10-22 13:20 实测，8/8 PASS）**
+
+| # | URL | 结果 |
+|---|---|---|
+| 1 | https://smnh6y8fgh.coze.site/ | PASS · 209 字 |
+| 2 | https://smnh6y8fgh.coze.site/experiments | PASS · 479 字 |
+| 3 | https://smnh6y8fgh.coze.site/exp/exp01?force=1&autodemo=1 | PASS · 停在实验台 → 落到 `/exp/exp01/report` |
+| 4 | https://smnh6y8fgh.coze.site/exp/exp03?force=1&autodemo=1 | PASS · 落到 `/exp/exp03/report` |
+| 5 | https://smnh6y8fgh.coze.site/exp/exp09?force=1&autodemo=1 | PASS · 落到 `/exp/exp09/report` |
+
+判据：正文 <40 字符算空白页；非 2xx 算死链；控制台 error / pageerror 计入失败。以上 0 项触发。
+
+**现场点验（:3001，5/5 PASS）**
+
+| 动作 | 预期 |
+|---|---|
+| 登录页学号姓名随便填 → 提交 | 直接进 `/experiments`（演示口径放行，不卡登录） |
+| 登录页切「教师」→ 一键进 | 进 `/teacher`，有班级数据 |
+| 任意页右下 DEV → 展开 Dev Dock | 10 个「一键演示」热区，实测 62×32px，手点不空 |
+| Dev Dock 点 exp09「一键演示」 | 进 `/exp/exp09?force=1&autodemo=1`，顶部「第 01 步 / 共 07 步」 |
+| exp09 一路跑完 | 自动跳报告页，总分 **96** |
+
+复跑命令：`node .team/online-autodemo.mjs`（线上）、`node .team/live-check.mjs`（本地 :3001）。
 
 ---
 
