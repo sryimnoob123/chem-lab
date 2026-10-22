@@ -50,10 +50,7 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
   const [remark, setRemark] = useState<LlmAssessResult | null>(null);
   const [remarkLoading, setRemarkLoading] = useState(false);
   useEffect(() => {
-    if (pieces.length === 0) {
-      setRemark(null);
-      return undefined;
-    }
+    if (pieces.length === 0) return undefined;
     const timer = window.setTimeout(() => {
       setRemarkLoading(true);
       void fetch("/api/plan/assess", {
@@ -77,6 +74,9 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
     }, 600);
     return () => window.clearTimeout(timer);
   }, [pieces, params, topic]);
+
+  /** 方案清空后不显示上一次的点评：派生，不靠 effect 清 state */
+  const shownRemark = pieces.length > 0 ? remark : null;
 
   const toggle = (id: string) =>
     setPieces((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -104,8 +104,8 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
           feasible: report.feasible,
           score: report.score,
           issues: report.issues.map((i) => ({ ruleId: i.ruleId, level: i.level, text: i.text })),
-          assessment: remark?.text ?? assessment.text,
-          assessmentOffline: !remark || remark.provider === "mock",
+          assessment: shownRemark?.text ?? assessment.text,
+          assessmentOffline: !shownRemark || shownRemark.provider === "mock",
         }),
       });
       const body = (await res.json().catch(() => ({}))) as {
@@ -304,15 +304,15 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
             <div className={s.panelHead}>
               <h2 className={s.panelTitle}>方案点评</h2>
               <span className={s.mono} data-demo-id="demo-remark-provider">
-                {remarkLoading ? "生成中…" : remark ? (remark.provider === "mock" ? "本地点评" : "AI 点评") : "本地点评"}
+                {remarkLoading ? "生成中…" : shownRemark ? (shownRemark.provider === "mock" ? "本地点评" : "AI 点评") : "本地点评"}
               </span>
             </div>
             <p className={s.remark} data-demo-id="demo-remark-text">
-              {remark?.text ?? assessment.text}
+              {shownRemark?.text ?? assessment.text}
             </p>
-            {remark && remark.points.length > 0 ? (
+            {shownRemark && shownRemark.points.length > 0 ? (
               <ul className={s.remarkPoints} data-demo-id="demo-remark-points">
-                {remark.points.map((point, index) => (
+                {shownRemark.points.map((point, index) => (
                   <li key={`${point.kind}-${index}`} className={s.remarkPoint} data-kind={point.kind}>
                     <span className={s.remarkDot} aria-hidden="true" />
                     {point.text}
@@ -320,9 +320,9 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
                 ))}
               </ul>
             ) : null}
-            {remark && remark.questions.length > 0 ? (
+            {shownRemark && shownRemark.questions.length > 0 ? (
               <div className={s.remarkAsk} data-demo-id="demo-remark-questions">
-                {remark.questions.map((question) => (
+                {shownRemark.questions.map((question) => (
                   <p key={question} className={s.remarkQuestion}>
                     {question}
                   </p>

@@ -114,13 +114,18 @@ export function mockAssess(plan: PlanInput, report: PlanReport, topic?: PlanTopi
     .slice(0, 2);
   for (const issue of risks) {
     const pieceId = RULE_PIECE[issue.ruleId];
+    // 指到具体片段：缺的块说「还没放」，放了但用错的块说「问题出在」
+    const missing = pieceId !== undefined && !plan.pieces.includes(pieceId);
     points.push({
       kind: "risk",
       ruleId: issue.ruleId,
       pieceId,
-      text: pieceId
-        ? `问题出在「${pieceTitle(pieceId)}」：${issue.text} —— ${issue.hint}`
-        : `${issue.text} —— ${issue.hint}`,
+      text:
+        pieceId && missing
+          ? `还缺「${pieceTitle(pieceId)}」：${issue.text} —— ${issue.hint}`
+          : pieceId
+            ? `问题出在「${pieceTitle(pieceId)}」：${issue.text} —— ${issue.hint}`
+            : `${issue.text} —— ${issue.hint}`,
     });
   }
 
