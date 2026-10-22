@@ -54,8 +54,9 @@ export function NextActionCard({
         disabled={disabled}
         onClick={onChoose}
       >
-        <span className={styles.nextName}>{clip(name, 18)}</span>
-        <span className={styles.nextWhy}>{clip(why, 18)}</span>
+        {/* 动作名不靠截断，允许换行完整显示（用户 2026-10-22：按钮上被裁字看不懂） */}
+        <span className={styles.nextName}>{clip(name, 26)}</span>
+        <span className={styles.nextWhy}>{clip(why, 22)}</span>
         {keyHint ? (
           <span className={styles.key} aria-hidden="true">
             按 {keyHint}

@@ -1,36 +1,11 @@
 import Link from "next/link";
 
 const ITEMS = [
-  {
-    id: "exp01",
-    no: "01",
-    name: "仪器的认领、天平使用及溶液配制",
-    note: "洗涤 · 称量 · 定容 · 硫酸稀释",
-  },
-  {
-    id: "exp02",
-    no: "02",
-    name: "试剂级氯化钠制备",
-    note: "除杂 · 过滤 · 蒸发结晶 · 产率",
-  },
-  {
-    id: "exp08",
-    no: "08",
-    name: "清点仪器，分析天平称量练习",
-    note: "固定质量称量 · 递减法 · 记录规范",
-  },
-  {
-    id: "exp09",
-    no: "09",
-    name: "酸碱标准溶液的配制与浓度比较",
-    note: "滴定管润洗 · 半滴操作 · 终点判定",
-  },
-  {
-    id: "exp10",
-    no: "10",
-    name: "盐酸标准溶液的标定与工业纯碱总碱度测定",
-    note: "基准物质标定 · 双指示剂法",
-  },
+  { id: "exp01", no: "01", name: "仪器的认领、天平使用及溶液配制" },
+  { id: "exp02", no: "02", name: "试剂级氯化钠制备" },
+  { id: "exp08", no: "08", name: "清点仪器，分析天平称量练习" },
+  { id: "exp09", no: "09", name: "酸碱标准溶液的配制与浓度比较" },
+  { id: "exp10", no: "10", name: "盐酸标准溶液的标定与工业纯碱总碱度测定" },
 ];
 
 export function ExperimentList() {
@@ -43,7 +18,6 @@ export function ExperimentList() {
               <span className="exp-list__no mono">{item.no}</span>
               <span className="exp-list__body">
                 <span className="exp-list__name">{item.name}</span>
-                <span className="exp-list__note">{item.note}</span>
               </span>
             </Link>
           </li>
@@ -69,6 +43,7 @@ export function ExperimentList() {
         .exp-list__row {
           display: grid;
           grid-template-columns: 30px minmax(0, 1fr);
+          align-items: center;
           gap: 10px;
           min-height: 46px;
           padding: 8px 8px 8px 0;
@@ -88,16 +63,6 @@ export function ExperimentList() {
           font-weight: 500;
           color: var(--ink);
           transition: color 160ms var(--ease-out);
-        }
-        .exp-list__note {
-          display: block;
-          margin-top: 2px;
-          overflow: hidden;
-          color: var(--ink-2);
-          font-size: 11px;
-          line-height: 1.4;
-          white-space: nowrap;
-          text-overflow: ellipsis;
         }
         .exp-list__all {
           display: inline-flex;

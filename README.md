@@ -107,7 +107,7 @@ docs/design/            设计契约、动效 token、风格裁定、素材许�
 
 完整约定见 [`AGENTS.md`](./AGENTS.md)，其中与本项目演示最相关的四条：
 
-1. **不引动画库**（GSAP/Motion 等），动效一律 CSS transition/keyframes；只动 `transform/opacity`，交互 ≤300ms
+1. **能用 CSS 就不用库**：动效默认 CSS transition/keyframes；只有弹簧、布局/共享元素动画、退场、可打断手势才上 Motion（`motion.dev`）。GSAP / Lottie 不引；只动 `transform/opacity`，交互 ≤300ms
 2. **改颜色只走 token**（`--paper` / `--ink` / `--line` / `--river-700` 等），不写字面量
 3. **`data-demo-id` 一个都不许改**——演示脚本和 e2e 全靠它定位
 4. **中文文件只用 `write`/`edit` 工具**，不要用 PowerShell 重定向（会变 GBK 乱码）

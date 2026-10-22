@@ -98,6 +98,30 @@ const COMPUTE_WHY: Partial<Record<string, string>> = {
   compute: "c 与 V 成反比，别拿体积比当浓度比",
 };
 
+/**
+ * 「这个动作怎么执行」—— 建议卡第二行优先给操作方式，而不是重复判据
+ * （用户 2026-10-22：只说要读数/观察，没说点哪里、怎么点，等于不能用）。
+ * 教学必需，属于 AGENTS 9.9 的例外；每条 ≤18 字，别写成说明书。
+ */
+const ACTION_HOW: Partial<Record<string, string>> = {
+  observe: "点这张卡即完成观察，读数自动记台账",
+  readInstrument: "点这张卡读一次数",
+  wash: "点这张卡完成冲洗与淋洗",
+  weigh: "点这张卡完成本次称量",
+  dissolve: "点这张卡加蒸馏水并搅拌",
+  transfer: "点这张卡转入容量瓶",
+  dilute: "点这张卡定容到刻度",
+  heat: "点这张卡加热到指定温度",
+  evaporate: "点这张卡蒸发浓缩",
+  filter: "点这张卡过滤取滤液",
+  centrifuge: "点这张卡离心分层",
+  washPrecipitate: "点这张卡洗涤沉淀",
+  addDrops: "点这张卡逐滴加入",
+  titrate: "点这张卡逐滴滴定",
+  assemble: "把试剂拖到对应器皿上",
+  calibrate: "点这张卡校准仪器",
+};
+
 const INPUT_MODES = [
   { id: "drag", label: "拖拽" },
   { id: "click", label: "点选" },
@@ -1205,6 +1229,7 @@ export function Workbench({
               name={guideName(suggested.label)}
               why={
                 (isComputeStep ? COMPUTE_WHY[suggested.type] : undefined) ??
+                ACTION_HOW[suggested.type] ??
                 whyLine(step.judge.criterion)
               }
               keyHint={suggestedKey ? String(suggestedKey) : undefined}

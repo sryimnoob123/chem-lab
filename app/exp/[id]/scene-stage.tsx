@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { getSceneReagent } from "@/lib/scene/reagents";
 import { DEFAULT_RACK_IDS, rackIdsFor } from "./rack-ids";
-import { BenchScene } from "@/components/exp/scene/bench-scene";
+import { BenchScene, type SceneFeedback } from "@/components/exp/scene/bench-scene";
 import { ComputeBench } from "@/components/exp/scene/compute-bench";
 import { PourFX } from "@/components/exp/scene/pour";
 import { EndingFlash, SuccessBurst } from "@/components/exp/feedback";
@@ -173,6 +173,9 @@ export function SceneStage({
     onReject: (verdict, _reagentId, mode, point) => {
       onInput?.(mode);
       onCaption(null);
+      // 拒收也只抖「松手时压着的那一台」，不再抖整块台面（2026-10-22 用户口径）
+      const hit = point ? vesselAt(point) : null;
+      if (hit) setRejectFx((prev) => ({ id: hit, key: (prev?.key ?? 0) + 1 }));
       onDropRejected?.(verdict, point);
     },
   });
@@ -216,7 +219,7 @@ export function SceneStage({
   const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
     event.preventDefault();
     const id = flow.draggingId ?? event.dataTransfer.getData("text/plain");
-    if (id) flow.drop(id, { x: event.clientX, y: event.clientY });
+    if (id) dropAt(id, { x: event.clientX, y: event.clientY });
   };
 
   useEffect(() => {
@@ -231,8 +234,46 @@ export function SceneStage({
   const selected = reagents.find((item) => item.id === selectedId) ?? null;
   const targetActive = Boolean(selectedId || flow.draggingId);
 
-  const feedbackClass =
-    feedbackTone === "success" ? "ix-snap" : feedbackTone === "failure" ? "ix-shake" : "";
+  /**
+   * 最近一次投放落到的器皿（用户 2026-10-22：只跟被操作的那一台互动）。
+   * 反馈只传给这一个器皿；整块台面不再播吸附/抖动。
+   */
+  const [targetVesselId, setTargetVesselId] = useState<string | null>(null);
+  /** 拒收时抖的那一台（落点器皿），带 key 让抖动可重播。 */
+  const [rejectFx, setRejectFx] = useState<{ id: string; key: number } | null>(null);
+
+  /** 松手点下面压着的器皿 id：大热区按钮盖在 SVG 上，必须逐层穿透才拿得到器皿。 */
+  const vesselAt = (point: { x: number; y: number }): string | null => {
+    if (typeof document === "undefined") return null;
+    for (const el of document.elementsFromPoint(point.x, point.y)) {
+      const hit = el.closest<HTMLElement>('[data-demo-id^="demo-scene-vessel"]');
+      const id = hit?.dataset.demoId?.replace("demo-scene-vessel-", "");
+      if (id) return id;
+    }
+    return null;
+  };
+
+  /** 落位：先记下落点器皿（反馈只给它），再交给 flow 播倾倒。 */
+  const dropAt = (id: string, point: { x: number; y: number }) => {
+    const hit = vesselAt(point);
+    if (hit) setTargetVesselId(hit);
+    flow.drop(id, point);
+  };
+
+  const vesselFeedback: SceneFeedback | null = rejectFx
+    ? { vesselId: rejectFx.id, kind: "reject", key: rejectFx.key }
+    : feedbackTone && targetVesselId
+      ? {
+          vesselId: targetVesselId,
+          kind: feedbackTone === "success" ? "success" : "reject",
+          key: feedbackSeq,
+        }
+      : null;
+
+  // 一次成功的动作把上一条拒收抖动画清掉，避免它还挂在器皿上
+  useEffect(() => {
+    if (feedbackTone === "success") setRejectFx(null);
+  }, [feedbackTone, feedbackSeq]);
 
   return (
     <div
@@ -312,7 +353,7 @@ export function SceneStage({
                     flow.endDrag();
                     return;
                   }
-                  flow.drop(drag.id, { x: event.clientX, y: event.clientY });
+                  dropAt(drag.id, { x: event.clientX, y: event.clientY });
                 }}
                 onPointerCancel={() => {
                   pointerDragRef.current = null;
@@ -369,9 +410,10 @@ export function SceneStage({
       ) : null}
 
       <div className={styles.benchArea}>
+        {/* 不再用 key={feedbackSeq}：那会让整块台面每做一步就重建、所有器皿动画一起重播
+            （用户 2026-10-22 说的「整场一起动」）。反馈只传给被操作的那一个器皿。 */}
         <div
-          key={`vessel-${feedbackSeq}`}
-          className={`${styles.apparatusWrap} ${feedbackClass}`}
+          className={styles.apparatusWrap}
           data-bench={isBenchScene ? "true" : undefined}
           data-feedback={feedbackTone ?? undefined}
         >
@@ -430,12 +472,15 @@ export function SceneStage({
                 reaction={null}
                 selectedReagentId={null}
                 draggingReagentId={null}
-                feedback={null}
+                feedback={isBenchScene ? vesselFeedback : null}
                 onFeedbackEnd={() => undefined}
                 onDropReagent={() => undefined}
                 onActivateVessel={(id) => {
-                  // 台面场景：点天平 = 按 1（用户 2026-10-21 要求）
-                  if (id === "balance") onQuickAction?.();
+                  // 点场景里的实体 = 执行当前建议动作。
+                  // 原来只有 balance 走 onQuickAction，点烧杯/容量瓶只记 targetVesselId、什么都不发生，
+                  // 用户 2026-10-22 实测"检查就是检查不了"——点了没反应等于不能操作。
+                  setTargetVesselId(id);
+                  onQuickAction?.();
                 }}
                 onClearSelection={() => undefined}
                 onReveal={() => undefined}

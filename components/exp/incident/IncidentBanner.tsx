@@ -31,8 +31,10 @@ const LEVEL_TAG: Record<IncidentLevel, string> = {
   L4: "L4 · 终止",
 };
 
-/** 默认自动收起时长（L3/L4 需要学生看清，常驻到手动关闭）。 */
-const AUTO_HIDE_MS: Record<IncidentLevel, number> = { L1: 1600, L2: 2400, L3: 0, L4: 0 };
+/** 默认自动收起时长（L3/L4 需要学生看清，常驻到手动关闭）。
+ *  2026-10-22 用户反馈「每次错误之后没有一个明确的后果」：L1 原来 1.6s、L2 2.4s 就收，
+ *  字还没读完条就没了，等于没有后果。现在按「一眼看到 → 能读完」给足停留。 */
+const AUTO_HIDE_MS: Record<IncidentLevel, number> = { L1: 3600, L2: 4600, L3: 0, L4: 0 };
 
 export interface IncidentBannerProps {
   open: boolean;

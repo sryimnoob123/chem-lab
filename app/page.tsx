@@ -174,7 +174,6 @@ export default function Cover() {
           }
           .cover .cover-hero__sub,
           .cover .cover-hero__slogan,
-          .cover .exp-list__note,
           .cover .exp-list__all { color: #2e3a48; }
         }
         @media (max-width: 620px) {

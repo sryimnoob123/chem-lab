@@ -25,7 +25,7 @@ import {
 type OnboardingStep = {
   /** 一句话标题（≤10 字） */
   title: string;
-  /** 一句解释（≤40 字） */
+  /** 说明：最多两句，单句 ≤26 字，口语，不用公文腔 */
   desc: string;
   icon: ReactNode;
 };
@@ -72,25 +72,25 @@ function buildSteps(expId?: string): readonly OnboardingStep[] {
   return [
     {
       // 滴定类实验（exp09）首步是"配 500 mL 溶液"，拖瓶子的说法和第 1 步对不上。
-      title: bench ? "把试剂拖到台面器皿上" : "按看板提示逐步操作",
+      title: bench ? "把试剂拖到器皿上" : "跟着看板一步步做",
       desc: bench
-        ? "左边试剂架上的瓶子拖到烧杯 / 容量瓶 / 试管上。松手之后先看动画，再听结果。"
-        : "左边试剂架可以拖，场景里的瓶子也能直接点。左上角看板写着这一步该做什么。",
+        ? "左边架子上的瓶子，拖到烧杯或者容量瓶上。松手以后先看动画，再看结果条。"
+        : "左边试剂架能拖，场景里的瓶子也能点。看左上角的看板，它会告诉你这一步做什么。",
       icon: ICONS.drag,
     },
     {
-      title: "看结果条，不用猜",
-      desc: "绿条 = 这步对了，会自己往下走；红条 = 这步不对，会告诉你为什么。",
+      title: "看结果条就行",
+      desc: "绿条是这步做对了，会自动往下走。红条是没做对，还会告诉你为什么。",
       icon: ICONS.play,
     },
     {
-      title: "错了就重做，不扣已得的分",
-      desc: "按提示重做这一步即可。事故会记一笔，但后面的步骤照常继续。",
+      title: "错了就重做，不扣分",
+      desc: "照着提示把这一步再做一遍就行。做错会记一次事故，后面照常往下做。",
       icon: ICONS.retry,
     },
     {
-      title: "不知道干什么，看左上角",
-      desc: "左上角看板写着「现在该做什么」；还是不懂就按 H 取一条提示。",
+      title: "卡住了就看左上角",
+      desc: "左上角看板写着现在该做什么。还看不懂，就按 H 要一条提示。",
       icon: ICONS.board,
     },
   ];
@@ -122,6 +122,7 @@ export function ExperimentOnboarding({
   expId,
 }: ExperimentOnboardingProps) {
   const STEPS = buildSteps(expId);
+  const stepCount = STEPS.length;
   const [visible, setVisible] = useState(false);
   const [index, setIndex] = useState(0);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -156,7 +157,7 @@ export function ExperimentOnboarding({
 
   const next = useCallback(() => {
     setIndex((i) => {
-      if (i >= STEPS.length - 1) {
+      if (i >= stepCount - 1) {
         markOnboardingSeen(readStorage(), storageKey);
         setVisible(false);
         onDone?.();
@@ -164,7 +165,7 @@ export function ExperimentOnboarding({
       }
       return i + 1;
     });
-  }, [onDone, storageKey]);
+  }, [stepCount, onDone, storageKey]);
 
   const back = useCallback(() => setIndex((i) => Math.max(0, i - 1)), []);
 
@@ -221,7 +222,7 @@ export function ExperimentOnboarding({
 
         <div className={styles.kicker}>
           <span>
-            第 {index + 1} / {STEPS.length} 步 · 开始之前
+            第 {index + 1} / {STEPS.length} 步 · 开始前先看一眼
           </span>
           <span className={styles.dots} aria-hidden="true">
             {STEPS.map((_, i) => (
@@ -250,7 +251,7 @@ export function ExperimentOnboarding({
             onClick={next}
             data-demo-id="demo-onboarding-next"
           >
-            {isLast ? "知道了，开始实验" : "下一步"}
+            {isLast ? "懂了，开始做" : "下一步"}
           </button>
         </div>
       </div>

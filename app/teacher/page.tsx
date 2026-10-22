@@ -9,6 +9,7 @@ import { loadClassRadarSeries } from "@/components/teacher/radar-query";
 import { TeacherToolbar, type StatusFilter } from "@/components/teacher/toolbar";
 import { StudentTable } from "@/components/teacher/student-table";
 import { formatClock } from "@/components/teacher/format";
+import { demoIncidents, demoOverview, demoRadar, demoStudents } from "@/components/teacher/demo-data";
 import type { RadarSeries } from "@/components/teacher/radar-data";
 import type {
   IncidentStat,
@@ -45,10 +46,31 @@ async function load(
       listStudents({ q: q || undefined, status: status === "all" ? undefined : status, limit: 200 }),
       loadClassRadarSeries(),
     ]);
+    // 演示口径（用户 2026-10-22）：教师后台不做登录、不依赖数据库，空库也要能看到完整界面。
+    // 有真实数据就走真实数据；空库（或库没起）落演示数据，永远不出现"全是 0"的页面。
+    if (overview.total === 0) return { data: demoData(q, status), error: null };
     return { data: { overview, incidents, students, radar }, error: null };
-  } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : "未知错误" };
+  } catch {
+    // 演示兜底（用户 2026-10-22：教师后台不做登录、不依赖数据库，直接放一组数据看界面）。
+    // 库正常时走真实数据，库没起也永远有完整页面可演示。
+    return { data: demoData(q, status), error: null };
   }
+}
+
+/** 演示数据 + 与真实查询一致的筛选口径（搜索/状态过滤照常生效）。 */
+function demoData(q: string, status: StatusFilter): OverviewData {
+  const all = demoStudents();
+  const rows = all.rows.filter(
+    (r) =>
+      (status === "all" || r.status === status) &&
+      (q === "" || r.studentNo.includes(q) || r.name.includes(q)),
+  );
+  return {
+    overview: demoOverview(),
+    incidents: [...demoIncidents()],
+    students: { rows, total: rows.length },
+    radar: demoRadar(),
+  };
 }
 
 export default async function TeacherOverviewPage({ searchParams }: { searchParams: SearchParams }) {

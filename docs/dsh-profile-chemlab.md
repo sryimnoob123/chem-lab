@@ -22,9 +22,37 @@ cd E:\workspace\public\NOBBBB\chem-lab
 | 层 | 位置 | 内容 |
 |---|---|---|
 | 工程约定 | 项目根 `AGENTS.md` | 语言栈、目录、规范、三层测试、**并行作战方式与 DDL** |
-| 项目 skill | `chem-lab/.dsh/skills/`（9 个） | 方法论与检查清单，进 git |
+| 项目 skill | `chem-lab/.dsh/skills/`（15 个） | 方法论与检查清单，进 git |
+| 全局 skill | `~/.dsh/skills/`（20 个） | 同样这 13 个通用 skill 的副本，桌面端任何工作区都能用 |
 | profile | `~/.dsh/profiles/chemlab/` | bundles、插件、MCP、模型配置 |
+| desktop 档 | `~/.dsh/profiles/desktop/` | 你日常用的 Electron 档，本轮已同步同一套能力 + 新增 `preset-chemlab` |
 | 备份 | `~/.dsh/profiles/chemlab.bak-20261020/` | 改坏了的还原点 |
+
+## desktop 档对齐（2026-10-22）与本轮新增
+
+桌面端（Electron）用的是 `desktop` 档，不是 `chemlab` 档，所以这套能力重复做了一份进去：
+
+| 补进 desktop 的东西 | 说明 |
+|---|---|
+| `@michengai/dsh-code-review`、`billion-context`、`dsh-checkpoint-rewind`、`dsh-diff-approval` | 4 个插件，装完技能目录立即刷新（热加载生效） |
+| `agent-team` maxMembers 20 / maxTasks 512 | 与 chemlab 一致 |
+| MCP `context7` | Next 16 / React 19 / Drizzle 实时文档 |
+| 显式禁用 `experimental-inspector`、`session-inspector` | 与 billion-context 抢 `fetch`，不禁会报 `1 entry did not activate` |
+| **`preset-chemlab`**（新预设） | 桌面端预设选择器里出现，名字「chem-lab · Web 应用开发」，order 5 |
+
+`preset-chemlab` 是从 `~/.dsh/cordis.patch.yml` 的 `preset-standard` 整块抄下来改的（Cordis patch **不深合并**，覆盖 `config` 必须整段重述），并且把里面 `tool-plugin-manager` / `tool-plugin-market` 的 `disabled` 从 `true` 改成 `false`，这样这个预设下能直接装插件。
+
+> ⚠️ 预设改名后**要重启桌面端 app** 才在预设选择器里出现。已有会话保持它启动时的插件版本，新预设要在新会话里验证。
+
+### 校验 desktop 档的办法（CLI 不给看）
+
+`dsh --profile desktop --dump-config` 会直接报错：
+```
+error: profile "desktop" is managed exclusively by the Electron application
+```
+所以要校验 desktop 的 patch 有没有写坏，用一个**一次性镜像 profile**：把 `cordis.patch.yml` / `cordis.yml` / `package.json` / `pnpm-workspace.yaml` 复制到临时 profile，用 `mklink /J` 把 `node_modules` 软链过去，改掉 package.json 里的 name，然后 `--dump-config`。验完删掉（含软链要用 `cmd /c rmdir` 解，不能直接 `Remove-Item`）。
+
+> 踩坑：`Set-Content -Encoding UTF8` 在 Windows PowerShell 5 会写出 **BOM**，dsh 读 package.json 报 `SyntaxError: Unexpected token '﻿'`。手写这些文件必须用 `[IO.File]::WriteAllText(..., UTF8Encoding($false))` 或 `-Encoding utf8NoBOM`。
 
 ## 已装（6 个第三方 bundle + 2 个官方 bundle）
 
@@ -57,7 +85,7 @@ cd E:\workspace\public\NOBBBB\chem-lab
 | `dsh-vision-router` 等视觉桥 | 模型本身能读图（实测截图后能准确说出颜色/文字/位置），它默认把图发到云端兜底，且截图只吃本地 HTML 文件，不解 localhost |
 | `@goodandready/dsh-live-canvas` | 渲染的是 agent 生成的 HTML，不是 dev server 上的页面；3★、无 dsh 兼容声明 |
 | `@changfenhuang/dsh-genui` / `dsh-mermaid` | 是"展示"不是"验收"；genui 内置 3D，项目不做 3D |
-| `impeccable`（345K 安装） | 与 `frontend-design` 同源高重叠（会争"视觉方向"），且官方支持列表里没有 DSH |
+| `impeccable` | ~~与 `frontend-design` 同源高重叠~~ **已装**（用户 2026-10-22 明确要求，见下节） |
 | `dsh-db-tool` / `dsh-sql` / `dsh-database-explorer` / `dsh-db-connector` | **连不上 PGlite**（它不是网络服务）；真 PG 用 `psql` 更可编程（有退出码）。`dsh-db-tool` 还要给宿主打二进制补丁 |
 | `@modelcontextprotocol/server-postgres` | 已归档废弃，且有未修补的 SQL 注入（`COMMIT; DROP SCHEMA`） |
 | `@bytebase/dbhub` 等 PG MCP | 同样连不上 PGlite；开发期用 drizzle-kit 的 `driver: "pglite"` 更直接 |

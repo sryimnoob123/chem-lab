@@ -37,7 +37,7 @@
 ### 1.1 开发依赖（不进产物，仅记录）
 `typescript`（Apache-2.0）、`vitest`（MIT）、`tailwindcss`（MIT）、`eslint`（MIT）、`@playwright/test`（Apache-2.0）、`drizzle-kit`（Apache-2.0）。
 
-> 说明：**本项目不引入任何动画库 / 组件库 / 图表库 / 公式库**（`AGENTS.md` 与 `DESIGN-CONTRACT.md` §9 硬约束）。
+> 说明：**本项目不引入组件库 / 图表库 / 公式库**；动画库只允许 `motion.dev`，且限 `AGENTS.md` §3.1 那四类场景（弹簧、布局/共享元素、退场、可打断手势）（`DESIGN-CONTRACT.md` §9）。
 > 动效一律 CSS transition / keyframes；图表是手写 SVG；音效是 Web Audio 合成。
 
 ---

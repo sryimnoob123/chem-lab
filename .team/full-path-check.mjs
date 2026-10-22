@@ -5,11 +5,13 @@
  */
 import { chromium } from "@playwright/test";
 
-const BASE = process.env.BASE_URL ?? "http://127.0.0.1:3001";
+const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const problems = [];
 const rows = [];
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({
+  executablePath: "C:/Users/14681/AppData/Local/hermes/tools/chromium-1208/chrome-win64/chrome.exe",
+});
 
 async function newPage(ctx) {
   const page = ctx.pages()[0] ?? (await ctx.newPage());

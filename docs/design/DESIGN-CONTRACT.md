@@ -238,11 +238,11 @@ npm run shots -- exp09           # 只跑某个实验相关页面
 
 ## 9. 禁止清单（汇总）
 
-- 组件库 / 动画库 / 图表库 / 公式库 / CSS-in-JS
+- 组件库 / 图表库 / 公式库 / CSS-in-JS（动画库只允许 `motion.dev`，限 `AGENTS.md` §3.1 的四类场景）
 - 渐变装饰、玻璃拟态、霓虹、彩虹色板、重投影
 - 大圆角卡片墙、每卡同阴影、每卡 fade-in
 - 奶油底 + 衬线大标题 + 陶土色；纯黑底 + 荧光绿
 - ALL CAPS 眉标、中缀元信息、装饰性编号
 - `transition: all`、UI 用 ease-in、`scale(0)` 入场
 - 校徽改色/拉伸/加特效；外链学校资源
-- 用 browseros-neo 打开 localhost
+- 用 `ego-browser` / `browser_exec(local=True)` 打开 localhost（那是登录态站点的工具）

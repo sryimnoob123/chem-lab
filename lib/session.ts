@@ -73,29 +73,46 @@ export async function signIn(studentNo: string, name: string): Promise<Student |
 export async function signInDemo(studentNo: string, name: string): Promise<Student> {
   const no = normalize(studentNo) || normalize("20250101");
   const studentName = name.trim() || "周若曦";
-  const roster = await findRosterStudent(no, studentName);
+  // 查库失败不能把登录打死：演示机数据库没起时也要能进（用户 2026-10-22：只是个 demo）
+  let roster: Student | null = null;
+  try {
+    roster = await findRosterStudent(no, studentName);
+  } catch {
+    roster = null;
+  }
   const student: Student = roster ?? { studentNo: no, name: studentName, className: "演示班级" };
   const store = await cookies();
   store.set(SESSION_COOKIE, signSessionValue(student.studentNo), cookieOptions());
   return student;
 }
 
-/** 当前登录学生；未登录 / cookie 被篡改 / 已从名单移除都返回 null。 */
+/** 演示身份：没有 cookie、或数据库整个不可用时都用它，保证任何页面都进得去。 */
+const DEMO_STUDENT: Student = { studentNo: "20250101", name: "周若曦", className: "演示班级" };
+
+/**
+ * 当前登录学生。
+ *
+ * 演示口径（用户 2026-10-22）：登录只做样子，不挡人。
+ * 所以这里有三个兜底，任何一条都不再返回 null：
+ *   1. 没有 cookie → 直接给演示身份（进 /experiments 不会被弹回 /login）
+ *   2. 有 cookie 但库里没这个人 → 用 cookie 里的学号 + 演示姓名（成绩仍按 studentNo 归属）
+ *   3. 查库抛错（本地 PGlite 挂了 / 线上没注入 DATABASE_URL）→ 同上，不冒 500
+ */
 export async function getStudent(): Promise<Student | null> {
   const store = await cookies();
-  const studentNo = verifySessionValue(store.get(SESSION_COOKIE)?.value);
-  if (!studentNo) return null;
-
-  const rows = await db
-    .select({ studentNo: students.studentNo, name: students.name, className: students.className })
-    .from(students)
-    .where(eq(students.studentNo, studentNo))
-    .limit(1);
-  const row = rows[0];
-  if (row) return { studentNo: row.studentNo, name: row.name, className: row.className };
-  // 演示登录（signInDemo）允许填任意学号，这类会话不在白名单里。
-  // 原来这里返回 null → 学生刚登录就被弹回 /login（红队 2026-10-22 实测"乱填进不去"）。
-  // 成绩归属仍按 studentNo，不会串到别人身上。
+  const studentNo = verifySessionValue(store.get(SESSION_COOKIE)?.value) ?? DEMO_STUDENT.studentNo;
+  try {
+    const rows = await db
+      .select({ studentNo: students.studentNo, name: students.name, className: students.className })
+      .from(students)
+      .where(eq(students.studentNo, studentNo))
+      .limit(1);
+    const row = rows[0];
+    if (row) return { studentNo: row.studentNo, name: row.name, className: row.className };
+  } catch {
+    // 库不可用：落到下面的兜底身份，不抛给页面
+  }
+  if (studentNo === DEMO_STUDENT.studentNo) return DEMO_STUDENT;
   return { studentNo, name: "演示同学", className: "演示班级" };
 }
 

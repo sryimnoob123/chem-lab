@@ -1275,7 +1275,7 @@ button {
 }
 
 .tch-brand__name {
-  color: #fff;
+  color: var(--ink);
   font-size: var(--text-14);
   font-weight: 500;
   white-space: nowrap;
@@ -1309,11 +1309,11 @@ button {
 }
 
 .tch-tab:hover {
-  color: #fff;
+  color: var(--ink);
 }
 
 .tch-tab[aria-current="page"] {
-  color: #fff;
+  color: var(--ink);
   font-weight: 500;
   border-bottom-color: var(--river-100);
 }
@@ -1325,7 +1325,7 @@ button {
   margin-left: 18px;
   padding-left: 18px;
   border-left: 1px solid var(--bench-line);
-  color: #fff;
+  color: var(--ink);
   font-size: var(--text-14);
   white-space: nowrap;
 }
@@ -1359,7 +1359,7 @@ button {
 }
 
 .tch-unlock:hover {
-  color: #fff;
+  color: var(--ink);
   border-color: var(--bench-text);
 }
 
@@ -1381,7 +1381,7 @@ button {
   border: 1px solid var(--bench-line);
   border-radius: 2px;
   background: var(--bench-2);
-  color: #fff;
+  color: var(--ink);
   font-size: var(--text-12);
 }
 

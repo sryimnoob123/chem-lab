@@ -6,6 +6,6 @@ export default defineConfig([
   ...nextCoreWebVitals,
   ...nextTs,
   {
-    ignores: [".next/**", "node_modules/**", "e2e-review/**", ".pgdata/**"],
+    ignores: [".next/**", "node_modules/**", "e2e-review/**", ".pgdata/**", ".dsh/**", ".team/**"],
   },
 ]);

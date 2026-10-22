@@ -171,6 +171,94 @@ function LabPlaceholder() {
 
 
 /**
+ * 门禁页的实验台底：纸白 + 极淡方格纸 + 玻璃器皿线稿，正文卡片仍是白底。
+ * 只用 CSS 渐变与内联 SVG（无外链图、无新依赖）；描边走淡墨 --ink-2，
+ * 纸白底上不用白色高光。铺满视口宽度，左右出血盖住 980 正文列以外的余白。
+ */
+function BenchBackdrop() {
+  return (
+    <div aria-hidden="true" className="bop-bench">
+      <svg className="bop-bench__art" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+        <defs>
+          {/* 器材纹样：烧杯 / 锥形瓶 / 试管，稀疏平铺，只做背景肌理 */}
+          <pattern id="bop-bench-tile" width="320" height="300" patternUnits="userSpaceOnUse">
+            <g fill="none" stroke="#4a5768" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M26 48h60v62a13 13 0 0 1-13 13H39a13 13 0 0 1-13-13Z" />
+              <path d="M26 48q7-9 15 0" />
+              <path d="M36 86h40" strokeDasharray="3 6" />
+              <path d="M36 102h26" strokeDasharray="3 6" />
+              <path d="M186 30h12v28l24 52a14 14 0 0 1-13 20H175a14 14 0 0 1-13-20l24-52Z" />
+              <path d="M181 46h22" />
+              <path d="M166 98h42" strokeDasharray="3 6" />
+              <path d="M264 46v66a10 10 0 0 0 20 0V46" />
+              <path d="M259 46h30" />
+              <path d="M264 92h20" strokeDasharray="3 6" />
+            </g>
+          </pattern>
+        </defs>
+        <rect width="1200" height="900" fill="url(#bop-bench-tile)" opacity=".08" />
+        {/* 右侧大件：铁架台 + 滴定管，给背景一个能认出来的"实验台"焦点 */}
+        <g
+          transform="translate(920 120)"
+          fill="none"
+          stroke="#4a5768"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity=".07"
+        >
+          <path d="M18 470h150" />
+          <path d="M54 470V26" />
+          <path d="M54 58h36" />
+          <path d="M54 122h36" />
+          <path d="M120 46v296" />
+          <path d="M132 46v296" />
+          <path d="M120 46h12" />
+          <path d="M114 342h24" />
+          <path d="M126 342l-8 28h16Z" />
+          <path d="M120 90h8M120 122h8M120 154h8M120 186h8M120 218h8M120 250h8" />
+        </g>
+      </svg>
+      <style>{`
+        .bop-bench {
+          /* 固定铺满视口：不参与文档流，不产出横向滚动条；内容滚动时台面留在原地 */
+          position: fixed;
+          inset: 0;
+          z-index: 0;
+          overflow: hidden;
+          pointer-events: none;
+          background:
+            radial-gradient(90% 55% at 84% 4%, rgba(74,87,104,.07), transparent 72%),
+            linear-gradient(180deg, rgba(74,87,104,.06) 0%, rgba(74,87,104,0) 16%, rgba(74,87,104,0) 72%, rgba(74,87,104,.07) 100%),
+            repeating-linear-gradient(90deg, rgba(74,87,104,.055) 0 1px, transparent 1px 40px),
+            repeating-linear-gradient(0deg, rgba(74,87,104,.05) 0 1px, transparent 1px 40px),
+            var(--bench-ink, #f6f7f5);
+        }
+        .bop-bench__art {
+          position: absolute;
+          inset: 0;
+          display: block;
+          width: 100%;
+          height: 100%;
+        }
+        /* 台面下沿：一条淡墨接缝 + 轻微压深，像实验台边缘 */
+        .bop-bench::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 72px;
+          border-top: 1px solid rgba(74,87,104,.14);
+          background: linear-gradient(to top, rgba(74,87,104,.08), rgba(74,87,104,0));
+        }
+      `}</style>
+    </div>
+  );
+}
+
+
+/**
  * BOPPPS 前段：问卷与操作台**同屏**。
  * - 未通过：问卷在上，操作台位置是一个虚线占位（不提前创建 run）
  * - 通过后：原地把占位换成操作台，问卷收成一条细条（带「重做前测」）
@@ -243,10 +331,15 @@ export function BopbpsGate({
 
   if (stage === "loading") {
     return (
-      <div className="ix-page-enter" style={{ maxWidth: 980, margin: "0 auto", padding: "28px clamp(16px,4vw,28px)" }} aria-busy="true">
-        <div style={{ ...S.card, height: 160, opacity: 0.6 }} />
-        <LabPlaceholder />
-      </div>
+      <>
+        <BenchBackdrop />
+        <div className="ix-page-enter" style={{ maxWidth: 980, margin: "0 auto", padding: "28px clamp(16px,4vw,28px)" }} aria-busy="true">
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div style={{ ...S.card, height: 160, opacity: 0.6 }} />
+            <LabPlaceholder />
+          </div>
+        </div>
+      </>
     );
   }
 
@@ -271,78 +364,84 @@ export function BopbpsGate({
   const passed = scoreStage(c.pre, picked) >= 100;
 
   return (
-    <div className={leaving ? "ix-leave" : "ix-page-enter"} style={{ maxWidth: 980, margin: "0 auto", padding: "24px clamp(16px,4vw,28px) 40px" }}>
-      <div style={S.label}>BOPPPS · 预习段 · {expId.toUpperCase()}</div>
-      <h1 style={{ fontSize: 24, margin: "8px 0 16px", letterSpacing: "-.01em", color: "#12233b" }}>
-        先过前测，再进操作台
-      </h1>
+    <>
+      <BenchBackdrop />
+      <div className={leaving ? "ix-leave" : "ix-page-enter"} style={{ maxWidth: 980, margin: "0 auto", padding: "24px clamp(16px,4vw,28px) 40px" }}>
+        {/* 正文整体抬到背景之上：卡片保持白底，方格与线稿只从余白和卡片间隙透出来 */}
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <div style={S.label}>BOPPPS · 预习段 · {expId.toUpperCase()}</div>
+          <h1 style={{ fontSize: 24, margin: "8px 0 16px", letterSpacing: "-.01em", color: "#12233b" }}>
+            先过前测，再进操作台
+          </h1>
 
-      <section style={{ ...S.card, marginBottom: 12 }}>
-        <div style={S.label}>B · 导入</div>
-        <p style={{ ...S.body, marginTop: 8 }}>{c.bridgeIn}</p>
-      </section>
+          <section style={{ ...S.card, marginBottom: 12 }}>
+            <div style={S.label}>B · 导入</div>
+            <p style={{ ...S.body, marginTop: 8 }}>{c.bridgeIn}</p>
+          </section>
 
-      <section style={{ ...S.card, marginBottom: 12 }}>
-        <div style={S.label}>O · 目标</div>
-        <ul style={{ ...S.body, margin: "10px 0 0", paddingLeft: 18 }}>
-          {c.objectives.map((o) => (
-            <li key={o.competency} style={{ marginBottom: 6 }}>
-              <span className="mono" style={{ color: "#1f5fa8", fontWeight: 700, marginRight: 6 }}>
-                {o.competency}
+          <section style={{ ...S.card, marginBottom: 12 }}>
+            <div style={S.label}>O · 目标</div>
+            <ul style={{ ...S.body, margin: "10px 0 0", paddingLeft: 18 }}>
+              {c.objectives.map((o) => (
+                <li key={o.competency} style={{ marginBottom: 6 }}>
+                  <span className="mono" style={{ color: "#1f5fa8", fontWeight: 700, marginRight: 6 }}>
+                    {o.competency}
+                  </span>
+                  {o.text}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section style={S.card}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+              <div style={S.label}>P · 前测（{c.pre.length} 题，全对解锁下方操作台）</div>
+              <div className="mono" style={{ fontSize: 12, color: passed ? "#1a7f4b" : "#7b8a9c" }}>
+                {c.pre.filter((q) => picked[q.id]).length}/{c.pre.length}
+              </div>
+            </div>
+            <div style={{ marginTop: 14 }}>
+              {c.pre.map((q, i) => (
+                <Question
+                  key={q.id}
+                  q={q}
+                  index={i}
+                  picked={picked[q.id]}
+                  revealed={revealed}
+                  onPick={(key) => {
+                    setRevealed(false);
+                    setPicked((p) => ({ ...p, [q.id]: key }));
+                  }}
+                />
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 18, flexWrap: "wrap" }}>
+              <button type="button" data-demo-id="bopbps-pre-submit" onClick={submit} className="btn btn--primary" style={{ minHeight: 44, padding: "0 18px" }}>
+                提交前测
+              </button>
+              {revealed && !passed ? (
+                <button
+                  type="button"
+                  data-demo-id="bopbps-pre-reset"
+                  onClick={() => {
+                    setPicked({});
+                    setRevealed(false);
+                  }}
+                  className="btn btn--secondary"
+                  style={{ minHeight: 44, padding: "0 14px" }}
+                >
+                  重新作答
+                </button>
+              ) : null}
+              <span style={{ fontSize: 13, color: hint ? "#a33" : "#7b8a9c" }}>
+                {revealed ? (passed ? "全部正确，操作台已在下方解锁" : "还有错题，看解析后改选再提交") : hint || "选完 3 题后提交"}
               </span>
-              {o.text}
-            </li>
-          ))}
-        </ul>
-      </section>
+            </div>
+          </section>
 
-      <section style={S.card}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-          <div style={S.label}>P · 前测（{c.pre.length} 题，全对解锁下方操作台）</div>
-          <div className="mono" style={{ fontSize: 12, color: passed ? "#1a7f4b" : "#7b8a9c" }}>
-            {c.pre.filter((q) => picked[q.id]).length}/{c.pre.length}
-          </div>
+          <LabPlaceholder />
         </div>
-        <div style={{ marginTop: 14 }}>
-          {c.pre.map((q, i) => (
-            <Question
-              key={q.id}
-              q={q}
-              index={i}
-              picked={picked[q.id]}
-              revealed={revealed}
-              onPick={(key) => {
-                setRevealed(false);
-                setPicked((p) => ({ ...p, [q.id]: key }));
-              }}
-            />
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 18, flexWrap: "wrap" }}>
-          <button type="button" data-demo-id="bopbps-pre-submit" onClick={submit} className="btn btn--primary" style={{ minHeight: 44, padding: "0 18px" }}>
-            提交前测
-          </button>
-          {revealed && !passed ? (
-            <button
-              type="button"
-              data-demo-id="bopbps-pre-reset"
-              onClick={() => {
-                setPicked({});
-                setRevealed(false);
-              }}
-              className="btn btn--secondary"
-              style={{ minHeight: 44, padding: "0 14px" }}
-            >
-              重新作答
-            </button>
-          ) : null}
-          <span style={{ fontSize: 13, color: hint ? "#a33" : "#7b8a9c" }}>
-            {revealed ? (passed ? "全部正确，操作台已在下方解锁" : "还有错题，看解析后改选再提交") : hint || "选完 3 题后提交"}
-          </span>
-        </div>
-      </section>
-
-      <LabPlaceholder />
-    </div>
+      </div>
+    </>
   );
 }

@@ -11,18 +11,22 @@ type Slide = {
 };
 
 /**
- * 门户校园实景，全部来自 henu.edu.cn。
- * 排序：校门（campus-06 明伦校区南大门，「河南大學」匾额）第一 → 建筑实景 → 校庆/口号海报末位。
+ * 门户实景，全部来自 henu.edu.cn（校园建筑照，仓库里没有实验室照片）。
+ * 排序：校门（campus-06 明伦校区南大门，「河南大學」匾额）第一 → 建筑细节 → 校庆/口号海报末位。
  * campus-08 为党建宣传图，与课程无关，已移除。
+ * 视觉权重：纸白场（tone="paper"）下统一降饱和 + 提高纸白遮罩，
+ * object-position 尽量落在有建筑细节的区（檐口/门窗/匾额/石阶），
+ * 让校园图只当底纹，前景由器材线稿承担"实验室"语境。
+ * 换真实实验室照片：把图放进 public/brand/campus/ 后改这里的 src 与 position 即可。
  */
 const SLIDES: readonly Slide[] = [
-  { src: "/brand/campus/campus-06.jpg", position: "0% 50%", mobilePosition: "50% 46%" },
-  { src: "/brand/campus/campus-02.jpg", position: "50% 50%", mobilePosition: "50% 50%" },
-  { src: "/brand/campus/campus-03.jpg", position: "50% 50%", mobilePosition: "50% 50%" },
-  { src: "/brand/campus/campus-05.jpg", position: "0% 50%", mobilePosition: "50% 50%" },
-  { src: "/brand/campus/campus-01.jpg", position: "50% 50%", mobilePosition: "50% 50%" },
-  { src: "/brand/campus/campus-07.jpg", position: "50% 50%", mobilePosition: "50% 50%" },
-  { src: "/brand/campus/campus-04.jpg", position: "50% 50%", mobilePosition: "50% 50%" },
+  { src: "/brand/campus/campus-06.jpg", position: "56% 56%", mobilePosition: "56% 52%" },
+  { src: "/brand/campus/campus-02.jpg", position: "50% 42%", mobilePosition: "50% 40%" },
+  { src: "/brand/campus/campus-03.jpg", position: "40% 48%", mobilePosition: "50% 48%" },
+  { src: "/brand/campus/campus-05.jpg", position: "52% 50%", mobilePosition: "50% 50%" },
+  { src: "/brand/campus/campus-01.jpg", position: "50% 46%", mobilePosition: "50% 46%" },
+  { src: "/brand/campus/campus-07.jpg", position: "50% 40%", mobilePosition: "50% 40%" },
+  { src: "/brand/campus/campus-04.jpg", position: "62% 58%", mobilePosition: "56% 54%" },
 ];
 
 const CROSS_FADE_MS = 700;
@@ -156,14 +160,61 @@ export function CampusSlides({
             background: tone === "dark" ? darkBackground : undefined,
           }}
         />
+        {tone === "paper" ? (
+          <>
+            {/* 方格纸底：和门禁页前测同一套语言，填住照片淡出后的空纸 */}
+            <div className="campus-slides__grid" />
+            {/* 器材线稿：校园图只当底纹，把"实验室"语境压在右上/右侧余白上，8% 以内 */}
+            <svg className="campus-slides__lab" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+            <defs>
+              <pattern id="campus-lab-tile" width="300" height="280" patternUnits="userSpaceOnUse">
+                <g fill="none" stroke="#4a5768" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M28 40h54v56a12 12 0 0 1-12 12H40a12 12 0 0 1-12-12Z" />
+                  <path d="M28 40q6-8 13 0" />
+                  <path d="M37 74h36" strokeDasharray="3 6" />
+                  <path d="M170 26h11v25l21 46a12 12 0 0 1-11 17h-42a12 12 0 0 1-11-17l21-46Z" />
+                  <path d="M154 84h38" strokeDasharray="3 6" />
+                  <path d="M246 38v60a9 9 0 0 0 18 0V38" />
+                  <path d="M241 38h28" />
+                </g>
+              </pattern>
+            </defs>
+            <rect width="1440" height="900" fill="url(#campus-lab-tile)" opacity=".55" />
+            {/* 右侧大件：铁架台 + 滴定管，和门禁页同一套语言 */}
+            <g
+              transform="translate(1120 130)"
+              fill="none"
+              stroke="#4a5768"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity=".6"
+            >
+              <path d="M14 452h140" />
+              <path d="M48 452V22" />
+              <path d="M48 54h32" />
+              <path d="M48 116h32" />
+              <path d="M110 40v284" />
+              <path d="M122 40v284" />
+              <path d="M110 40h12" />
+              <path d="M104 324h24" />
+              <path d="M116 324l-8 26h16Z" />
+              <path d="M110 82h8M110 114h8M110 146h8M110 178h8M110 210h8M110 242h8" />
+            </g>
+            </svg>
+          </>
+        ) : null}
         <style>{`
+          .campus-slides { --img-filter: contrast(1.08) saturate(1.15); }
+          /* 纸白场：校园照压成底纹，颜色交给前景的器材线稿与卡片 */
+          .campus-slides--paper { --img-filter: grayscale(.38) saturate(.46) contrast(1.02) brightness(1.05); }
           .campus-slides__img {
             display: block;
             opacity: 0;
             object-position: var(--pos-d, 50% 50%);
             transform: scale(1);
             transform-origin: 50% 45%;
-            filter: contrast(1.08) saturate(1.15);
+            filter: var(--img-filter);
             transition: opacity var(--slide-fade) cubic-bezier(.23, 1, .32, 1);
           }
           .campus-slides__img[data-active="true"] {
@@ -174,23 +225,45 @@ export function CampusSlides({
             from { transform: scale(1); }
             to { transform: scale(1.04); }
           }
+          /* 器材线稿压在照片之上、正文之下：只在纸白场出现，8% 上下 */
+          .campus-slides__grid {
+            position: absolute;
+            inset: 0;
+            z-index: 4;
+            pointer-events: none;
+            background:
+              repeating-linear-gradient(90deg, rgba(74,87,104,.055) 0 1px, transparent 1px 40px),
+              repeating-linear-gradient(0deg, rgba(74,87,104,.05) 0 1px, transparent 1px 40px);
+          }
+          .campus-slides__lab {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: .12;
+          }
           .campus-slides--switching .campus-slides__img {
-            filter: contrast(1.08) saturate(1.15) blur(2px);
+            filter: var(--img-filter) blur(2px);
           }
           /* 只保留可读所需的最小白雾：左侧文字压条由 .cover-hero::before 承担，
              这里整体减淡，右侧/远景几乎通透，建筑轮廓与天空可见 */
           .campus-slides__shade--paper {
             background:
-              linear-gradient(100deg, rgba(246,247,245,.34) 0%, rgba(246,247,245,.3) 26%, rgba(246,247,245,.17) 50%, rgba(246,247,245,.07) 78%, rgba(246,247,245,.03) 100%),
-              linear-gradient(to top, #f6f7f5 0%, rgba(246,247,245,.34) 7%, transparent 15%);
+              /* 只留右上角一块"窗口"看得见建筑，向下、向右淡进纸白，避免整幅校园全景压场 */
+              radial-gradient(105% 78% at 78% 16%, rgba(246,247,245,0) 0%, rgba(246,247,245,.14) 42%, rgba(246,247,245,.6) 78%, rgba(246,247,245,.86) 100%),
+              linear-gradient(100deg, rgba(246,247,245,.5) 0%, rgba(246,247,245,.44) 26%, rgba(246,247,245,.3) 50%, rgba(246,247,245,.2) 78%, rgba(246,247,245,.13) 100%),
+              linear-gradient(to top, #f6f7f5 0%, rgba(246,247,245,.45) 8%, transparent 18%);
           }
           @media (max-width: 900px) {
             .campus-slides__img {
               object-position: var(--pos-m, var(--pos-d, 50% 50%));
             }
             .campus-slides__shade--paper {
-              background: linear-gradient(180deg, rgba(246,247,245,.18) 0%, rgba(246,247,245,.3) 24%, rgba(246,247,245,.42) 62%, rgba(246,247,245,.56) 100%);
+              background: linear-gradient(180deg, rgba(246,247,245,.26) 0%, rgba(246,247,245,.36) 24%, rgba(246,247,245,.5) 62%, rgba(246,247,245,.62) 100%);
             }
+            .campus-slides__lab { opacity: .075; }
           }
           @media (prefers-reduced-motion: reduce) {
             .campus-slides__img {
@@ -199,7 +272,7 @@ export function CampusSlides({
               transform: none !important;
             }
             .campus-slides--switching .campus-slides__img {
-              filter: contrast(1.08) saturate(1.15);
+              filter: var(--img-filter);
             }
           }
         `}</style>

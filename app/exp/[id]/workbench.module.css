@@ -340,9 +340,10 @@
   left: 16px;
   top: 156px;
   z-index: 8;
-  /* 244 -> 208：把宽度让给中间台面（用户要求台面铺满可用区） */
-  width: 208px;
-  padding: 10px;
+  /* 244 -> 208 -> 176：把宽度让给中间台面（用户 2026-10-22 再要求“台面做大一点”）。
+     176 - 2*8 padding = 160 内容宽，瓶子 20 + 8 gap + 132 文字，“碳酸钠 / Na2CO3” 不换行。 */
+  width: 176px;
+  padding: 8px;
   border: 1px solid var(--bench-line);
   background: rgba(246, 247, 245, 0.92);
   backdrop-filter: blur(8px);
@@ -511,7 +512,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 296px 48px 240px;
+  /* 用户 2026-10-22「台面太小」：左右预留从 240/296 收到 200/248，
+     1440 宽下台面从 904 -> 992（+9.7%），仍与试剂架(<=192)、引导卡(<=1200) 留 8px 间隙。 */
+  padding: 6px 248px 32px 200px;
 }
 
 .apparatusWrap {
@@ -523,6 +526,9 @@
   align-items: center;
   justify-content: center;
   transform-origin: 50% 78%;
+  /* 用户 2026-10-22：整场一起动 = 错。投放吸附由 use-drop-flow 给这一层播 scale(1.06)，
+     WAAPI 的优先级低于 !important，这里直接锁住整块台面，位移只发生在被操作的那个器皿上。 */
+  transform: none !important;
 }
 
 .apparatus {
@@ -537,55 +543,58 @@
   width: 100%;
 }
 
-/* 台面场景的投放热区：器皿横排铺开，不再是"底部居中一个锥形瓶"。
+/* 台面场景的投放热区：器皿横排铺开，不再是“底部居中一个锥形瓶”。
    热区覆盖整条器皿带，虚框只在拖拽/选中时出现，避免画面中间浮一个空方框。 */
 .apparatusWrap[data-bench="true"] .flaskTarget {
   left: 6%;
   bottom: 16%;
   width: 88%;
   height: 40%;
-  transform: none;
+  transform: none !important;
   border-color: transparent;
 }
 
+/* 2026-10-22：这一层是“整块台面”的热区，它一 hover/按下就整场缩放（用户报的整场互动）。
+   台面场景只保留它接 drop 的职责，不再有任何缩放/描边/文字。 */
 .apparatusWrap[data-bench="true"] .flaskTarget:global(.ix):hover,
 .apparatusWrap[data-bench="true"] .flaskTarget:global(.ix):active {
-  transform: scale(var(--scale-down));
+  transform: none !important;
 }
 
 /* 台面场景：常驻态不画框（796×270 的大框罩住整排器皿，看着像卡片边框）；
-   只有拖拽悬停/选中时才给一条淡虚框，提示"放这儿"。 */
+   只有拖拽悬停/选中时才给一条淡虚框，提示“放这儿”。 */
 /* 台面场景：热区不画边线，也不接收点击——之前它 1218×342 盖住整条台面，
-   点哪儿都命中"锥形瓶"（红队 2026-10-21 实测）。只在拖拽进行中接管指针以接收 drop。 */
+   点哪儿都命中“锥形瓶”（红队 2026-10-21 实测）。只在拖拽进行中接管指针以接收 drop。 */
 .apparatusWrap[data-bench="true"] .flaskTarget {
   border: 0 !important;
   pointer-events: none;
 }
 
+/* 拖拽中只让“手里那个瓶子”跟手：热区不再描整场的虚线框（2026-10-22 用户口径）。 */
 .apparatusWrap[data-bench="true"] .flaskTarget[data-dragging="true"] {
   pointer-events: auto;
-  border: 1px dashed rgba(74, 87, 104, 0.32) !important;
+  border: 0 !important;
 }
 
-.apparatusWrap[data-bench="true"] .flaskTarget[data-next="true"]::after {
+/* 整场级脉冲环 / 引导箭头 / “放到锥形瓶”标签，在台面场景一律不出现：
+   反馈只画在被点/被放的那个器皿上（scene.module.css 的 .vessel[data-active]）。 */
+.apparatusWrap[data-bench="true"] .flaskTarget:global(.ix)[data-drop-target="true"]::after,
+.apparatusWrap[data-bench="true"] .flaskTarget[data-next="true"][data-active="false"]::after,
+.apparatusWrap[data-bench="true"] .flaskTarget[data-hint-highlight="true"]::before {
   display: none;
 }
 
 .apparatusWrap[data-bench="true"] .flaskTarget .dropLabel {
-  opacity: 0;
-}
-
-.apparatusWrap[data-bench="true"] .flaskTarget[data-over="true"] .dropLabel,
-.apparatusWrap[data-bench="true"] .flaskTarget[data-active="true"] .dropLabel {
-  opacity: 0.72;
+  opacity: 0 !important;
 }
 
 .benchReuse {
   /* 台面要占满工作区主体：之前 900px + 70vh 上限，器皿看着像缩略图。
      这里用固定 height 而不是 max-height——svg 的 height:100% 需要一个确定的父高度，
-     否则会退回按 viewBox 比例算（1920 下算出 801px，比容器还高，撑破布局）。 */
+     否则会退回按 viewBox 比例算（1920 下算出 801px，比容器还高，撑破布局）。
+     92% -> 100%：让台面吃掉 benchArea 的全部高度（2026-10-22 用户要更大的台面）。 */
   width: 100%;
-  height: 92%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -630,6 +639,11 @@
   z-index: 0;
   border-top: 1px solid var(--bench-line);
   background: rgba(246, 247, 245, 0.90);
+}
+
+/* 台面场景里桌子已经画在 SVG 里了，这层 div 只会多出一条对不齐的横线 —— 收掉。 */
+.benchArea:has(> .apparatusWrap[data-bench="true"]) > .benchSurface {
+  display: none;
 }
 
 .flaskTarget {
@@ -755,7 +769,7 @@
 
 .fxSlot {
   position: absolute;
-  inset: 0 328px 0 0;
+  inset: 0 256px 0 0;
   z-index: 6;
   pointer-events: none;
 }
@@ -883,9 +897,10 @@
 .rail {
   position: absolute;
   top: 12px;
-  right: 12px;
+  right: 8px;
   z-index: 10;
-  width: 272px;
+  /* 272 -> 232：宽度还给台面（2026-10-22）。内宽 208 仍能放下 18px 标题两行 + 判据 + 动作列表。 */
+  width: 232px;
   max-height: calc(100% - 24px);
   display: flex;
   flex-direction: column;
@@ -1663,20 +1678,20 @@
 /* ------------------------------------------------------------------ 窄屏 */
 @media (max-width: 1180px) {
   .rail {
-    width: 292px;
+    width: 240px;
   }
 
   .benchArea {
-    padding-right: 284px;
-    padding-left: 232px;
+    padding-right: 256px;
+    padding-left: 200px;
   }
 
   .rack {
-    width: 208px;
+    width: 176px;
   }
 
   .fxSlot {
-    right: 284px;
+    right: 256px;
   }
 }
 

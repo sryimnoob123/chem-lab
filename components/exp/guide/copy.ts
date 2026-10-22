@@ -116,14 +116,23 @@ function numericFragment(params: ActionParams | undefined, value: number | undef
   return undefined;
 }
 
+/** 失败时的第一行要讲「后果」，不是「现象」。
+ *  原文案里后果都写在 `→` 后面（如「纤维残留、挂水珠 → 后续体积不准」），
+ *  而 firstClause 只取箭头前的现象、再 clip 10 字，后果就永远上不了屏 ——
+ *  学生只看到「纤维残留 · −2 分」，等于错误没有后果（用户 2026-10-22 反馈）。 */
+function consequenceOf(text: string): string {
+  const after = text.split(/→|->/)[1]?.trim();
+  return after && after.length > 0 ? after : firstClause(text);
+}
+
 /**
  * 结果条文案（第一行 ≤18 字）。
  * 成功：观测短句 + 数字（"认领单已核对签字 · 15"）
- * 失败：原因 + 扣分（"纤维残留 · −2 分"）
+ * 失败：后果 + 扣分（"后续体积不准 · −2 分"）
  */
 export function resultText(input: ResultTextInput): ResultText {
   if (input.outcome === "failure") {
-    const reason = clip(firstClause(input.shortTitle), 10);
+    const reason = clip(consequenceOf(input.shortTitle), 12);
     const line = clip(`${reason} · −${input.deduction} 分`, 18);
     const line2 = input.correct ? clip(firstClause(input.correct), 18) : undefined;
     return line2 ? { line, line2 } : { line };

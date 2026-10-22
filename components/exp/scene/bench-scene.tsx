@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
 import { DROPPABLE_KINDS, SCENE_VESSELS } from "@/lib/scene/palette";
 import { describeContents } from "@/lib/scene/reagents";
 import type { SceneFx, SceneOutcome } from "@/lib/scene/types";
@@ -81,8 +81,54 @@ export function BenchScene({
 }: BenchSceneProps) {
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [pressedId, setPressedId] = useState<string | null>(null);
+  /**
+   * 命中框 = 实测的器皿绘制框（2026-10-22 用户反馈"框有点偏移，没在正中间"）。
+   * 原来的 hitX = vessel.x + glassLeft*scale - 8 是经验偏移，实测烧杯中心偏 (+11, -16.5)。
+   * 现在量 VesselArt 的 getBBox() 直接用，任何 kind / scale 都自动对齐。
+   */
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const artRefs = useRef<Record<string, SVGGElement | null>>({});
+  const [hitBoxes, setHitBoxes] = useState<Record<string, { x: number; y: number; w: number; h: number }>>({});
+  /** 只量一次（挂载后 + 容器尺寸变化时）。放进依赖里会 setState→重渲染→再量 死循环。 */
+  useLayoutEffect(() => {
+    const measure = () => {
+      const next: Record<string, { x: number; y: number; w: number; h: number }> = {};
+      for (const [id, el] of Object.entries(artRefs.current)) {
+        if (!el) continue;
+        const b = el.getBBox();
+        if (!b.width || !b.height) continue;
+        next[id] = {
+          x: +(b.x - 6).toFixed(1),
+          y: +(b.y - 8).toFixed(1),
+          w: +(b.width + 12).toFixed(1),
+          h: +(b.height + 16).toFixed(1),
+        };
+      }
+      if (Object.keys(next).length) setHitBoxes(next);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (svgRef.current) ro.observe(svgRef.current);
+    return () => ro.disconnect();
+  }, []);
+  /**
+   * 被点中的那一个器皿（用户 2026-10-22 口径：点烧杯就只跟烧杯互动）。
+   * 只影响它自己的缩放 + 描边，整块台面与其它器皿的 transform 一律不动。
+   */
+  const [activeVesselId, setActiveVesselId] = useState<string | null>(null);
   /** 按实验裁剪器皿：天平单独渲染，这里只管玻璃器皿。 */
   const vessels = vesselIds ? SCENE_VESSELS.filter((v) => vesselIds.includes(v.id)) : SCENE_VESSELS;
+
+  /**
+   * viewBox 竖向按这一屏实际摆出来的器皿收紧：原 viewBox 顶部空着 ~150 单位，
+   * 台面被压在下半屏、显得小（用户 2026-10-22「台面做的太小」）。
+   * 横向仍固定 370..940：滴定场景的 pour.tsx 按 360 宽换算，别动横向刻度。
+   */
+  const tops = vessels.map((v) => v.y);
+  if (instrument === "balance") tops.push(214);
+  if (instrument === "ph") tops.push(196);
+  const contentTop = (tops.length ? Math.min(...tops) : 180) - 30;
+  const benchViewBox = `370 ${contentTop} 570 ${434 - contentTop}`;
 
   useEffect(() => {
     if (!reaction) return;
@@ -120,10 +166,11 @@ export function BenchScene({
         // 点空白取消选中；点器皿交给器皿自己的 handler
         const el = event.target as Element;
         if (el.closest('[data-demo-id^="demo-scene-vessel"]')) return;
+        setActiveVesselId(null);
         onClearSelection();
       }}
     >
-      <svg className={styles.benchSvg} viewBox="370 60 570 330" role="img" aria-label="实验台：玻璃器皿与分析天平">
+      <svg ref={svgRef} className={styles.benchSvg} viewBox={benchViewBox} role="img" aria-label="实验台：玻璃器皿与分析天平">
         {/* 台面（铁架台已删除：exp01/exp03 都不用滴定台，空夹子会被当成"这是什么"） */}
         <g aria-hidden="true">
           <rect x="370" y="340" width="570" height="80" fill="var(--bench)" />
@@ -220,9 +267,13 @@ export function BenchScene({
           const ringW = vessel.kind === "burette" ? 100 : vessel.w + 20;
           const ringH = vessel.h + 34;
 
+          /**
+           * key 只在「这个器皿拿到反馈」时变：让 ix-snap / ix-shake 能重播，
+           * 又不会像旧的 wrap key 那样每做一步就把整台器皿重建（整场一起闪）。
+           */
           return (
             <g
-              key={vessel.id}
+              key={`${vessel.id}${fb ? `-${feedback?.key}` : ""}`}
               data-demo-id={`demo-scene-vessel-${vessel.id}`}
               className={`ix ${styles.vessel} ${droppable ? styles.droppable : styles.static} ${
                 fb === "success" ? "ix-snap" : fb === "reject" ? "ix-shake" : ""
@@ -230,6 +281,7 @@ export function BenchScene({
               role="button"
               tabIndex={0}
               data-pressed={pressedId === vessel.id ? "true" : "false"}
+              data-active={activeVesselId === vessel.id ? "true" : "false"}
               data-drag-over={droppable && hovered && draggingReagentId ? "true" : "false"}
               data-feedback={fb ?? undefined}
               aria-label={
@@ -241,8 +293,15 @@ export function BenchScene({
               onPointerUp={() => setPressedId(null)}
               onPointerCancel={() => setPressedId(null)}
               onPointerLeave={() => setPressedId(null)}
-              onClick={() => onActivateVessel(vessel.id)}
-              onKeyDown={(event) => handleKeyDown(event, vessel.id)}
+              onClick={() => {
+                // 点哪台就跟哪台互动：只标记它自己（scale 1.02 + 描边），整块台面不动
+                setActiveVesselId(vessel.id);
+                onActivateVessel(vessel.id);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") setActiveVesselId(vessel.id);
+                handleKeyDown(event, vessel.id);
+              }}
               onAnimationEnd={(event) => {
                 if (event.target === event.currentTarget && fb) onFeedbackEnd();
               }}
@@ -263,12 +322,14 @@ export function BenchScene({
                 onDropReagent(vessel.id);
               }}
             >
-              <VesselArt
-                vessel={vessel}
-                contents={contents[vessel.id] ?? []}
-                outcome={activeOutcome}
-                fxKey={reaction?.key ?? 0}
-              />
+              <g ref={(el) => { artRefs.current[vessel.id] = el; }}>
+                <VesselArt
+                  vessel={vessel}
+                  contents={contents[vessel.id] ?? []}
+                  outcome={activeOutcome}
+                  fxKey={reaction?.key ?? 0}
+                />
+              </g>
               {/* 成功光环 / 拒收红环（一次性，动画结束由 onAnimationEnd 清掉） */}
               {fb === "success" ? (
                 <rect className={styles.pulseRing} x={ringX} y={ringY} width={ringW} height={ringH} rx={10} />
@@ -276,7 +337,9 @@ export function BenchScene({
               {fb === "reject" ? (
                 <rect className={styles.rejectRing} x={ringX} y={ringY} width={ringW} height={ringH} rx={10} />
               ) : null}
-              {droppable && ((hovered && draggingReagentId) || (!draggingReagentId && selectedReagentId)) ? (
+              {/* 目标环只在「拖到它上面 / 悬停它」时出现：选中态用 focusRing 描边，
+                  不再整排器皿一起闪虚线（2026-10-22 用户口径：只跟被操作的那一台互动）。 */}
+              {droppable && hovered ? (
                 <rect
                   className={styles.targetRing}
                   data-drop-target="true"
@@ -287,21 +350,23 @@ export function BenchScene({
                   rx={10}
                 />
               ) : null}
+              {/* 命中框与焦点环都用实测绘制框：中心与器皿对齐，不再靠经验偏移 */}
               <rect
                 className={styles.hit}
-                x={hitX}
-                y={vessel.y - 14}
-                width={hitW}
-                height={vessel.h + 22}
+                data-hit-vessel={vessel.id}
+                x={hitBoxes[vessel.id]?.x ?? hitX}
+                y={hitBoxes[vessel.id]?.y ?? vessel.y - 14}
+                width={hitBoxes[vessel.id]?.w ?? hitW}
+                height={hitBoxes[vessel.id]?.h ?? vessel.h + 22}
                 rx={4}
                 pointerEvents="all"
               />
               <rect
                 className={styles.focusRing}
-                x={hitX}
-                y={vessel.y - 14}
-                width={hitW}
-                height={vessel.h + 22}
+                x={hitBoxes[vessel.id]?.x ?? hitX}
+                y={hitBoxes[vessel.id]?.y ?? vessel.y - 14}
+                width={hitBoxes[vessel.id]?.w ?? hitW}
+                height={hitBoxes[vessel.id]?.h ?? vessel.h + 22}
                 rx={4}
               />
               {hovered && hintMode ? <DropHint vessel={vessel} mode={hintMode} /> : null}

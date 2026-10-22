@@ -17,7 +17,6 @@ type Role = "student" | "teacher";
  * 所以做法是**前端预填 + 一键提交**，而不是削弱鉴权。
  */
 const DEMO_STUDENT = { no: "20250101", name: "周若曦" };
-const DEMO_TEACHER_PASSCODE = "2026";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,8 +25,6 @@ export default function LoginPage() {
   const [studentNo, setStudentNo] = useState(DEMO_STUDENT.no);
   const [name, setName] = useState(DEMO_STUDENT.name);
   const [passcode, setPasscode] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
   // 双层视差：pointermove 只写 CSS 变量（--px / --py），不 setState。
   // 仅 (hover:hover) and (pointer:fine) 且非 reduced-motion 才挂监听。
@@ -44,73 +41,24 @@ export default function LoginPage() {
     return () => window.removeEventListener("pointermove", onMove);
   }, []);
 
-  /** 统一的登录请求：学生走 /api/session，教师走 /api/teacher/unlock。 */
-  async function login(nextRole: Role, body: Record<string, string>) {
-    setError(null);
-    setBusy(true);
-    try {
-      const res =
-        nextRole === "student"
-          ? await fetch("/api/session", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify(body),
-            })
-          : await fetch("/api/teacher/unlock", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify(body),
-            });
-
-      if (!res.ok) {
-        const payload = (await res.json().catch(() => ({}))) as { error?: string };
-        playSound("error-system");
-        setError(
-          payload.error === "NOT_IN_ROSTER"
-            ? "该学号不在课程名单里，请核对后重试，或联系老师导入名单。"
-            : nextRole === "teacher"
-              ? "口令不正确。"
-              : "登录失败，请稍后重试。",
-        );
-        return;
-      }
-      playSound("ok-l1");
-      router.push(nextRole === "student" ? "/experiments" : "/teacher");
-      router.refresh();
-    } catch {
-      playSound("error-system");
-      setError("网络异常，请重试。");
-    } finally {
-      setBusy(false);
-    }
+  /**
+   * 演示口径（用户 2026-10-22）：登录只做样子，不校验、不请求后端。
+   * 之前学生走 POST /api/session 查库，库里一有问题就 500、现场卡在登录页。
+   */
+  function enter(nextRole: Role) {
+    playSound("ok-l1");
+    router.push(nextRole === "student" ? "/experiments" : "/teacher");
+    router.refresh();
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    // 教师端不再校验口令：表单提交也直接进后台（口令字段仅保留给旧链接兼容）
-    if (role === "teacher") {
-      playSound("ok-l1");
-      router.push("/teacher");
-      router.refresh();
-      return;
-    }
-    void login("student", { studentNo: studentNo.trim(), name: name.trim() });
+    enter(role);
   }
 
-  /** 一键进：不填表，直接用演示凭证登录（学生/教师各自的入口）。 */
+  /** 一键进：不填表，直接进对应端。 */
   function enterAs(nextRole: Role) {
-    if (busy) return;
-    playSound("tick");
-    if (nextRole === "student") {
-      setStudentNo(DEMO_STUDENT.no);
-      setName(DEMO_STUDENT.name);
-      void login("student", { studentNo: DEMO_STUDENT.no, name: DEMO_STUDENT.name });
-      return;
-    }
-    // 教师端：打开就进后台，不再弹口令（口令只留可选，用户 2026-10-22 要求）
-    playSound("ok-l1");
-    router.push("/teacher");
-    router.refresh();
+    enter(nextRole);
   }
 
   return (
@@ -137,7 +85,6 @@ export default function LoginPage() {
             onClick={() => {
               playSound("tick");
               setRole("student");
-              setError(null);
             }}
             data-demo-id="demo-login-tab-student"
           >
@@ -151,7 +98,6 @@ export default function LoginPage() {
             onClick={() => {
               playSound("tick");
               setRole("teacher");
-              setError(null);
             }}
             data-demo-id="demo-login-tab-teacher"
           >
@@ -205,26 +151,20 @@ export default function LoginPage() {
             </>
           )}
 
-          {error ? (
-            <p className="login__error" role="alert">
-              {error}
-            </p>
-          ) : null}
-
           {role === "teacher" ? (
             <button
               type="button"
               className="login__quick"
               onClick={() => enterAs("teacher")}
-              disabled={busy}
+             
               data-demo-id="demo-login-quick-teacher"
             >
               直接进入教师后台（无需口令）
             </button>
           ) : null}
 
-          <button className="btn btn--primary login__submit" type="submit" disabled={busy} data-demo-id="demo-login-submit">
-            {busy ? "登录中…" : role === "student" ? "进入实验" : "登录教师后台"}
+          <button className="btn btn--primary login__submit" type="submit" data-demo-id="demo-login-submit">
+            {role === "student" ? "进入实验" : "登录教师后台"}
           </button>
         </form>
 
