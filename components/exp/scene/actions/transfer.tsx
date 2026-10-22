@@ -8,6 +8,7 @@
  * 中间一条沿管身落下的液柱，避免"液体凭空出现"。
  */
 
+import { liquidBox } from "../vessels/vessel-geometry";
 import { bodyTransform, levelShift, type VesselAnchor } from "./geometry";
 import { EASE_IN_OUT, EASE_OUT, type Beat } from "./timeline";
 import type { ActionScene } from "./rinse";
@@ -20,10 +21,15 @@ export function buildTransfer(
   to: VesselAnchor,
   opts: { clipFrom: string; clipTo: string },
 ): ActionScene {
-  const fromFull = levelShift(from, 0.72);
-  const fromLow = levelShift(from, 0.28);
-  const toLow = levelShift(to, 0.1);
-  const toHigh = levelShift(to, 0.66);
+  /** 两台器皿各自的液面几何（局部坐标）：矩形左右各出壁 6 单位，多出来的被器身裁掉 */
+  const fromBox = liquidBox(from.kind);
+  const toBox = liquidBox(to.kind);
+  /** 液位位移一律换算成器皿局部坐标（液体层在外层 `scale()` 里） */
+  const shiftOf = (a: VesselAnchor, level: number) => Number((levelShift(a, level) / a.scale).toFixed(2));
+  const fromFull = shiftOf(from, 0.72);
+  const fromLow = shiftOf(from, 0.28);
+  const toLow = shiftOf(to, 0.1);
+  const toHigh = shiftOf(to, 0.66);
 
   /** 管身：源瓶口 → 目标瓶口，中途提起 */
   const startX = from.mouthX;
@@ -35,21 +41,48 @@ export function buildTransfer(
     <>
       <defs>
         <clipPath id={opts.clipFrom}>
-          <path d={from.bodyD} transform={bodyTransform(from)} />
+          <path d={from.bodyD} />
         </clipPath>
         <clipPath id={opts.clipTo}>
-          <path d={to.bodyD} transform={bodyTransform(to)} />
+          <path d={to.bodyD} />
         </clipPath>
       </defs>
 
-      {/* 源器皿：液面先降 */}
-      <g data-a="from" clipPath={`url(#${opts.clipFrom})`} style={{ transform: `translateY(${fromFull}px)` }}>
-        <rect x={from.x - 4} y={from.surfaceY} width={from.w + 8} height={from.baseY - from.surfaceY + 6} fill={WATER} />
+      {/*
+        源 / 目标器皿的液体层：clipPath 用**器皿局部坐标**，裁剪挂在**不动的**外层 `<g transform>` 上，
+        动的只有里层 translateY（transform 写在 clipPath 子 path 上、或 clip-path 挂到会动的那层，
+        都会让液体溢出瓶外，见 rinse.tsx 的两条注释）。
+      */}
+      <g transform={bodyTransform(from)} clipPath={`url(#${opts.clipFrom})`}>
+        <g data-a="from" style={{ transform: `translateY(${fromFull}px)` }}>
+          <rect
+            x={fromBox.x - 6}
+            y={(from.surfaceY - from.y) / from.scale}
+            width={fromBox.w + 12}
+            height={(from.baseY - from.surfaceY + 6) / from.scale}
+            fill={WATER}
+          />
+        </g>
       </g>
-      {/* 目标器皿：液面后升 */}
-      <g data-a="to" clipPath={`url(#${opts.clipTo})`} style={{ transform: `translateY(${toLow}px)` }}>
-        <rect x={to.x - 4} y={to.surfaceY} width={to.w + 8} height={to.baseY - to.surfaceY + 6} fill={WATER} />
-        <ellipse cx={to.mouthX} cy={to.surfaceY} rx={to.rx} ry={4.4} fill="none" stroke={EDGE} strokeWidth={1.2} />
+      <g transform={bodyTransform(to)} clipPath={`url(#${opts.clipTo})`}>
+        <g data-a="to" style={{ transform: `translateY(${toLow}px)` }}>
+          <rect
+            x={toBox.x - 6}
+            y={(to.surfaceY - to.y) / to.scale}
+            width={toBox.w + 12}
+            height={(to.baseY - to.surfaceY + 6) / to.scale}
+            fill={WATER}
+          />
+          <ellipse
+            cx={(to.mouthX - to.x) / to.scale}
+            cy={(to.surfaceY - to.y) / to.scale}
+            rx={to.rx / to.scale}
+            ry={4.4 / to.scale}
+            fill="none"
+            stroke={EDGE}
+            strokeWidth={1.2 / to.scale}
+          />
+        </g>
       </g>
 
       {/* 移液管：一根细管 + 中部球 */}

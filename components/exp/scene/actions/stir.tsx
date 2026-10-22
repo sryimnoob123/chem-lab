@@ -9,6 +9,7 @@
  * 滴加（滴管/滴定）：管尖悬在液面上方，液滴一颗颗落下，落点出涟漪、液面微升。
  */
 
+import { liquidBox } from "../vessels/vessel-geometry";
 import { bodyTransform, levelShift, type VesselAnchor } from "./geometry";
 import { EASE_IN_OUT, EASE_OUT, type Beat } from "./timeline";
 import type { ActionScene } from "./rinse";
@@ -17,7 +18,11 @@ const WATER = "var(--scene-water)";
 const EDGE = "var(--scene-water-edge)";
 
 export function buildStir(a: VesselAnchor, opts: { clipId: string; levelStart?: number }): ActionScene {
-  const level = levelShift(a, opts.levelStart ?? 0.5);
+  /** 器皿自己的液面几何（局部坐标）：液体矩形左右各出壁 6 单位，多出来的被器身裁掉 */
+  const box = liquidBox(a.kind);
+  /** 液位位移一律换算成器皿局部坐标（液体层在外层 `scale()` 里） */
+  const shift = (level: number) => Number((levelShift(a, level) / a.scale).toFixed(2));
+  const level = shift(opts.levelStart ?? 0.5);
   const rodTop = a.mouthY - 46;
   const rodBottom = a.mouthY + (a.baseY - a.mouthY) * 0.52;
   const swirlY = a.surfaceY + 10;
@@ -26,13 +31,30 @@ export function buildStir(a: VesselAnchor, opts: { clipId: string; levelStart?: 
     <>
       <defs>
         <clipPath id={opts.clipId}>
-          <path d={a.bodyD} transform={bodyTransform(a)} />
+          <path d={a.bodyD} />
         </clipPath>
       </defs>
 
-      <g data-a="water" clipPath={`url(#${opts.clipId})`} style={{ transform: `translateY(${level}px)` }}>
-        <rect x={a.x - 4} y={a.surfaceY} width={a.w + 8} height={a.baseY - a.surfaceY + 6} fill={WATER} />
-        <ellipse cx={a.mouthX} cy={a.surfaceY} rx={a.rx} ry={4.4} fill="none" stroke={EDGE} strokeWidth={1.2} />
+      {/* 液体层：clipPath 用器皿局部坐标，裁剪挂在不动的外层（见 rinse.tsx 的两条注释） */}
+      <g transform={bodyTransform(a)} clipPath={`url(#${opts.clipId})`}>
+        <g data-a="water" style={{ transform: `translateY(${level}px)` }}>
+          <rect
+            x={box.x - 6}
+            y={(a.surfaceY - a.y) / a.scale}
+            width={box.w + 12}
+            height={(a.baseY - a.surfaceY + 6) / a.scale}
+            fill={WATER}
+          />
+          <ellipse
+            cx={(a.mouthX - a.x) / a.scale}
+            cy={(a.surfaceY - a.y) / a.scale}
+            rx={a.rx / a.scale}
+            ry={4.4 / a.scale}
+            fill="none"
+            stroke={EDGE}
+            strokeWidth={1.2 / a.scale}
+          />
+        </g>
       </g>
 
       {/* 旋转的液面弧线：液面在跟着棒转 */}
@@ -142,19 +164,31 @@ export function buildStir(a: VesselAnchor, opts: { clipId: string; levelStart?: 
 
 /** 滴加：滴管悬在液面上方，液滴一颗颗落。 */
 export function buildDrops(a: VesselAnchor, opts: { clipId: string; levelStart?: number }): ActionScene {
-  const level = levelShift(a, opts.levelStart ?? 0.55);
+  /** 器皿自己的液面几何（局部坐标） */
+  const box = liquidBox(a.kind);
+  /** 液位位移一律换算成器皿局部坐标（液体层在外层 `scale()` 里） */
+  const shift = (level: number) => Number((levelShift(a, level) / a.scale).toFixed(2));
+  const level = shift(opts.levelStart ?? 0.55);
   const tipY = a.mouthY - 18;
-  const rise = levelShift(a, 0.68);
+  const rise = shift(0.68);
 
   const node = (
     <>
       <defs>
         <clipPath id={opts.clipId}>
-          <path d={a.bodyD} transform={bodyTransform(a)} />
+          <path d={a.bodyD} />
         </clipPath>
       </defs>
-      <g data-a="water" clipPath={`url(#${opts.clipId})`} style={{ transform: `translateY(${level}px)` }}>
-        <rect x={a.x - 4} y={a.surfaceY} width={a.w + 8} height={a.baseY - a.surfaceY + 6} fill={WATER} />
+      <g transform={bodyTransform(a)} clipPath={`url(#${opts.clipId})`}>
+        <g data-a="water" style={{ transform: `translateY(${level}px)` }}>
+          <rect
+            x={box.x - 6}
+            y={(a.surfaceY - a.y) / a.scale}
+            width={box.w + 12}
+            height={(a.baseY - a.surfaceY + 6) / a.scale}
+            fill={WATER}
+          />
+        </g>
       </g>
 
       {/* 滴管 */}

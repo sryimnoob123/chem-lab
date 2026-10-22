@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { anchorOf } from "./geometry";
+import { liquidBox } from "../vessels/vessel-geometry";
 import { INCIDENT_TIMING, INCIDENT_TOTAL_MS, buildIncident } from "./incident";
 import type { IncidentFx } from "./incident-art";
 
@@ -111,6 +112,24 @@ describe("buildIncident 复用实验台资源", () => {
     expect(html).not.toContain("fill=\"#fff\"");
     // 没有第二个视口/独立小场景
     expect(html).not.toContain("viewBox");
+  });
+
+  it("液体层裁在不动的外层：clip-path 挂在器身 <g transform> 上，不在会动的 data-i=\"liquid\" 上", () => {
+    const scene = buildIncident(anchor, { fx: "glassBreak", op: "poke", clipId: "clip-x", baseLevel: 0.38 });
+    const html = renderToStaticMarkup(scene.node as React.ReactElement);
+    // 事故里液面从 base 涨到 surge：裁剪若挂在被 translate 的那层，会跟着液体一起挪，
+    // 瓶底那一圈被裁掉 / 液体下缘浮在瓶底之上（docs/液体层裁剪.md 规则 B）
+    const block = html.match(/<g transform="([^"]+)" clip-path="url\(#([^)]+)\)">(<g data-i="liquid"[^>]*>)/);
+    expect(block, "液体层应该是 <g transform clip-path><g data-i=\"liquid\">…").toBeTruthy();
+    expect(block?.[2]).toBe("clip-x");
+    expect(block?.[3]).not.toContain("clip-path");
+
+    // 液体矩形横向用器皿自己的液面宽度（包围盒 a.w 会整体偏左 ~22 viewBox 单位）
+    const box = liquidBox(anchor.kind);
+    const rect = html.match(/<g data-i="liquid"[^>]*>\s*<rect\b([^>]*)>/)?.[1] ?? "";
+    const attr = (name: string) => Number(rect.match(new RegExp(`${name}="([^"]+)"`))?.[1] ?? Number.NaN);
+    expect(attr("x")).toBeCloseTo(box.x - 6, 1);
+    expect(attr("width")).toBeCloseTo(box.w + 12, 1);
   });
 
   it("每种事故都能在器皿上画出画面（6 种全非空）", () => {

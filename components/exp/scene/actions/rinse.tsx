@@ -11,6 +11,7 @@
  */
 
 import type { ReactNode } from "react";
+import { liquidBox } from "../vessels/vessel-geometry";
 import { bodyTransform, levelShift, type VesselAnchor } from "./geometry";
 import { EASE_IN_OUT, EASE_OUT, type Beat } from "./timeline";
 
@@ -37,9 +38,13 @@ export function buildRinse(
   opts: { variant: RinseVariant; clipId: string; levelStart?: number },
 ): ActionScene {
   const isDilute = opts.variant === "dilute";
-  const empty = levelShift(a, 0);
-  const wet = levelShift(a, isDilute ? 0.55 : 0.62);
-  const start = levelShift(a, opts.levelStart ?? 0);
+  /** 器皿自己的液面几何（局部坐标）：液体矩形左右各出壁 6 单位，多出来的被器身裁掉 */
+  const box = liquidBox(a.kind);
+  /** 液位位移一律换算成**器皿局部坐标**（液体层在外层 `scale()` 里，见 node） */
+  const shift = (level: number) => Number((levelShift(a, level) / a.scale).toFixed(2));
+  const empty = shift(0);
+  const wet = shift(isDilute ? 0.55 : 0.62);
+  const start = shift(opts.levelStart ?? 0);
   /** 水柱起点：洗瓶嘴在瓶口上方 58 单位处 */
   const spoutY = a.mouthY - 58;
 
@@ -47,24 +52,37 @@ export function buildRinse(
     <>
       <defs>
         <clipPath id={opts.clipId}>
-          <path d={a.bodyD} transform={bodyTransform(a)} />
+          <path d={a.bodyD} />
         </clipPath>
       </defs>
 
-      {/* 器皿里的水（被玻璃剪影裁住） */}
-      <g
-        data-a="water"
-        clipPath={`url(#${opts.clipId})`}
-        style={{ transform: `translateY(${start}px)` }}
-      >
-        <rect
-          x={a.x - 4}
-          y={a.surfaceY}
-          width={a.w + 8}
-          height={a.baseY - a.surfaceY + 6}
-          fill={WATER}
-        />
-        <ellipse cx={a.mouthX} cy={a.surfaceY} rx={a.rx} ry={4.4} fill="none" stroke={EDGE} strokeWidth={1.2} />
+      {/*
+        器皿里的水（被玻璃剪影裁住）：clipPath 用**器皿局部坐标**；裁剪挂在**不动的**外层
+        `<g transform>` 上，动的只有里面那层 translateY。
+        两个坑都在这里（2026-10-23 实测）：
+          1. 不能把 transform 写在 clipPath 的子 path 上 —— Chrome 会忽略这份裁剪，液体溢出瓶外；
+          2. 不能把 clip-path 挂到**被 translate 的那层**上 —— 裁剪会跟着液体一起挪，
+             液面一升，瓶身轮廓就跟着下移，液体在底部/两侧露出瓶外（命中测试实测 456 个点）。
+      */}
+      <g transform={bodyTransform(a)} clipPath={`url(#${opts.clipId})`}>
+        <g data-a="water" style={{ transform: `translateY(${start}px)` }}>
+          <rect
+            x={box.x - 6}
+            y={(a.surfaceY - a.y) / a.scale}
+            width={box.w + 12}
+            height={(a.baseY - a.surfaceY + 6) / a.scale}
+            fill={WATER}
+          />
+          <ellipse
+            cx={(a.mouthX - a.x) / a.scale}
+            cy={(a.surfaceY - a.y) / a.scale}
+            rx={a.rx / a.scale}
+            ry={4.4 / a.scale}
+            fill="none"
+            stroke={EDGE}
+            strokeWidth={1.2 / a.scale}
+          />
+        </g>
       </g>
 
       {/* 洗瓶 + 连续水柱 */}

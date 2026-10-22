@@ -23,6 +23,7 @@
  */
 
 import type { ReactNode } from "react";
+import { liquidBox } from "../vessels/vessel-geometry";
 import { bodyTransform, levelShift, type VesselAnchor } from "./geometry";
 import type { Beat } from "./timeline";
 import { EASE_IN_OUT, EASE_OUT } from "./timeline";
@@ -219,6 +220,8 @@ export function buildIncident(
   const base = Math.max(0, Math.min(1, opts.baseLevel));
   const ix = a.mouthX + a.rx * 0.22;
   const iy = a.surfaceY + (a.baseY - a.surfaceY) * 0.44;
+  /** 器皿自己的液面几何（局部坐标）：液体矩形左右各出壁 6 单位，多出来的被器身裁掉 */
+  const box = liquidBox(a.kind);
 
   /** 液位位移一律换算成**器皿局部坐标**（液体层在 <g transform=scale> 里，见下面 node） */
   const shift = (level: number) => Number((levelShift(a, level) / a.scale).toFixed(2));
@@ -265,11 +268,13 @@ export function buildIncident(
     node: (
       <>
         {/*
-          液体层（和实验台 GlassVessel 同一套画法）：clipPath 用**器皿局部坐标**、
+          液体层（和实验台 GlassVessel / 洗涤动作同一套画法）：clipPath 用**器皿局部坐标**、
           外面那层 <g transform> 负责把局部坐标摆到台面上。
-          为什么不能把 transform 写在 clipPath 的子 path 上：Chrome 在这块台面 SVG 里
-          会直接忽略那份裁剪（2026-10-23 实测：液体溢出瓶外），改成「局部坐标 + 外层变换」
-          就和 GlassVessel 一致，裁得干净。
+          两个坑都别踩（2026-10-23 实测，见 docs/液体层裁剪.md）：
+            1. transform 不许写在 clipPath 的子 path 上 —— Chrome 在这块台面 SVG 里会忽略裁剪；
+            2. clip-path 不许挂在**被 translate 的那层**上 —— 裁剪在元素自己的局部坐标系里生效，
+               会跟着液体一起挪：事故里液面从 base 涨到 surge，瓶底那圈就被裁掉/液体下缘浮起来。
+          所以裁剪挂在不动的外层 `<g transform>`，动的只有里面 `data-i="liquid"` 那层。
         */}
         <defs>
           <clipPath id={opts.clipId}>
@@ -277,17 +282,13 @@ export function buildIncident(
           </clipPath>
         </defs>
 
-        <g transform={bodyTransform(a)}>
-          <g
-            data-i="liquid"
-            clipPath={`url(#${opts.clipId})`}
-            style={{ transform: `translateY(${shift(base)}px)` }}
-          >
+        <g transform={bodyTransform(a)} clipPath={`url(#${opts.clipId})`}>
+          <g data-i="liquid" style={{ transform: `translateY(${shift(base)}px)` }}>
             <rect
-              x={-6}
+              x={box.x - 6}
               y={(a.surfaceY - a.y) / a.scale}
-              width={(a.w + 12) / a.scale}
-              height={(a.baseY - a.surfaceY + 8) / a.scale}
+              width={box.w + 12}
+              height={(a.baseY - a.surfaceY + 6) / a.scale}
               fill={WATER}
             />
             <ellipse

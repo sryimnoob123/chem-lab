@@ -348,3 +348,38 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
 下一步
 - 按下那一次提交仍是唯一贵的地方（试剂按下 = setSelectedId + beginDrag → 整块台面重渲染）。dev+6× 才看得出，prod 下 <30ms；真要再压就把 `flow.draggingId` 也改成属性直写。
 - `reagent-rack.tsx`（旧 HTML5 拖拽）只剩预览页用，还在 `onDragOver` 里 setHoverId，删掉或改造时记得一起收。
+
+## 2026-10-23 02:5x · t_81833e85 动作液体层裁剪（rinse/stir/transfer）
+做了什么
+- 现象是**两个**坑叠在一起：① clipPath 子 path 带 transform → Chrome 忽略裁剪；② 只修①后，clip-path 还挂在被 translate 的那层，裁剪跟着液体挪 → 液面一升就露底。
+- 定稿结构：`<g transform={bodyTransform(a)} clip-path=…><g data-a="water" style={translateY}>…`（裁剪挂不动的父层，动的是里层）。
+- 坐标全部换局部：`(x-a.x)/scale`、`(y-a.y)/scale`、`levelShift()/scale`、描边宽 `/scale`；横向改用 `liquidBox(kind)`（原来用包围盒 a.w，液体整体偏左 22 viewBox 单位）。
+- 顺手修 `buildDrops`（同文件同 bug，定容后滴加那一段）。新增 `liquid-clip.test.ts` 6 例。
+
+证据
+- 命中测试（elementFromPoint 遵守 clip-path + path.isPointInFill 判瓶身）：rinse 343/0、dilute 287/0、transfer 42+44/0、stir 255/0、drops 388/0；把裁剪挪回会动那层，容量瓶一项 456/588 越界。
+- 单测：旧写法 6 例全红 → 新写法 6 例全绿。真实应用 :3000/:3001 各抓一帧（app-rinse-live / app-dilute-live）。
+- tsc 0 error / eslint 0 error 20 warning / vitest 43 文件 576 条 / next build ok；0 console error。
+- 图与说明：`docs/液体层裁剪.md`、`docs/liquid-clip-frames/`。
+
+改了哪些文件
+- `components/exp/scene/actions/rinse.tsx`、`stir.tsx`、`transfer.tsx`、`components/exp/scene/actions/liquid-clip.test.ts`（新）、`docs/液体层裁剪.md` + 截图。
+- 取证临时页 `app/liquid-clip-preview` 截完已删，仓库不留。
+
+下一步
+- `incident.tsx` 的事故液体层还是「裁剪挂会动层」（同族 bug，另开卡）。
+- 真实应用里「移液管转移」不好手点触发（要 from≠目标），acceptance 的转移帧来自同一组件渲染的对照页。
+
+## 2026-10-23 03:2x · t_591572a5 事故液体层同族 bug 收口
+做了什么
+- `buildIncident` 的液体层从「clip-path 挂在被 translate 的 `data-i="liquid"` 上 + 包围盒宽度」改成和洗涤同一结构：`<g transform={bodyTransform(a)} clip-path=…><g data-i="liquid" style={translateY}>`，横向用 `liquidBox(a.kind)`（包围盒 a.w 会让液体整体偏左 ~22 viewBox 单位）。
+- 事故这一段的液位从 base 涨到 surge 再回落，裁剪跟着走就会把瓶底那圈裁掉；改后裁剪挂在不动的外层。
+证据
+- 真实应用 dev :3000 上对照（/exp/exp01 → 错误演示「拿玻璃棒在容量瓶里搅洗」，WAAPI 暂停冻结、液面推到 0.38）：修后 132 命中 / 0 越界；把同一帧的裁剪挪回会动那层 511 命中 / 379 越界。图 `docs/liquid-clip-frames/incident-ab-{good,bad}.png`。
+- 两个真实场景各抓一帧：`incident-scene-poke.png`（裂纹+碎玻璃）、`incident-scene-oven.png`（器底火焰+裂纹）。注意这两台容量瓶在这一步是**空的**（液位 0），画面里没有液体，所以「露底」只能用上面那组对照量。
+- 单测：incident.test.ts 加 1 条结构断言，liquid-clip.test.ts 的事故用例覆盖 3 种器皿 × 4 种起手 = 12 组；把 incident.tsx 改回旧写法两条立刻红，恢复后全绿。
+- tsc 0 error / eslint 0 error / vitest 578 全过 / next build ok。
+踩坑
+- 命中测试别单用 `elementFromPoint`：事故的爆心闪光圆（r≈0.36·max(w,h)）盖住整个瓶身，会一直返回 `circle[data-i=flash]`，测出 0 命中。要用 `elementsFromPoint` 看整叠里有没有液体 rect。
+- exp01 有前测闸：`/exp/exp01?force=1` 可跳过；正常流程要先答 1D/2B/3C 才能进操作台。
+- 真机点击用 `el.click()`（合成事件会冒泡到 React 根），`click_at_xy` 在这套页面会打空。
