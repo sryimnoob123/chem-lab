@@ -2119,3 +2119,29 @@
   z-index: 40;
   width: min(330px, calc(100vw - 32px));
 }
+
+/* 动作播放中的「跳过动作」：默认必须播完，但允许催一下（AGENTS 9.9：只给一层文字） */
+.skipAction {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 6;
+  padding: 6px 14px;
+  border: 1px solid var(--line-strong, rgba(74, 87, 104, 0.28));
+  border-radius: 999px;
+  background: rgba(246, 247, 245, 0.92);
+  color: var(--ink-2, #4a5768);
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background-color 160ms cubic-bezier(0.23, 1, 0.32, 1), border-color 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.skipAction:hover {
+  background: #fff;
+  border-color: rgba(74, 87, 104, 0.45);
+}
+
+.skipAction:active {
+  transform: scale(0.97);
+}

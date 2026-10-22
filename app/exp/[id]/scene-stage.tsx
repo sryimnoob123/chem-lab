@@ -1,8 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import type { StepDefinition } from "@/lib/engine.types";
+import type { SceneAction, SceneActionApi } from "@/components/exp/scene/actions/action-layer";
+import { prefersReducedMotion } from "@/components/exp/scene/actions/timeline";
 import { getSceneVessel } from "@/lib/scene/palette";
 import { getSceneReagent } from "@/lib/scene/reagents";
 import { DEFAULT_RACK_IDS, rackIdsFor } from "./rack-ids";
@@ -129,6 +131,9 @@ export function SceneStage({
   nextReagent,
   hintHighlight = false,
   onQuickAction,
+  onCueVessel,
+  actionApiRef,
+  layoutKey,
   toolIds,
   activeTool = null,
   onSelectTool,
@@ -167,7 +172,13 @@ export function SceneStage({
   /** L3 提示：直接在目标元素（锥形瓶热区）上描边 + 箭头。 */
   hintHighlight?: boolean;
   /** 点台面上的仪器（如天平）＝按 1，直接使用当前建议动作。 */
-  onQuickAction?: () => void;
+  onQuickAction?: (vesselId: string) => void;
+  /** 把「本步该动哪台器皿」告诉工作台：动作动画要知道落在谁身上。 */
+  onCueVessel?: (vesselId: string | null) => void;
+  /** 工作台通过它播动作（洗涤/搅拌/转移/称量…），播完才 dispatch。 */
+  actionApiRef?: { current: SceneActionApi | null };
+  /** 步骤/重置变化：器皿回位 */
+  layoutKey?: number;
   /** 当前建议动作的 type（observe/weigh/dissolve…）；决定「点器皿」算不算完成 */
   suggestedType?: string;
   /** 台面工具：水龙头/毛刷/洗瓶/玻璃棒（用户 2026-10-22 要求每个操作都有对应工具） */
@@ -200,6 +211,45 @@ export function SceneStage({
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * 动作层控制器（用户 2026-10-22：操作必须有可见的动作过程）。
+   * 工作台通过 actionApiRef.play(action) 播一条动作，Promise 在「播完 / 跳过」后 resolve，
+   * 工作台拿到 true 才 dispatch —— 保证「动作结束才出结果和分数」。
+   */
+  const [sceneAction, setSceneAction] = useState<SceneAction | null>(null);
+  const pendingActionRef = useRef<((ok: boolean) => void) | null>(null);
+
+  const finishAction = useCallback(() => {
+    const pending = pendingActionRef.current;
+    pendingActionRef.current = null;
+    setSceneAction(null);
+    pending?.(true);
+  }, []);
+
+  const playAction = useCallback(
+    (next: SceneAction) =>
+      new Promise<boolean>((resolve) => {
+        if (pendingActionRef.current) {
+          resolve(false);
+          return;
+        }
+        if (prefersReducedMotion()) {
+          resolve(true);
+          return;
+        }
+        pendingActionRef.current = resolve;
+        setSceneAction(next);
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    if (!actionApiRef) return undefined;
+    actionApiRef.current = { play: playAction, skip: finishAction, busy: Boolean(sceneAction) };
+    return () => {
+      actionApiRef.current = null;
+    };
+  }, [actionApiRef, playAction, finishAction, sceneAction]);
   /**
    * 指针当前压着的那台器皿（拖拽中 / 选好试剂后悬停时）。
    * 每台器皿自己亮自己报名字，代替以前那个盖住整排器皿的大方块热区。
@@ -318,6 +368,11 @@ export function SceneStage({
    * 而不是只有右侧一张卡。算不出来（本步不是倒试剂）就不亮，绝不瞎指。
    */
   const cueVesselId = step ? expectedVesselId(step, performed ?? EMPTY_PERFORMED, vesselLabels) : null;
+
+  /** 把目标器皿报给工作台：动作动画要落在这一台上 */
+  useEffect(() => {
+    onCueVessel?.(cueVesselId);
+  }, [cueVesselId, onCueVessel]);
   const dropHoverValid = !cueVesselId || !overVesselId || overVesselId === cueVesselId;
 
   /** 一句"这里不是要动的地方"——任何落空/落错都必须出声，绝不静默。 */
@@ -386,7 +441,7 @@ export function SceneStage({
       // 不接的话第 3 步永远过不去（7 步里唯一没有场景入口的动作）。
       const deviceAct = ["weigh", "calibrate", "readInstrument", "observe", "compute"];
       if (suggestedType && deviceAct.includes(suggestedType)) {
-        onQuickAction?.();
+        onQuickAction?.(id);
         return;
       }
       nudge(`${id === "balance" ? "天平" : "pH 计"}这里现在不用动，这一步要做的是「${suggestedName ?? "别的操作"}」`);
@@ -405,7 +460,7 @@ export function SceneStage({
     // 用户 2026-10-22 实测：连点容量瓶/试管/烧杯一路「连对 11」直达第 7 步。
     // 洗、称、溶、转移、定容、移液必须走场景里的工具或拖试剂。
     if (suggestedType === "observe" || suggestedType === "readInstrument") {
-      onQuickAction?.();
+      onQuickAction?.(id);
       return;
     }
     nudge(
@@ -663,6 +718,9 @@ export function SceneStage({
                 onDropToSink={onDropToSink}
                 onClearSelection={() => undefined}
                 onReveal={() => undefined}
+                action={sceneAction}
+                onActionDone={finishAction}
+                layoutKey={layoutKey}
               />
             </div>
           ) : computeMode ? (
@@ -716,6 +774,18 @@ export function SceneStage({
       </div>
 
       <PourFX pour={flow.pour} onDone={flow.clearPour} />
+
+      {/* 动作播放中：给一个明确的「跳过」（默认必须播完，但用户可以催） */}
+      {sceneAction ? (
+        <button
+          type="button"
+          className={styles.skipAction}
+          data-demo-id="demo-action-skip"
+          onClick={finishAction}
+        >
+          跳过动作
+        </button>
+      ) : null}
 
       {/* 跟手的拖动影子：只在拖出阈值后出现，fixed 定位跟着指针，不抢事件 */}
       {dragGhost ? (

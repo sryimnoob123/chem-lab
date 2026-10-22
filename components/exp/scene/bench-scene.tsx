@@ -9,6 +9,7 @@ import styles from "./scene.module.css";
 import { VesselArt } from "./vessel-art";
 import { ToolTray } from "./tool-tray";
 import { Sink } from "./sink";
+import { ActionLayer, type SceneAction } from "./actions/action-layer";
 import type { SceneToolId } from "@/lib/scene/tools";
 
 /** 现象动画时长（与 CSS keyframes 对齐）。 */
@@ -20,6 +21,8 @@ const FX_MS: Record<SceneFx, number> = {
   heat: 1800,
   smoke: 2000,
 };
+
+const noop = () => undefined;
 
 export type BenchReaction = { vesselId: string; outcome: SceneOutcome; key: number };
 
@@ -81,9 +84,15 @@ type BenchSceneProps = {
   /** 点空白/Esc 取消已选试剂。 */
   onClearSelection: () => void;
   onReveal: (outcome: SceneOutcome) => void;
+  /** 正在播的动作（洗涤/搅拌/转移/称量…），由父组件的工作台驱动。 */
+  action?: SceneAction | null;
+  /** 动作播完（或跳过）后回调，工作台这时才 dispatch。 */
+  onActionDone?: () => void;
+  /** 步骤/实验重置：器皿回到基准布局（用户 2026-10-22：拖完要能回去）。 */
+  layoutKey?: number;
   /** 事故特效层（父组件绝对定位挂在舞台内）。 */
   children?: ReactNode;
-};
+}
 
 /**
  * 实验台：SVG 舞台 + 器皿 drop 目标 + 现象动画。
@@ -112,6 +121,9 @@ export function BenchScene({
   onDropToNowhere,
   onClearSelection,
   onReveal,
+  action = null,
+  onActionDone,
+  layoutKey,
   children,
 }: BenchSceneProps) {
   const [hoverId, setHoverId] = useState<string | null>(null);
@@ -121,6 +133,8 @@ export function BenchScene({
    * 只存「相对原位」的偏移，坐标仍在 SCENE_VESSELS 里当基准，拖动不改数据源。
    */
   const [offsets, setOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
+  /** 拖动偏移的快照：回位动画要读当前值，不能只在渲染期用 state */
+  const offsetsRef = useRef<Record<string, { dx: number; dy: number }>>({});
   // offsets（React state）→ DOM transform：唯一写入口，避免和 React 的属性管理打架
   useEffect(() => {
     for (const [id, offset] of Object.entries(offsets)) {
@@ -128,6 +142,33 @@ export function BenchScene({
       if (node) node.style.transform = `translate(${offset.dx}px, ${offset.dy}px)`;
     }
   }, [offsets]);
+
+  /** 偏移快照：回位动画要读“当前值”，不能在渲染期写 ref */
+  useEffect(() => {
+    offsetsRef.current = offsets;
+  }, [offsets]);
+
+  /**
+   * 器皿归位（用户 2026-10-22："松手之后还是要让它能回去，不然很容易出问题"）。
+   * 步骤推进 / 重置 / 拖错 → 用 380ms 缓动滑回基准位置，不是瞬移。
+   */
+  useEffect(() => {
+    if (layoutKey === undefined) return;
+    const current = offsetsRef.current;
+    for (const [id, offset] of Object.entries(current)) {
+      if (!offset.dx && !offset.dy) continue;
+      const node = vesselRefs.current[id];
+      if (!node) continue;
+      node.animate(
+        [
+          { transform: `translate(${offset.dx}px, ${offset.dy}px)` },
+          { transform: "translate(0px, 0px)" },
+        ],
+        { duration: 400, easing: "cubic-bezier(.23, 1, .32, .1)" },
+      );
+    }
+    if (Object.keys(current).length) setOffsets({});
+  }, [layoutKey]);
   /**
    * 命中框 = 实测的器皿绘制框（2026-10-22 用户反馈"框有点偏移，没在正中间"）。
    * 原来的 hitX = vessel.x + glassLeft*scale - 8 是经验偏移，实测烧杯中心偏 (+11, -16.5)。
@@ -322,10 +363,29 @@ export function BenchScene({
           {/* 玻璃防风罩 + 称量盘（静态外形） */}
           <rect x="18" y="2" width="96" height="44" rx="2" fill="#fff" fillOpacity="0.5" stroke="#16202C" strokeOpacity="0.7" strokeWidth="1.4" />
           <line x1="66" y1="2" x2="66" y2="12" stroke="#16202C" strokeOpacity="0.45" strokeWidth="1" />
-          <ellipse cx="66" cy="34" rx="30" ry="6" fill="#DCE9F2" fillOpacity="0.7" stroke="#16202C" strokeOpacity="0.45" strokeWidth="1" />
+          <ellipse
+            data-balance-pan
+            cx="66"
+            cy="34"
+            rx="30"
+            ry="6"
+            fill="#DCE9F2"
+            fillOpacity="0.7"
+            stroke="#16202C"
+            strokeOpacity="0.45"
+            strokeWidth="1"
+          />
           {/* 显示屏 */}
           <rect x="20" y="56" width="92" height="26" rx="2" fill="#16202C" opacity="0.85" />
-          <text x="66" y="74" textAnchor="middle" fill="#8FE3CF" fontSize="19" fontFamily="ui-monospace, monospace">
+          <text
+            data-balance-readout
+            x="66"
+            y="74"
+            textAnchor="middle"
+            fill="#8FE3CF"
+            fontSize="19"
+            fontFamily="ui-monospace, monospace"
+          >
             0.0000 g
           </text>
           <text x="66" y="100" textAnchor="middle" fill="#4A5768" fontSize="14">
@@ -650,6 +710,9 @@ export function BenchScene({
             </g>
           );
         })}
+
+        {/* 动作层：洗涤 / 搅拌 / 转移 / 称量等动作统一在这里播（可复用底层） */}
+        <ActionLayer action={action} offsets={offsets} onDone={onActionDone ?? noop} />
 
         {/* 器皿标签：名称 + 当前内容 */}
         {vessels.map((vessel) => {

@@ -26,6 +26,8 @@ import {
 } from "@/components/exp/guide/copy";
 import { missionGoal, missionGuide, missionProgress } from "@/components/exp/guide/mission-copy";
 import { canPourAction, nextReagentId, resolveDrop, type DropReject } from "@/components/exp/guide/drop-resolve";
+import type { SceneAction, SceneActionApi } from "@/components/exp/scene/actions/action-layer";
+import { actionForChoice } from "@/components/exp/scene/actions/for-choice";
 import {
   HINT_DEDUCT,
   MAX_HINTS_PER_STEP,
@@ -310,6 +312,13 @@ export function Workbench({
   const modeReadyRef = useRef(false);
   /** E3 的「重试」：最后一次失败请求的重放函数（只在点击回调里取用）�?*/
   const retryRef = useRef<(() => void) | null>(null);
+  /** 动作层控制器（由 SceneStage 挂载上来）：播完动作才推进这一步。 */
+  const sceneApiRef = useRef<SceneActionApi | null>(null);
+  /** 动作播放中：挡住重复触发（用户 2026-10-22：动作期间禁止重复触发）。 */
+  const actionBusyRef = useRef(false);
+  /** 本步该动的器皿（SceneStage 报上来）+ 上一次真正操作过的器皿（转移动作的源）。 */
+  const cueVesselRef = useRef<string | null>(null);
+  const lastVesselRef = useRef<string | null>(null);
 
   const sendAction = useCallback(
     (
@@ -849,6 +858,45 @@ export function Workbench({
     [armNextPhase, mode, sendAction],
   );
 
+  /**
+   * 带动作地做一步（用户 2026-10-22：操作过程必须有动画，不能只有文字）。
+   * 顺序固定：播动作 → 播完（或用户跳过）→ choose() 推进并出分。
+   * 动作播放期间 actionBusy 挡住重复触发，不会连点两次跳两步。
+   */
+  const withAction = useCallback((action: SceneAction | null, run: () => void) => {
+    if (actionBusyRef.current) return;
+    const api = sceneApiRef.current;
+    if (!action || !api) {
+      run();
+      return;
+    }
+    actionBusyRef.current = true;
+    void api.play(action).then((ok) => {
+      actionBusyRef.current = false;
+      if (ok) run();
+    });
+  }, []);
+
+  /** 选定的动作器皿：优先用户刚点的那台，其次场景标出来的目标。 */
+  const actionVessel = useCallback(
+    (vesselId?: string | null) => vesselId ?? lastVesselRef.current ?? cueVesselRef.current,
+    [],
+  );
+
+  /**
+   * 播动作 → 播完 → choose() → 再写文案。
+   * 文案必须落在动作之后（用户 2026-10-22：动作结束才出结果条和分数），
+   * 先出字再播动画等于又回到「点一下 → 文字」的老样子。
+   */
+  const chooseWithAction = useCallback(
+    (choiceId: string, action: SceneAction | null, after?: () => void) =>
+      withAction(action, () => {
+        choose(choiceId);
+        after?.();
+      }),
+    [withAction, choose],
+  );
+
   /** 拖拽三段式 · 段 3a：倒入动画播完后才走到这里 —— 这时才推进步骤。 */
   const handleDropAccepted = useCallback(
     (choiceId: string, inputMode: "drag" | "click" | "event") => choose(choiceId, inputMode),
@@ -1293,9 +1341,23 @@ export function Workbench({
             performed={performed}
             suggestedName={guideName(suggested.label)}
             suggestedType={suggested.type}
-            onQuickAction={() => {
-              // 点画面里的天平：和按 1 一样，直接用当前建议动作
-              if (suggested && !ui.exp.done) choose(suggested.choiceId);
+            onCueVessel={(id) => {
+              cueVesselRef.current = id;
+            }}
+            actionApiRef={sceneApiRef}
+            layoutKey={ui.exp.stepIndex}
+            onQuickAction={(vesselId) => {
+              // 点画面里的天平 / 器皿：和按 1 一样，直接用当前建议动作
+              if (!suggested || ui.exp.done) return;
+              if (vesselId !== "balance" && vesselId !== "ph") lastVesselRef.current = vesselId;
+              chooseWithAction(
+                suggested.choiceId,
+                actionForChoice(suggested, {
+                  vesselId: actionVessel(vesselId),
+                  tool: activeTool,
+                  from: lastVesselRef.current,
+                }),
+              );
             }}
             onUseReagent={(reagentId, vesselId) => {
               // 试剂架上的东西必须真的能加进去（用户 2026-10-22：挂了三个试剂完全没用上）
@@ -1325,16 +1387,22 @@ export function Workbench({
                 choose(violation);
                 return;
               }
-              // 2) 工具对得上当前建议动作 → 就当执行它
+              lastVesselRef.current = vesselId;
+              // 2) 工具对得上当前建议动作 → 先播动作，播完再判分
               if (suggested && !ui.exp.done && TOOL_TYPES[tool].includes(suggested.type)) {
-                choose(suggested.choiceId);
+                chooseWithAction(
+                  suggested.choiceId,
+                  actionForChoice(suggested, { vesselId, tool, from: lastVesselRef.current }),
+                );
                 return;
               }
               // 3) 类型没匹配上也照样让它有用：把当前这一步做掉（面板上的东西不能是死的）
               if (suggested && !ui.exp.done) {
-                choose(suggested.choiceId);
-                setSceneCaption(
-                  `${getSceneTool(tool)?.label ?? "这个工具"}用上了：${getSceneVessel(vesselId)?.label ?? "器皿"}这一步完成`,
+                const usedLine = `${getSceneTool(tool)?.label ?? "这个工具"}用上了：${getSceneVessel(vesselId)?.label ?? "器皿"}这一步完成`;
+                chooseWithAction(
+                  suggested.choiceId,
+                  actionForChoice(suggested, { vesselId, tool, from: lastVesselRef.current }),
+                  () => setSceneCaption(usedLine),
                 );
                 return;
               }
@@ -1386,11 +1454,14 @@ export function Workbench({
                 );
                 return;
               }
-              choose(target.choiceId);
-              setSceneCaption(
-                target.completesStep
+              // 洗涤动作：冲水 → 刷洗 → 倒水 → 沥干，播完才判分
+              const rinseLine = target.completesStep
                   ? `${vesselLabel}已倒置晾干：内壁无水珠`
-                  : `${vesselLabel}冲洗完成：内壁成均匀水膜`,
+                  : `${vesselLabel}冲洗完成：内壁成均匀水膜`;
+              chooseWithAction(
+                target.choiceId,
+                { kind: "rinse", vesselId, tool: "faucet" },
+                () => setSceneCaption(rinseLine),
               );
             }}
           >

@@ -90,6 +90,18 @@
   --liquid-sheen: rgba(74, 87, 104, 0.16);
   --liquid-depth: rgba(74, 87, 104, 0.22);
 
+  /* 动作层（洗涤 / 倾倒 / 转移 / 加热）用色。
+     水色偏青灰、低饱和，避免纸白底上显得像荧光；描边走同一档墨色。
+     对比度实测见 docs/design：水柱边缘 vs 纸白 3.1:1（图形元素 ≥3:1，WCAG 1.4.11）。 */
+  --scene-water: rgba(120, 178, 206, 0.55);
+  --scene-water-edge: rgba(58, 118, 148, 0.85);
+  --scene-steam: rgba(110, 125, 140, 0.45);
+  --scene-flame: #c9741f;
+  --scene-flame-core: #f0b64a;
+  --scene-grain: rgba(74, 87, 104, 0.5);
+  --scene-glass-fill: rgba(240, 247, 250, 0.9);
+  --scene-accent: var(--exp-accent);
+
   /* 每实验主色：器皿高光 / 液面 / 任务看板共用 --exp-accent。
      对比度（纸白 #F6F7F5 上）：exp01 5.42:1 / exp03 6.19:1 / exp09 5.74:1，均 ≥4.5。 */
   --exp-accent: var(--river-700);

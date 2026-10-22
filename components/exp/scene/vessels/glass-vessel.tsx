@@ -133,7 +133,11 @@ export function GlassVessel({ vessel, contents, liquidOverride }: GlassVesselPro
       <path d={sheenPath(kind)} className={styles.sheen} />
 
       {showLiquid ? (
-        <g className={styles.liquidGroup}>
+        <g
+          className={styles.liquidGroup}
+          data-vessel-liquid={vessel.id}
+          style={{ transformBox: "view-box", transformOrigin: "0 0" }}
+        >
           <path
             d={liquidPath(kind)}
             className={mix.kind === "precipitate" ? styles.liquidThick : styles.liquid}

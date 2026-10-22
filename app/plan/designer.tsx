@@ -10,13 +10,16 @@
  * 规则判定全在 lib/plan/rules.ts，组件只渲染。
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { REFERENCE_PLAN, getPiece, type PieceKind, type PlanInput } from "@/lib/plan/pieces";
 import { validate } from "@/lib/plan/rules";
 import { offlineAssessment } from "@/lib/plan/assess";
+import { applyTopic, getTopic, type PlanTopic } from "@/lib/plan/topics";
+import type { LlmAssessResult } from "@/lib/plan/llm-assess";
 import { PieceLibrary } from "./piece-library";
 import { ScorePanel } from "./score-panel";
+import { TopicPicker } from "./topic-picker";
 import s from "./plan.module.css";
 
 const DEFAULT_PARAMS: Record<string, string | number | boolean> = { ...REFERENCE_PLAN.params };
@@ -28,6 +31,8 @@ const PRETTY_PARAM: { key: string; label: string; kind: "number" | "bool" }[] = 
 ];
 
 export function PlanDesigner({ studentNo }: { studentNo: string }) {
+  /** 先选主题（P0）：null = 还没选，显示主题卡；选了才进画布 */
+  const [topic, setTopic] = useState<PlanTopic | null>(null);
   const [pieces, setPieces] = useState<string[]>([]);
   const [params, setParams] = useState<Record<string, string | number | boolean>>(DEFAULT_PARAMS);
   const [kind, setKind] = useState<PieceKind | null>(null);
@@ -35,8 +40,43 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
   const [saveMsg, setSaveMsg] = useState("");
 
   const plan: PlanInput = useMemo(() => ({ pieces, params }), [pieces, params]);
-  const report = useMemo(() => validate(plan), [plan]);
+  /** 基础 21 条 + 主题专属约束合成一份报告：一张评分卡，不出现两套分数 */
+  const report = useMemo(() => applyTopic(validate(plan), plan, topic ?? undefined), [plan, topic]);
   const assessment = useMemo(() => offlineAssessment(plan, report), [plan, report]);
+  /**
+   * 点评（P1）：规则给分，AI 只点评。走 `/api/plan/assess`，provider 由服务端 env 决定；
+   * 接口挂了就用 offlineAssessment 的本地文案兜底 —— 演示时不允许空着。
+   */
+  const [remark, setRemark] = useState<LlmAssessResult | null>(null);
+  const [remarkLoading, setRemarkLoading] = useState(false);
+  useEffect(() => {
+    if (pieces.length === 0) {
+      setRemark(null);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      setRemarkLoading(true);
+      void fetch("/api/plan/assess", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ pieces, params, topicId: topic?.id }),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data: (LlmAssessResult & { ok?: boolean }) | null) => {
+          if (data?.ok) {
+            setRemark({
+              provider: data.provider,
+              text: data.text,
+              points: data.points ?? [],
+              questions: data.questions ?? [],
+            });
+          }
+        })
+        .catch(() => undefined)
+        .finally(() => setRemarkLoading(false));
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [pieces, params, topic]);
 
   const toggle = (id: string) =>
     setPieces((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -64,8 +104,8 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
           feasible: report.feasible,
           score: report.score,
           issues: report.issues.map((i) => ({ ruleId: i.ruleId, level: i.level, text: i.text })),
-          assessment: assessment.text,
-          assessmentOffline: true,
+          assessment: remark?.text ?? assessment.text,
+          assessmentOffline: !remark || remark.provider === "mock",
         }),
       });
       const body = (await res.json().catch(() => ({}))) as {
@@ -95,6 +135,34 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
         <h1 className={s.title}>进阶学习 · 实验 10</h1>
         <span className={s.who}>学号 {studentNo}</span>
       </header>
+
+      {topic ? (
+        <div className={s.topicHead} data-demo-id="demo-topic-head">
+          <span className={s.topicHeadTitle}>{topic.title}</span>
+          <span className={s.topicHeadGoal}>{topic.goal}</span>
+          <button
+            type="button"
+            className={s.topicSwitch}
+            data-demo-id="demo-topic-switch"
+            onClick={() => {
+              setTopic(null);
+              setPieces([]);
+            }}
+          >
+            换主题
+          </button>
+        </div>
+      ) : (
+        <TopicPicker
+          onPick={(picked) => {
+            setTopic(picked);
+            setPieces([]);
+          }}
+        />
+      )}
+
+      {!topic ? null : (
+        <>
       <p className={s.lead}>
         素材按实验环节分三段：① HCl 标定 → ② 总碱度测定 → ③ 通用器材与记录。点块加入方案、上下调序，顶部随时给分。
       </p>
@@ -102,7 +170,13 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
       <ScorePanel report={report} pieceCount={pieces.length} />
 
       <div className={s.cols}>
-        <PieceLibrary selected={pieces} kind={kind} onKind={setKind} onToggle={toggle} />
+        <PieceLibrary
+          selected={pieces}
+          kind={kind}
+          onKind={setKind}
+          onToggle={toggle}
+          featured={topic?.featured}
+        />
 
         <div className={s.right}>
           <section className={s.panel} aria-label="我的方案">
@@ -227,11 +301,39 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
           </section>
 
           <section className={s.panel} aria-label="方案点评">
-            <h2 className={s.panelTitle}>方案点评</h2>
-            <p className={s.remark}>{assessment.text}</p>
+            <div className={s.panelHead}>
+              <h2 className={s.panelTitle}>方案点评</h2>
+              <span className={s.mono} data-demo-id="demo-remark-provider">
+                {remarkLoading ? "生成中…" : remark ? (remark.provider === "mock" ? "本地点评" : "AI 点评") : "本地点评"}
+              </span>
+            </div>
+            <p className={s.remark} data-demo-id="demo-remark-text">
+              {remark?.text ?? assessment.text}
+            </p>
+            {remark && remark.points.length > 0 ? (
+              <ul className={s.remarkPoints} data-demo-id="demo-remark-points">
+                {remark.points.map((point, index) => (
+                  <li key={`${point.kind}-${index}`} className={s.remarkPoint} data-kind={point.kind}>
+                    <span className={s.remarkDot} aria-hidden="true" />
+                    {point.text}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {remark && remark.questions.length > 0 ? (
+              <div className={s.remarkAsk} data-demo-id="demo-remark-questions">
+                {remark.questions.map((question) => (
+                  <p key={question} className={s.remarkQuestion}>
+                    {question}
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </section>
         </div>
       </div>
+        </>
+      )}
     </main>
   );
 }

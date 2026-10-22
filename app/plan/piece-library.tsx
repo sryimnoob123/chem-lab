@@ -8,7 +8,7 @@
  * 演示脚本依赖 data-demo-id：每块仍是 `demo-design-piece-*`，类型筛选仍是 `demo-design-tab-*`。
  */
 
-import { PIECES, type PieceKind } from "@/lib/plan/pieces";
+import { PIECES, type PieceKind, type PlanPiece } from "@/lib/plan/pieces";
 import { libraryGroups } from "@/lib/plan/groups";
 import s from "./plan.module.css";
 
@@ -26,14 +26,21 @@ export function PieceLibrary({
   kind,
   onKind,
   onToggle,
+  featured,
 }: {
   selected: readonly string[];
   kind: PieceKind | null;
   onKind: (kind: PieceKind | null) => void;
   onToggle: (id: string) => void;
+  /** 主题推荐素材：置顶显示（其余仍可选，用来做错） */
+  featured?: readonly string[];
 }) {
   const groups = libraryGroups(selected, kind);
   const picked = new Set(selected);
+  const pinned = new Set(featured ?? []);
+  /** 主题相关块排到本组最前：学生先看见该主题用得上的，再看见全量 */
+  const ordered = (pieces: readonly PlanPiece[]) =>
+    [...pieces].sort((a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id)));
 
   return (
     <section className={s.panel} aria-label="素材库">
@@ -77,7 +84,7 @@ export function PieceLibrary({
               </span>
             </header>
             <div className={s.pieceList}>
-              {pieces.map((p) => {
+              {ordered(pieces).map((p) => {
                 const on = picked.has(p.id);
                 return (
                   <button
@@ -85,6 +92,7 @@ export function PieceLibrary({
                     type="button"
                     className={s.piece}
                     data-demo-id={p.demoId}
+                    data-featured={pinned.has(p.id) ? "true" : undefined}
                     aria-pressed={on}
                     onClick={() => onToggle(p.id)}
                   >
