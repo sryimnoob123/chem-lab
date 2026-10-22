@@ -1,0 +1,71 @@
+{
+ "results": [
+  {
+   "section": "S5",
+   "name": "拼接实验四个主题",
+   "pass": true,
+   "detail": "demo-topic-topic-hcl-standard demo-topic-topic-acid-acceptance demo-topic-topic-co2-blank demo-topic-topic-soda-alkalinity"
+  },
+  {
+   "section": "S5",
+   "name": "topic-hcl-standard 拖块→点评",
+   "pass": true,
+   "detail": "主题头=盐酸标准溶液的标定 入门 交一份能照 · 素材=2 项（本轮加入 weighing-bottle/sodium-carbonate/param-drying） · 点评=离线点评 · 要点 5 条 · 点评首句=方案现在做不了：8 条硬约束没过。先处理「酸式滴定管」。"
+  },
+  {
+   "section": "S5",
+   "name": "topic-acid-acceptance 拖块→点评",
+   "pass": true,
+   "detail": "主题头=新到浓盐酸验收（KHP 基准） 进阶 · 素材=3 项（本轮加入 weighing-bottle/param-drying/weigh） · 点评=离线点评 · 要点 5 条 · 点评首句=方案现在做不了：10 条硬约束没过。先处理「邻苯二甲酸氢钾（"
+  },
+  {
+   "section": "S5",
+   "name": "topic-co2-blank 拖块→点评",
+   "pass": true,
+   "detail": "主题头=CO₂ 干扰与终点判读专项 进阶 交 · 素材=3 项（本轮加入 boil/methyl-orange/weighing-bottle） · 点评=离线点评 · 要点 5 条 · 点评首句=方案现在做不了：10 条硬约束没过。先处理「新沸冷却蒸馏水」"
+  },
+  {
+   "section": "S5",
+   "name": "topic-soda-alkalinity 拖块→点评",
+   "pass": true,
+   "detail": "主题头=工业纯碱总碱度测定 综合 交一份双指 · 素材=3 项（本轮加入 boil/methyl-orange/weighing-bottle） · 点评=离线点评 · 要点 5 条 · 点评首句=方案现在做不了：9 条硬约束没过。先处理「甲基橙 0.1%（"
+  },
+  {
+   "section": "S6",
+   "name": "口令 2026 进教师端",
+   "pass": true,
+   "detail": "/teacher · 学生行 40 · 口令输入框=有 · 共 40 人"
+  },
+  {
+   "section": "S6",
+   "name": "学情能读",
+   "pass": true,
+   "detail": "← 返回主界面 河南大学 · 无机及分析化学实验 教师端 学情总览 名单管理 刘建彩 刘 学情总览 03600004 ·"
+  },
+  {
+   "section": "S6",
+   "name": "口令登录后已解锁（不再要求二次解锁）",
+   "pass": true,
+   "detail": "解锁控件 0 个"
+  },
+  {
+   "section": "S6",
+   "name": "CSV 导出不乱码",
+   "pass": true,
+   "detail": "HTTP 200 · BOM=true · 40 行 · 表头=学号,姓名,班级,实验,状态,完成度,操作分,报告分,总分,事故数,最近活跃 · 乱码=false"
+  },
+  {
+   "section": "S6",
+   "name": "导出按钮（界面点击）",
+   "pass": true,
+   "detail": "已导出 4 KB"
+  },
+  {
+   "section": "S6",
+   "name": "学生详情页",
+   "pass": true,
+   "detail": "← 返回主界面 河南大学 · 无机及分析化学实验 教师端 学情总览 名单管理 刘建彩 刘 ← 学情总览 周若曦 2025"
+  }
+ ],
+ "errors": []
+}

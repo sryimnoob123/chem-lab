@@ -1,0 +1,161 @@
+{
+ "results": [
+  {
+   "section": "S1",
+   "name": "门户首页",
+   "pass": true,
+   "detail": "HTTP 200 · h1=无机及分析化学实验 · 5 行 · 查看全部=/experiments · 横向溢出=false"
+  },
+  {
+   "section": "S1",
+   "name": "首页控制台",
+   "pass": true,
+   "detail": "0 条错误"
+  },
+  {
+   "section": "S1",
+   "name": "登录页",
+   "pass": true,
+   "detail": "横向溢出=false"
+  },
+  {
+   "section": "S1",
+   "name": "登录 → 我的实验",
+   "pass": true,
+   "detail": "可点实验 4 个 · 拼接实验入口 1 个"
+  },
+  {
+   "section": "S1",
+   "name": "列表解锁全部 10 个",
+   "pass": true,
+   "detail": "行 10 个 · 可点 10 个"
+  },
+  {
+   "section": "S1",
+   "name": "10 个实验默认门禁页",
+   "pass": true,
+   "detail": "exp01:200/前测门禁 exp02:200/前测门禁 exp03:200/前测门禁 exp04:200/前测门禁 exp05:200/前测门禁 exp06:200/前测门禁 exp07:200/前测门禁 exp08:200/前测门禁 exp09:200/前测门禁 exp10:200/前测门禁"
+  },
+  {
+   "section": "S1",
+   "name": "10 个实验操作台(?force=1)",
+   "pass": true,
+   "detail": "exp01:7步/4器皿 exp02:6步/6器皿 exp03:6步/4器皿 exp04:5步/6器皿 exp05:6步/0器皿 exp06:6步/0器皿 exp07:6步/0器皿 exp08:7步/4器皿 exp09:7步/2器皿 exp10:6步/0器皿"
+  },
+  {
+   "section": "S2",
+   "name": "BOPPPS 前测出现",
+   "pass": true,
+   "detail": "三道前测已渲染"
+  },
+  {
+   "section": "S2",
+   "name": "前测提交后解锁操作台",
+   "pass": true,
+   "detail": "已进操作台"
+  },
+  {
+   "section": "S2",
+   "name": "演示引导出气泡",
+   "pass": true,
+   "detail": "把容量瓶 100 mL拖进洗涤槽 按住器皿，拖进槽里松手"
+  },
+  {
+   "section": "S2",
+   "name": "非法落点提示（第 7 步）",
+   "pass": true,
+   "detail": "落点判定=bad · 提示=1"
+  },
+  {
+   "section": "S2",
+   "name": "七步走完",
+   "pass": true,
+   "detail": "第1步:过 第2步:过 第3步:过 第4步:过 第5步:过 第6步:过 第7步:卡住 · 真实拖拽=false"
+  },
+  {
+   "section": "S2",
+   "name": "交卷入口",
+   "pass": true,
+   "detail": "最后一步做完自动交卷"
+  },
+  {
+   "section": "S2",
+   "name": "报告页打开",
+   "pass": true,
+   "detail": "/exp/exp01/report?runId=da7e5d90-b44f-4e26-8657-5ea1cd21a186"
+  },
+  {
+   "section": "S2",
+   "name": "报告有分数",
+   "pass": true,
+   "detail": "总分 86"
+  },
+  {
+   "section": "S2",
+   "name": "报告有学号",
+   "pass": true,
+   "detail": "学号 20250101"
+  },
+  {
+   "section": "S2",
+   "name": "报告有时间线",
+   "pass": true,
+   "detail": "有时间线条目"
+  },
+  {
+   "section": "S2",
+   "name": "报告有错题解析",
+   "pass": true,
+   "detail": "ok"
+  },
+  {
+   "section": "S2",
+   "name": "报告有后测",
+   "pass": true,
+   "detail": "13 个后测元素 · 题目 3"
+  },
+  {
+   "section": "S2",
+   "name": "后测提交后出逐题解析",
+   "pass": true,
+   "detail": "后测完成 · 得分 100 / 100 重做后测"
+  },
+  {
+   "section": "S3",
+   "name": "exp03 器皿库/工具托盘/试剂架",
+   "pass": true,
+   "detail": "器皿 4 · 工具 4 · 试剂 1 · 托盘 1"
+  },
+  {
+   "section": "S3",
+   "name": "exp03 非法落点提示",
+   "pass": true,
+   "detail": "本步没有试剂拖拽（跳过）"
+  },
+  {
+   "section": "S3",
+   "name": "exp03 连做两步",
+   "pass": true,
+   "detail": "第1步:按1→2 第2步:按1→3"
+  },
+  {
+   "section": "S4",
+   "name": "exp09 器皿库/工具托盘/试剂架",
+   "pass": true,
+   "detail": "器皿 2 · 工具 4 · 试剂 4 · 托盘 1"
+  },
+  {
+   "section": "S4",
+   "name": "exp09 非法落点提示",
+   "pass": true,
+   "detail": "本步没有试剂拖拽（跳过）"
+  },
+  {
+   "section": "S4",
+   "name": "exp09 连做两步",
+   "pass": true,
+   "detail": "第1步:按1→2 第2步:按1→3"
+  }
+ ],
+ "errors": []
+}

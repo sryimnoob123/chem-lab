@@ -50,7 +50,7 @@ export function TeacherExportButton() {
         data-demo-id="demo-teacher-export"
         onClick={download}
         disabled={state === "busy"}
-        style={{ minHeight: 36 }}
+        style={{ minHeight: 44 }}
       >
         {state === "busy" ? "导出中…" : "导出学情 CSV"}
       </button>

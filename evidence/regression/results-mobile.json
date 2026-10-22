@@ -1,0 +1,64 @@
+{
+ "rows": [
+  {
+   "name": "home",
+   "url": "/",
+   "overflow": 0,
+   "wide": [
+    "rect.null@1026",
+    "g.null@834",
+    "path.null@834"
+   ],
+   "small": []
+  },
+  {
+   "name": "login",
+   "url": "/login",
+   "overflow": 0,
+   "wide": [
+    "DIV.login-card@413",
+    "A.login__brand@392",
+    "DIV.login__tabs@392"
+   ],
+   "small": []
+  },
+  {
+   "name": "catalog",
+   "url": "/experiments",
+   "overflow": 0,
+   "wide": [],
+   "small": []
+  },
+  {
+   "name": "exp01",
+   "url": "/exp/exp01?force=1",
+   "overflow": 0,
+   "wide": [
+    "OL.SPhgxG_dockList@924",
+    "LI.null@464",
+    "BUTTON.SPhgxG_dockItem ix@464"
+   ],
+   "small": [
+    ":40",
+    ":40",
+    ":40",
+    ":40"
+   ]
+  },
+  {
+   "name": "plan",
+   "url": "/plan",
+   "overflow": 0,
+   "wide": [],
+   "small": []
+  },
+  {
+   "name": "teacher",
+   "url": "/teacher",
+   "overflow": 0,
+   "wide": [],
+   "small": []
+  }
+ ],
+ "errs": []
+}

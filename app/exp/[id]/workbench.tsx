@@ -1819,7 +1819,7 @@ export function Workbench({
           {ui.hint ? <em>H{ui.hint.level}</em> : null}
           {!hintExhausted && hintNextTier ? <em>{`${hintUsed}/${MAX_HINTS_PER_STEP}`}</em> : null}
         </button>
-        按 1~9 选择动作 · H 提示 · R 重做 · Enter 交卷
+        H 提示 · R 重做 · Enter 交卷
       </p>
 
       <ExperimentDock currentId={expId} onNotice={setNotice} />

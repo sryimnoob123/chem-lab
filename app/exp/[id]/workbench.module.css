@@ -333,6 +333,17 @@
   transform: scale(0.97);
 }
 
+/* 触屏：演示按钮与底部实验 dock 都撑到 44px 触控区（AGENTS §3）。
+   2026-10-23 回归实测：390×844 下「演示」30px、dock 项 38px，低于触控下限。 */
+@media (max-width: 640px) {
+  .coachButton {
+    min-height: 44px;
+  }
+  .dockItem {
+    height: 44px;
+  }
+}
+
 .coachButton[data-open="true"] {
   border-color: var(--exp-accent);
   color: var(--exp-accent);
@@ -921,6 +932,13 @@
   overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--bench-line) transparent;
+}
+
+/* 空栏不出框：本步既没有读数也没有失败详情时，aside 里一个子元素都没有，
+   只剩一圈边框挂在右上角（2026-10-23 回归实测：exp01 第 1 步右上一个 232×26 的空框）。
+   收掉边框与留白，右侧台面直接让出来。 */
+.rail:empty {
+  display: none;
 }
 
 .railHead {

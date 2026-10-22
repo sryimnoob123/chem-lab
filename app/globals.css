@@ -1530,6 +1530,27 @@ button {
   gap: 12px;
 }
 
+/* 窄屏：右上角「更新时间 + 教师解锁 + 导出」排不进一行，允许换行并撑到 44px 触控区。
+   2026-10-23 全站回归实测：390×844 下 .tch-page-head__side 把页面撑出 9px 横向溢出，
+   「教师解锁」32px、「导出学情 CSV」36px 也低于 AGENTS §3 的 44px 触控下限。 */
+@media (max-width: 640px) {
+  .tch-page-head__side {
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .tch-page-head__side > * {
+    min-width: 0;
+  }
+  .tch-updated {
+    white-space: normal;
+  }
+  .tch-unlock {
+    min-height: 44px;
+  }
+}
+
 .tch-updated {
   font-size: var(--text-12);
   color: var(--ink-2);

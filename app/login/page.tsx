@@ -41,24 +41,48 @@ export default function LoginPage() {
     return () => window.removeEventListener("pointermove", onMove);
   }, []);
 
+  /** 口令校验失败时留在原页给一句人话（后端仍是唯一判据） */
+  const [teacherError, setTeacherError] = useState("");
+
   /**
    * 演示口径（用户 2026-10-22）：登录只做样子，不校验、不请求后端。
    * 之前学生走 POST /api/session 查库，库里一有问题就 500、现场卡在登录页。
+   *
+   * 例外是教师：`/teacher` 里的「导出学情 CSV」走 /api/teacher/export，
+   * 后端要 chem_teacher cookie（lib/session.ts 的 requireTeacher）。
+   * 2026-10-23 回归实测：登录页填了口令却谁也没种 cookie，
+   * 于是导出永远 403「请先在右上角教师解锁」。这里把填的口令真的提交上去，
+   * 留空则照旧直接进（演示不弹口令），口令错就留在本页给提示。
    */
-  function enter(nextRole: Role) {
+  async function enter(nextRole: Role) {
     playSound("ok-l1");
+    if (nextRole === "teacher" && passcode.trim()) {
+      try {
+        const res = await fetch("/api/teacher/unlock", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ passcode: passcode.trim() }),
+        });
+        if (res.status === 401) {
+          setTeacherError("口令不对，再试一次");
+          return;
+        }
+      } catch {
+        // 网络/后端挂了不挡人：照旧进后台（只是导出会提示先解锁）
+      }
+    }
     router.push(nextRole === "student" ? "/experiments" : "/teacher");
     router.refresh();
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    enter(role);
+    void enter(role);
   }
 
   /** 一键进：不填表，直接进对应端。 */
   function enterAs(nextRole: Role) {
-    enter(nextRole);
+    void enter(nextRole);
   }
 
   return (
@@ -164,6 +188,11 @@ export default function LoginPage() {
           <button className="btn btn--primary login__submit" type="submit" data-demo-id="demo-login-submit">
             {role === "student" ? "进入实验" : "登录教师后台"}
           </button>
+          {role === "teacher" && teacherError ? (
+            <p className="login__foot" role="alert" data-demo-id="demo-login-teacher-error" style={{ color: "#a33" }}>
+              {teacherError}
+            </p>
+          ) : null}
         </form>
 
         {/* 原来「演示账号」和「返回门户 / 课程号」是上下两行小字（堆叠），
