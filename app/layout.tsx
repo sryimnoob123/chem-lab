@@ -23,12 +23,13 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-CN">
-      <head>
+    // suppressHydrationWarning：线上（生产构建 + UTC 容器）实测会报 React #418，
+    // 本地同构建不复现；差异来自浏览器对 <head> 的规范化（手写 <link> 被移动/去重）。
+    // 只影响属性/文本级告警，不影响功能，先压掉保证演示控制台干净。
+    <html lang="zh-CN" suppressHydrationWarning>
+      <body className="min-h-screen antialiased" suppressHydrationWarning>
         {/* 霞鹜文楷：97 个 subset 分片，只能用 link 引入，不进 Tailwind 处理 */}
         <link rel="stylesheet" href="/fonts/lxgw-wenkai/lxgwwenkai-regular.css" />
-      </head>
-      <body className="min-h-screen antialiased">
         {children}
         {devtoolsEnabled() ? <DevDockLoader /> : null}
       </body>

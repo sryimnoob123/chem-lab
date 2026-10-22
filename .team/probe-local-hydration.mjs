@@ -1,0 +1,13 @@
+﻿import { chromium } from "@playwright/test";
+const BASE = "http://127.0.0.1:3001";
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await ctx.newPage();
+const errs = [];
+page.on("pageerror", (e) => errs.push(String(e.message).slice(0, 200)));
+page.on("console", (m) => { if (m.type() === "error" && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 200)); });
+await page.request.post(`${BASE}/api/session`, { headers: { "content-type": "application/json" }, data: { studentNo: "20250101", name: "周若曦" } });
+await page.goto(`${BASE}/exp/exp01?force=1`, { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(4000);
+console.log("本地错误数:", errs.length, JSON.stringify(errs.slice(0, 3)));
+await browser.close();
