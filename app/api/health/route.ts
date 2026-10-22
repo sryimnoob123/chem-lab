@@ -44,11 +44,31 @@ export async function GET(): Promise<Response> {
       ms: Date.now() - startedAt,
     });
   } catch (error) {
+    // 把驱动 / drizzle 包在外层的 cause 一起带出来，否则只有一句 "Failed query"
+    const chain: string[] = [];
+    let cursor: unknown = error;
+    for (let depth = 0; depth < 4 && cursor; depth += 1) {
+      const item = cursor as { name?: string; message?: string; code?: string; cause?: unknown };
+      chain.push(`${item.name ?? "Error"}: ${(item.message ?? "").slice(0, 160)}${item.code ? ` [${item.code}]` : ""}`);
+      cursor = item.cause;
+    }
+    // 再单独做一次最简单的探活：能连上库、能跑 select 1，才轮到「表不存在」
+    let probe = "";
+    try {
+      await db.execute(sql`select 1`);
+      probe = "select 1 ok";
+    } catch (probeError) {
+      const item = probeError as { name?: string; message?: string; code?: string; cause?: { message?: string } };
+      probe = `select 1 失败：${item.name ?? "Error"}: ${(item.message ?? "").slice(0, 160)}${
+        item.cause?.message ? ` / ${String(item.cause.message).slice(0, 160)}` : ""
+      }${item.code ? ` [${item.code}]` : ""}`;
+    }
     return Response.json(
       {
         ok: false,
         dbMode,
-        error: error instanceof Error ? `${error.name}: ${error.message}`.slice(0, 300) : String(error).slice(0, 300),
+        error: chain.join(" ← ").slice(0, 600),
+        probe,
         hint:
           dbMode === "pglite"
             ? "平台没有注入数据库连接串，代码回落到了 PGlite；线上容器只读，必须配 DATABASE_URL 或 COZE_PG_* 变量"
