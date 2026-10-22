@@ -482,7 +482,7 @@ const step4: StepDefinition = {
     correct(
       "step4-rinse",
       "transfer",
-      "用少量蒸馏水洗涤烧杯内壁与玻璃棒 3 次，洗液并入容量瓶",
+      "蒸馏水洗涤烧杯与玻璃棒 3 次，洗液并入容量瓶",
       "demo-op-step4-rinse",
       "S2",
       {
@@ -567,10 +567,13 @@ const step5: StepDefinition = {
     correct(
       "step5-water",
       "dilute",
-      "加水至刻度线下方 1~2 cm，改胶头滴管逐滴加入",
+      "加蒸馏水至刻度线下 1~2 cm，改用胶头滴管",
       "demo-op-step5-water",
       "S2",
-      { ...P({ volume: 100 }), observation: { text: "液面接近刻度线，改用胶头滴管逐滴加入" } },
+      {
+        ...P({ volume: 100, reagent: "water" }),
+        observation: { text: "液面接近刻度线，改用胶头滴管逐滴加入" },
+      },
     ),
     correct(
       "step5-read",
@@ -646,7 +649,7 @@ const step6: StepDefinition = {
   scene: "通风橱旁操作台",
   demoId: "exp01-step6-pipette",
   judge: {
-    criterion: "放出体积 25.00 ±0.03 mL；管尖外壁无液滴",
+    criterion: "放出体积 25.00±0.03mL；管尖外壁无液滴",
     competency: ["S2", "K2"],
     tolerance: { paramKey: "volume", expected: 25, unit: "mL", tolerance: 0.03 },
   },
@@ -744,7 +747,7 @@ const step7: StepDefinition = {
   scene: "通风橱内",
   demoId: "exp01-step7-acid",
   judge: {
-    criterion: "加酸过程中液温 ≤60 ℃、无暴沸、无溅出；标签含名称/浓度/日期/姓名",
+    criterion: "加酸液温 ≤60 ℃，无暴沸、无溅出；标签含名称/浓度/日期/姓名",
     competency: ["A1", "K2"],
     tolerance: { paramKey: "concentration", expected: 0.5, unit: "mol/L", tolerance: 0.005 },
   },
@@ -774,7 +777,7 @@ const step7: StepDefinition = {
     correct(
       "step7-acid",
       "dilute",
-      "用 10 mL 量筒量 2.7 mL 浓硫酸，沿烧杯内壁缓缓注入水中，边加边搅拌",
+      "量 2.7 mL 浓硫酸，用 10 mL 量筒沿壁注入水中并搅拌",
       "demo-op-step7-acid",
       "K2",
       {
