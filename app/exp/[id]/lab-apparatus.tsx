@@ -124,9 +124,35 @@ export function LabApparatus({ className }: ApparatusProps) {
         <clipPath id="flask-liquid-clip">
           <path d="M148 530 h48 v30 l42 72 q4 8 -6 8 H112 q-10 0 -6 -8 l42 -72 Z" />
         </clipPath>
+        {/* 锥形瓶液体（用户 2026-10-22 报「色块有问题」）：
+            之前是一整块硬边矩形 fillOpacity .72，像贴了一张色纸。
+            现在：垂直渐变（液面亮、瓶底沉）+ 液面双层椭圆高光，和玻璃器皿同一套画法。 */}
+        <defs>
+          <linearGradient id="flask-liquid-depth" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--river-700)" stopOpacity="0.58" />
+            <stop offset="22%" stopColor="var(--river-700)" stopOpacity="0.72" />
+            <stop offset="100%" stopColor="var(--river-700)" stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
         <g clipPath="url(#flask-liquid-clip)">
-          <rect x="88" y="604" width="172" height="40" fill="var(--river-700)" fillOpacity=".72" />
+          <rect x="88" y="604" width="172" height="40" fill="url(#flask-liquid-depth)" />
+          {/* 这条 path 的 d 被 pour.tsx 的液面抬升动画按选择器锁定（translateY 34→0），
+              改 d 会让倒入时液面不动 —— 保留原样，只在其上加两层椭圆做厚度。 */}
           <path d="M88 604 H260" stroke="#EDF0EE" strokeWidth="2" />
+          {/* 液面：外圈柔和反光 + 内圈实线，两层才像有厚度的液面 */}
+          <ellipse cx="176" cy="604" rx="72" ry="4.6" fill="none" stroke="#EDF0EE" strokeWidth="3" strokeOpacity="0.5" />
+          <ellipse cx="176" cy="604" rx="72" ry="4.6" fill="none" stroke="#EDF0EE" strokeWidth="1.1" strokeOpacity="0.9" />
+          {/* 瓶内壁的淡阴影（纸白底上用淡墨而不是白高光） */}
+          <path d="M100 612 q-8 34 12 44" fill="none" stroke="rgba(74,87,104,.16)" strokeWidth="3" />
+          {/* 少量气泡：慢速上浮，证明是液体不是色块 */}
+          <circle cx="150" cy="628" r="1.6" fill="#FFFFFF" fillOpacity="0.42">
+            <animate attributeName="cy" values="636;610" dur="4.2s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.5;0" dur="4.2s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="196" cy="632" r="1.2" fill="#FFFFFF" fillOpacity="0.36">
+            <animate attributeName="cy" values="640;614" dur="5.6s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.45;0" dur="5.6s" repeatCount="indefinite" />
+          </circle>
         </g>
         <text
           x="176"
