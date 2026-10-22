@@ -1,199 +1,235 @@
 /**
- * 拼接方案的 AI 点评 —— 可插拔 provider（P1）
+ * 拼接方案的 AI 点评 —— **唯一一条点评链路**（provider: mock | coze | ark）。
  *
  * 分工（用户 2026-10-22 口径）：
  *   规则引擎给分（lib/plan/rules.ts + topics.ts，离线、可解释、永远可用）；
  *   AI 只做点评与追问，**不负责给分**。
  *
- * provider 由 `PLAN_ASSESS_PROVIDER` 选：`mock` | `coze` | `ark`，缺省 auto
- * （配了 COZE_API_TOKEN+COZE_BOT_ID 走 coze，配了 ARK_API_KEY 走 ark，都没配走 mock）。
- * 明天接扣子只换 provider，不改业务代码。
+ * provider 由 `PLAN_ASSESS_PROVIDER` 选，缺省 auto：
+ *   - `COZE_API_TOKEN` + `COZE_BOT_ID` → coze（扣子 v3 chat：发起 → 轮询 → 取消息）；
+ *   - `COZE_LLM_URL` + key（`COZE_LLM_KEY` / `COZE_LLM_API_KEY` / `DEEPSEEK_API_KEY` / `ARK_API_KEY`）
+ *     → ark（OpenAI 兼容 `/chat/completions`，豆包方舟 / DeepSeek / 自建网关都能走）；
+ *   - 其余 → mock（本地点评，`assess-mock.ts`）。
  *
- * 所有 provider 都必须返回同一形状：
- *   { provider, text, points: [{ kind, pieceId?, ruleId?, text }], questions: [] }
- * `points` 要能指到具体片段 —— 学生看得到"我用了哪一块、为什么不行"。
+ * 硬约束（演示优先）：**永不 throw**。超时（12 s 封顶）、限流、断网、空回复、坏 JSON
+ * 一律回退本地点评，并用 `fallback` 告诉 UI「离线点评」的原因。
+ *
+ * 所有 provider 返回同一形状：
+ *   { provider, text, points:[{kind, pieceId?, ruleId?, text}], questions, fallback?, pointsFrom? }
  */
 
 import { PIECES_BY_ID, type PlanInput } from "./pieces";
-import type { PlanIssue, PlanReport } from "./rules";
+import { RULES_BY_CODE, type PlanReport } from "./rules";
 import type { PlanTopic } from "./topics";
+import {
+  mockAssess,
+  type AssessFallback,
+  type AssessPoint,
+  type AssessProvider,
+  type LlmAssessResult,
+} from "./assess-mock";
 
-export type AssessPointKind = "good" | "risk" | "todo";
+export type { AssessFallback, AssessPoint, AssessPointKind, AssessProvider, LlmAssessResult } from "./assess-mock";
+export { mockAssess } from "./assess-mock";
 
-export type AssessPoint = {
-  kind: AssessPointKind;
-  /** 指到具体素材块 */
-  pieceId?: string;
-  /** 指到具体规则 */
-  ruleId?: string;
-  text: string;
-};
+/** 12 s 上限：比原来的 8 s 宽一点给豆包轮询，但演示绝不能卡更久 */
+export const TIMEOUT_MS = 12_000;
+const COZE_POLL_MS = Math.max(100, Number(process.env.COZE_POLL_MS ?? 300) || 300);
 
-export type LlmAssessResult = {
-  provider: "mock" | "coze" | "ark";
-  text: string;
-  points: AssessPoint[];
-  questions: string[];
-};
+class HttpError extends Error {
+  status: number;
+  constructor(status: number, message?: string) {
+    super(message ?? `http-${status}`);
+    this.name = "HttpError";
+    this.status = status;
+  }
+}
+class EmptyAnswerError extends Error {
+  constructor(message = "empty-answer") {
+    super(message);
+    this.name = "EmptyAnswerError";
+  }
+}
+class DeadlineError extends Error {
+  constructor() {
+    super("deadline-exceeded");
+    this.name = "TimeoutError";
+  }
+}
 
-const TIMEOUT_MS = 12_000;
+function reasonOf(error: unknown): AssessFallback {
+  // fetch 连不上（DNS / 连接被拒 / 代理断）抛的是 TypeError，别当成"格式不对"
+  if (error instanceof TypeError) return "network";
+  if (error instanceof HttpError) return error.status === 429 ? "rate-limit" : "http";
+  if (error instanceof EmptyAnswerError) return "empty";
+  if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) return "timeout";
+  return "error";
+}
 
-/** 片段小知识库：mock 点评用它指到具体块 */
-const PIECE_NOTES: Readonly<Record<string, string>> = {
-  "piece-na2co3-primary": "无水 Na₂CO₃ 作基准物，摩尔质量大、称量相对误差小，是标定 HCl 的常规选择",
-  "piece-khp": "邻苯二甲酸氢钾常用来标碱，标 HCl 要先把它的钾盐转成酸，路线比 Na₂CO₃ 绕",
-  "piece-burette-acid": "盐酸必须走酸式滴定管，玻璃活塞不会被酸腐蚀",
-  "piece-burette-base": "碱式滴定管内是橡胶管 + 玻璃珠，装盐酸会让橡胶老化、漏液",
-  "piece-pipette-25": "移液管取 25.00 mL 比量筒精确两个数量级，但必须润洗 3 次",
-  "piece-analytical-balance": "分析天平 0.1 mg，基准物称量才能记到小数点后 4 位",
-  "piece-boiled-water": "新沸冷却的蒸馏水赶掉了溶入的 CO₂，配碱液和做空白都要用它",
-  "piece-step-boil": "煮沸驱 CO₂：碳酸转成 CO₂ 逸出，第二步终点才不会判早",
-  "piece-step-blank": "空白试验把蒸馏水带来的碱量扣掉，是系统误差的常规处理",
-  "piece-step-parallel": "平行 3 份才看得出精密度，单次结果没有说服力",
-  "piece-phenolphthalein": "酚酞管第一终点：微红刚好消失",
-  "piece-methyl-orange": "甲基橙管第二终点：黄→橙且 30 s 不褪",
-  "piece-hcl-conc": "浓盐酸 37% 只能稀释成近似浓度，本身不能当标准液",
-};
+/** 每次请求都按剩余预算设超时，保证整条链路 ≤ TIMEOUT_MS */
+function signalUntil(deadline: number): AbortSignal {
+  return AbortSignal.timeout(Math.max(400, deadline - Date.now()));
+}
 
-/** 规则 → 通常的责任片段（点评要指到块上） */
-const RULE_PIECE: Readonly<Record<string, string>> = {
-  "std-primary-standard": "piece-hcl-conc",
-  "analytical-balance": "piece-analytical-balance",
-  "burette-rinse": "piece-step-rinse",
-  "burette-degas-zero": "piece-step-degas",
-  "primary-standard-dried": "piece-param-drying",
-  "parallel-min-and-range": "piece-step-parallel",
-  "parallel-same-batch": "piece-step-parallel",
-  "no-mouth-pipetting": "piece-pipette-25",
-  "flask-receiving": "piece-flask-250",
-  "half-drop-touch-wall": "piece-step-half-drop",
-  "near-endpoint-dropwise": "piece-step-near-endpoint",
-  "indicator-1-2-drops": "piece-phenolphthalein",
-  "endpoint-hold-30s": "piece-param-endpoint",
-  "endpoint-color-criterion": "piece-param-endpoint",
-  "standardization-boil-co2": "piece-step-boil",
-  "blank-test": "piece-step-blank",
-  "acid-base-burette-match": "piece-burette-acid",
-  "total-alkalinity-dual-indicator": "piece-methyl-orange",
-  "conc-acid-into-water": "piece-hcl-conc",
-  "naoh-co2-free-water": "piece-boiled-water",
-  "reading-two-decimals": "piece-burette-acid",
-  "topic-standard-needs-primary": "piece-na2co3-primary",
-  "topic-standard-needs-acid-burette": "piece-burette-acid",
-  "topic-standard-parallel-3": "piece-step-parallel",
-  "topic-alkalinity-dual-indicator": "piece-methyl-orange",
-  "topic-alkalinity-boil": "piece-step-boil",
-  "topic-alkalinity-blank": "piece-step-blank",
-  "topic-acceptance-khp": "piece-khp",
-  "topic-acceptance-single-standard": "piece-na2co3-primary",
-  "topic-acceptance-parallel-blank": "piece-step-blank",
-  "topic-co2-boiled-water": "piece-boiled-water",
-  "topic-co2-boil-and-blank": "piece-step-boil",
-  "topic-co2-endpoint": "piece-param-endpoint",
-};
+/* ── prompt：随主题变 ─────────────────────────────────────────────── */
 
 function pieceTitle(id: string): string {
   return PIECES_BY_ID[id]?.title ?? id;
 }
 
 /**
- * mock 点评：不联网、确定性输出，但**具体到片段**。
- * 先挑 2 个做得对的块夸（带理由），再挑 2 条问题指到责任块，最后给 2 个追问。
- * 明天接扣子后 `text` 换成模型生成，`points` / `questions` 结构不变。
+ * 把「主题 + 块 + 参数 + 规则判定」摊开给模型，避免它凭空猜。
+ * 主题决定 prompt：标题/情境/目标/该主题的规则子集都进提示词。
  */
-export function mockAssess(plan: PlanInput, report: PlanReport, topic?: PlanTopic): LlmAssessResult {
-  const points: AssessPoint[] = [];
+export function buildPrompt(plan: PlanInput, report: PlanReport, topic?: PlanTopic): string {
+  const lines: string[] = [
+    "你在点评大一《无机及分析化学》实验课的一份「拼接式方案」。学生从素材库挑块拼流程，本地规则引擎已经判过一遍。",
+  ];
 
-  const goodCandidates = plan.pieces.filter((id) => PIECE_NOTES[id]);
-  for (const id of goodCandidates.slice(0, 2)) {
-    points.push({ kind: "good", pieceId: id, text: `用了「${pieceTitle(id)}」：${PIECE_NOTES[id]}。` });
+  if (topic) {
+    lines.push(`【主题】${topic.title}（难度：${topic.level}）`);
+    lines.push(`【情境】${topic.scene}`);
+    lines.push(`【目标】${topic.goal}`);
+    lines.push("【本主题硬约束】");
+    for (const constraint of topic.constraints) {
+      const rule = topic.rules.find((item) => item.code === constraint.ruleCode);
+      const level = rule?.level === "block" ? "硬约束" : "扣分项";
+      lines.push(`- ${constraint.text}（${constraint.ruleCode} / ${level}）`);
+    }
+  } else {
+    lines.push("【主题】学生没有选主题，按基础 21 条规则点评。");
   }
 
-  const risks: PlanIssue[] = [...report.issues]
-    .sort((a, b) => (a.level === b.level ? 0 : a.level === "block" ? -1 : 1))
-    .slice(0, 2);
-  for (const issue of risks) {
-    const pieceId = RULE_PIECE[issue.ruleId];
-    // 指到具体片段：缺的块说「还没放」，放了但用错的块说「问题出在」
-    const missing = pieceId !== undefined && !plan.pieces.includes(pieceId);
-    points.push({
-      kind: "risk",
-      ruleId: issue.ruleId,
-      pieceId,
-      text:
-        pieceId && missing
-          ? `还缺「${pieceTitle(pieceId)}」：${issue.text} —— ${issue.hint}`
-          : pieceId
-            ? `问题出在「${pieceTitle(pieceId)}」：${issue.text} —— ${issue.hint}`
-            : `${issue.text} —— ${issue.hint}`,
+  lines.push(`【学生放入的块】共 ${plan.pieces.length} 块，顺序即流程：`);
+  if (plan.pieces.length === 0) {
+    lines.push("- 空");
+  } else {
+    plan.pieces.forEach((id, index) => {
+      lines.push(`${index + 1}. ${pieceTitle(id)}（${id}）`);
     });
   }
 
-  if (points.filter((p) => p.kind === "good").length === 0) {
-    points.push({ kind: "todo", text: "方案还是空的：先从主题推荐的块里挑一个起点（基准物或滴定管）。" });
+  const params = plan.params ? Object.entries(plan.params) : [];
+  lines.push("【参数】");
+  if (params.length === 0) {
+    lines.push("- 无");
+  } else {
+    for (const [key, value] of params) lines.push(`- ${key} = ${String(value)}`);
   }
 
-  const questions: string[] = [];
-  const parallel = plan.params?.parallelCount;
-  if (parallel !== undefined && Number(parallel) < 3) {
-    questions.push(`你把平行次数设成 ${String(parallel)} —— 两份能看出精密度吗？`);
-  }
-  if (plan.pieces.includes("piece-hcl-conc") && !plan.pieces.includes("piece-step-dilute")) {
-    questions.push("浓盐酸稀释到 ≈0.1 mol/L 之后，你怎么确认稀释后的实际浓度？");
-  }
-  if (!plan.pieces.includes("piece-step-blank")) {
-    questions.push("如果蒸馏水里溶了 CO₂，它会让结果偏高还是偏低？你打算怎么扣掉？");
-  }
-  if (questions.length === 0) {
-    questions.push("这个方案里哪一步的误差最大？你怎么把它压到 0.2% 以内？");
+  lines.push("【规则引擎判定】");
+  lines.push(
+    `- 得分 ${report.score}/100；可执行=${report.feasible ? "是" : "否"}；硬约束 ${report.blockCount} 条、扣分项 ${report.warnCount} 条`,
+  );
+
+  lines.push("【未通过】");
+  if (report.issues.length === 0) {
+    lines.push("- 无");
+  } else {
+    for (const issue of report.issues.slice(0, 10)) {
+      lines.push(`- [${issue.level}] ${issue.ruleId}：${issue.text}（${issue.hint}）`);
+    }
   }
 
-  const topicLine = topic ? `（主题：${topic.title}）` : "";
-  const head = report.feasible
-    ? `方案可执行${topicLine}：规则 ${report.score} 分。`
-    : `方案还不能做${topicLine}：${report.blockCount} 条硬约束没过。`;
-  const body = points
-    .filter((p) => p.kind !== "good")
-    .map((p) => p.text)
-    .slice(0, 2)
-    .join(" ");
+  lines.push(`【已通过】${report.passed.length > 0 ? report.passed.slice(0, 15).join("、") : "无"}`);
 
-  return {
-    provider: "mock",
-    text: `${head}${body || "结构和顺序都没问题，可以进操作台验证。"}`,
-    points,
-    questions: questions.slice(0, 2),
-  };
+  lines.push("【写作要求】");
+  lines.push("1. 结论先行：第一句就说这份方案能不能进操作台，不要铺垫。");
+  lines.push("2. 只依据上面的判定说话：不要复述规则原文，不要编造化学计量关系、浓度或数据。");
+  lines.push("3. points 必须点名具体素材块（pieceId）或规则（ruleId）；pieceId / ruleId 只能取上面出现过的值。");
+  lines.push("4. questions 最多 2 条，必须能推动学生改方案（问变量、问依据、问怎么排除）。");
+  lines.push("5. 中文，text 不超过 120 字，不要 Markdown。");
+  lines.push(
+    '【输出】只输出 JSON：{"text":"…","points":[{"kind":"good|risk|todo","pieceId":"piece-…","ruleId":"…","text":"…"}],"questions":["…"]}',
+  );
+  return lines.join("\n");
 }
 
-function buildPrompt(plan: PlanInput, report: PlanReport, topic?: PlanTopic): string {
-  const bad = report.issues.slice(0, 8);
-  const passed = report.passed.slice(0, 8);
-  const badLines = bad.length
-    ? bad.map((item: PlanIssue) => `- [${item.level}] ${item.ruleId}：${item.text}`).join("\n")
-    : "- 无";
-  const okLines = passed.length ? passed.map((line) => `- ${line}`).join("\n") : "- 无";
-  const pieceLines = plan.pieces.map((id) => `- ${id}（${pieceTitle(id)}）`).join("\n");
+/* ── 解析模型输出 ─────────────────────────────────────────────────── */
 
-  return [
-    "你在点评一个大一无机及分析化学实验的「拼接式方案」。",
-    topic ? `学生选的主题：${topic.title} —— ${topic.goal}` : "学生没有选主题。",
-    `方案共 ${plan.pieces.length} 块：\n${pieceLines || "- 空"}`,
-    `规则引擎判定：得分 ${report.score}/100，可执行=${report.feasible ? "是" : "否"}，硬约束 ${report.blockCount} 条、警告 ${report.warnCount} 条。`,
-    `未通过：\n${badLines}`,
-    `已通过：\n${okLines}`,
-    "请用 3 句话说清：① 能不能做 ② 最要紧的一个错误和它的化学后果 ③ 下一步怎么改。",
-    "必须点出具体片段的名字（例如「移液管 25.00 mL」），不要泛泛而谈。不要 Markdown，不超过 150 字。",
-  ].join("\n");
+function plainText(text: string): string {
+  return text
+    .replace(/\*\*/g, "")
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/^[-*]\s+/gm, "")
+    .trim();
 }
 
-async function callCoze(prompt: string): Promise<string | null> {
-  const token = process.env.COZE_API_TOKEN;
-  const botId = process.env.COZE_BOT_ID;
-  if (!token || !botId) return null;
-  const res = await fetch("https://api.coze.cn/v3/chat", {
+function sanitizePoints(value: unknown, topic: PlanTopic | undefined): AssessPoint[] {
+  if (!Array.isArray(value)) return [];
+  const points: AssessPoint[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const raw = item as Record<string, unknown>;
+    const kind = raw.kind;
+    const text = typeof raw.text === "string" ? plainText(raw.text) : "";
+    if ((kind !== "good" && kind !== "risk" && kind !== "todo") || !text) continue;
+    const pieceId = typeof raw.pieceId === "string" && PIECES_BY_ID[raw.pieceId] ? raw.pieceId : undefined;
+    const ruleId =
+      typeof raw.ruleId === "string" &&
+      (RULES_BY_CODE[raw.ruleId] !== undefined || topic?.rules.some((rule) => rule.code === raw.ruleId))
+        ? raw.ruleId
+        : undefined;
+    if (!pieceId && !ruleId) continue; // 指不到块或规则的要点不收
+    points.push({ kind, pieceId, ruleId, text: text.slice(0, 160) });
+    if (points.length === 5) break;
+  }
+  return points;
+}
+
+function sanitizeQuestions(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    .map((item) => item.trim().slice(0, 120))
+    .slice(0, 2);
+}
+
+/**
+ * 模型可能不听话：先按 JSON 解析；不是 JSON 就把整段当点评文本（points 交给本地兜底）。
+ * 导出给单测，坏 JSON 的行为必须可验证。
+ */
+export function parseModelAnswer(
+  raw: string,
+  topic?: PlanTopic,
+): { text: string; points: AssessPoint[]; questions: string[] } {
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    try {
+      const parsed = JSON.parse(cleaned.slice(start, end + 1)) as Record<string, unknown>;
+      const text = typeof parsed.text === "string" ? plainText(parsed.text) : "";
+      if (text) {
+        return {
+          text: text.slice(0, 600),
+          points: sanitizePoints(parsed.points, topic),
+          questions: sanitizeQuestions(parsed.questions),
+        };
+      }
+    } catch {
+      // 落到下面：当成纯文本
+    }
+  }
+  return { text: plainText(cleaned).slice(0, 600), points: [], questions: [] };
+}
+
+/* ── 云端 provider ────────────────────────────────────────────────── */
+
+type CozeEnvelope<T> = { code?: number; msg?: string; data?: T };
+
+/** 扣子 v3 chat：发起 → 轮询 retrieve 到 completed → 取 message/list 里的 answer */
+async function callCoze(prompt: string, deadline: number): Promise<string> {
+  const token = (process.env.COZE_API_TOKEN ?? "").trim();
+  const botId = (process.env.COZE_BOT_ID ?? "").trim();
+  if (!token || !botId) throw new EmptyAnswerError("no-coze-credentials");
+  const base = (process.env.COZE_API_BASE ?? "https://api.coze.cn").replace(/\/+$/, "");
+  const headers = { "content-type": "application/json", authorization: `Bearer ${token}` };
+
+  const startRes = await fetch(`${base}/v3/chat`, {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    headers,
+    signal: signalUntil(deadline),
     body: JSON.stringify({
       bot_id: botId,
       user_id: "chem-lab",
@@ -201,42 +237,113 @@ async function callCoze(prompt: string): Promise<string | null> {
       auto_save_history: false,
       additional_messages: [{ role: "user", content: prompt, content_type: "text" }],
     }),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
-  if (!res.ok) return null;
-  const json = (await res.json()) as {
-    data?: { messages?: Array<{ type?: string; content?: string }> };
-  };
-  return json.data?.messages?.find((item) => item.type === "answer")?.content?.trim() || null;
+  if (!startRes.ok) throw new HttpError(startRes.status);
+  const start = (await startRes.json()) as CozeEnvelope<{ id?: string; conversation_id?: string; status?: string }>;
+  if (start.code !== 0) throw new HttpError(start.code === 4290 ? 429 : 400, `coze-${start.code}`);
+  const chatId = start.data?.id;
+  const conversationId = start.data?.conversation_id;
+  if (!chatId || !conversationId) throw new EmptyAnswerError("coze-no-chat-id");
+
+  const query = new URLSearchParams({ conversation_id: conversationId, chat_id: chatId }).toString();
+  let status = start.data?.status ?? "in_progress";
+  while (status !== "completed") {
+    if (status === "failed" || status === "requires_action" || status === "canceled") {
+      throw new EmptyAnswerError(`coze-${status}`);
+    }
+    if (Date.now() + COZE_POLL_MS >= deadline) throw new DeadlineError();
+    await new Promise((resolve) => setTimeout(resolve, COZE_POLL_MS));
+    const retrieveRes = await fetch(`${base}/v3/chat/retrieve?${query}`, { headers, signal: signalUntil(deadline) });
+    if (!retrieveRes.ok) throw new HttpError(retrieveRes.status);
+    const retrieve = (await retrieveRes.json()) as CozeEnvelope<{ status?: string }>;
+    if (retrieve.code !== 0) throw new EmptyAnswerError(`coze-${retrieve.code}`);
+    status = retrieve.data?.status ?? status;
+  }
+
+  const listRes = await fetch(`${base}/v3/chat/message/list?${query}`, { headers, signal: signalUntil(deadline) });
+  if (!listRes.ok) throw new HttpError(listRes.status);
+  const list = (await listRes.json()) as CozeEnvelope<Array<{ type?: string; content?: string; content_type?: string }>>;
+  if (list.code !== 0) throw new EmptyAnswerError(`coze-${list.code}`);
+  const answer = list.data?.find(
+    (item) => item.type === "answer" && typeof item.content === "string" && item.content.trim().length > 0,
+  );
+  if (!answer?.content) throw new EmptyAnswerError("coze-no-answer");
+  return answer.content.trim();
 }
 
-async function callArk(prompt: string): Promise<string | null> {
-  const key = process.env.ARK_API_KEY;
-  if (!key) return null;
-  const base = process.env.ARK_BASE_URL ?? "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
-  const model = process.env.ARK_MODEL ?? "doubao-seed-1-6-flash";
-  const res = await fetch(base, {
+type OpenAiTarget = { url: string; apiKey: string; model: string };
+
+/** OpenAI 兼容端点：COZE_LLM_URL 优先，其次方舟 / DeepSeek */
+function resolveOpenAiTarget(): OpenAiTarget | undefined {
+  const explicitUrl = (process.env.COZE_LLM_URL ?? "").trim();
+  if (explicitUrl) {
+    const key = (
+      process.env.COZE_LLM_KEY ??
+      process.env.COZE_LLM_API_KEY ??
+      process.env.DEEPSEEK_API_KEY ??
+      process.env.ARK_API_KEY ??
+      ""
+    ).trim();
+    if (!key) return undefined;
+    return { url: explicitUrl, apiKey: key, model: (process.env.COZE_LLM_MODEL ?? "doubao-seed-1-6-flash").trim() };
+  }
+  const arkKey = (process.env.ARK_API_KEY ?? "").trim();
+  if (arkKey) {
+    return {
+      url: (process.env.ARK_BASE_URL ?? "https://ark.cn-beijing.volces.com/api/v3/chat/completions").trim(),
+      apiKey: arkKey,
+      model: (process.env.ARK_MODEL ?? "doubao-seed-1-6-flash").trim(),
+    };
+  }
+  const deepseekKey = (process.env.DEEPSEEK_API_KEY ?? "").trim();
+  if (deepseekKey) {
+    const base = (process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com").trim().replace(/\/+$/, "");
+    return {
+      url: `${base}/chat/completions`,
+      apiKey: deepseekKey,
+      model: (process.env.DEEPSEEK_MODEL ?? "deepseek-chat").trim(),
+    };
+  }
+  return undefined;
+}
+
+async function callOpenAi(prompt: string, deadline: number): Promise<string> {
+  const target = resolveOpenAiTarget();
+  if (!target) throw new EmptyAnswerError("no-llm-credentials");
+  const res = await fetch(target.url, {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+    headers: { "content-type": "application/json", authorization: `Bearer ${target.apiKey}` },
+    signal: signalUntil(deadline),
     body: JSON.stringify({
-      model,
+      model: target.model,
       temperature: 0.3,
-      messages: [{ role: "user", content: prompt }],
+      max_tokens: 600,
+      stream: false,
+      messages: [
+        { role: "system", content: "你是严谨的分析化学实验助教，只根据给定材料点评，不编造数据。" },
+        { role: "user", content: prompt },
+      ],
     }),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
-  if (!res.ok) return null;
-  const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-  return json.choices?.[0]?.message?.content?.trim() || null;
+  if (!res.ok) throw new HttpError(res.status);
+  const json = (await res.json()) as { choices?: Array<{ message?: { content?: unknown } }> };
+  const text = json.choices?.[0]?.message?.content;
+  if (typeof text !== "string" || text.trim().length === 0) throw new EmptyAnswerError("empty-completion");
+  return text.trim();
 }
 
-/** 当前配置指向哪个 provider（auto 时按可用 key 推断）。 */
-export function providerOf(): LlmAssessResult["provider"] {
+/** 当前配置指向哪个 provider（auto 时按可用凭据推断）。 */
+export function providerOf(): AssessProvider {
   const chosen = (process.env.PLAN_ASSESS_PROVIDER ?? "auto").trim().toLowerCase();
   if (chosen === "mock" || chosen === "coze" || chosen === "ark") return chosen;
-  if (process.env.COZE_API_TOKEN && process.env.COZE_BOT_ID) return "coze";
-  if (process.env.ARK_API_KEY) return "ark";
+  if ((process.env.COZE_API_TOKEN ?? "").trim() && (process.env.COZE_BOT_ID ?? "").trim()) return "coze";
+  if (resolveOpenAiTarget()) return "ark";
   return "mock";
+}
+
+/** 有没有真正的模型通道（页面用来标注「离线点评 / AI 点评」）。 */
+export function llmEnabled(): boolean {
+  return providerOf() !== "mock";
 }
 
 /**
@@ -248,22 +355,28 @@ export async function assessPlan(
   report: PlanReport,
   topic?: PlanTopic,
 ): Promise<LlmAssessResult> {
+  const local = mockAssess(plan, report, topic);
   const provider = providerOf();
-  const fallback = mockAssess(plan, report, topic);
-  if (provider === "mock") return fallback;
+  if (provider === "mock") return local;
 
+  const deadline = Date.now() + TIMEOUT_MS;
   try {
     const prompt = buildPrompt(plan, report, topic);
-    const text = provider === "coze" ? await callCoze(prompt) : await callArk(prompt);
-    if (!text) return { ...fallback, text: `${fallback.text}（AI 通道未返回，以下是本地点评）` };
-    // 云端只补一段总体点评；片段级 points 仍由规则给出，保证指得准
-    return { ...fallback, provider, text };
-  } catch {
-    return fallback;
+    const raw = provider === "coze" ? await callCoze(prompt, deadline) : await callOpenAi(prompt, deadline);
+    const parsed = parseModelAnswer(raw, topic);
+    if (!parsed.text) return { ...local, fallback: "empty" };
+    if (parsed.points.length === 0) {
+      // 模型只给了文字（或 JSON 坏）：文字用模型的，指到块的要点仍用本地
+      return { ...local, provider, text: parsed.text, pointsFrom: "local" };
+    }
+    return {
+      provider,
+      text: parsed.text,
+      points: parsed.points,
+      questions: parsed.questions.length > 0 ? parsed.questions : local.questions,
+      pointsFrom: "model",
+    };
+  } catch (error) {
+    return { ...local, fallback: reasonOf(error) };
   }
-}
-
-/** 有没有真正的模型通道（页面用来标注「本地点评 / AI 点评」）。 */
-export function llmEnabled(): boolean {
-  return providerOf() !== "mock";
 }

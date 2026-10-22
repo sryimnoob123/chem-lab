@@ -1,28 +1,28 @@
-# 交接 · webapp（2026-10-22 深夜 · 拖拽/动画性能）
+# 交接 · webapp（2026-10-23 04:4x · 拼接实验主题 + AI 点评）
 
 ## 状态
-全站拖拽热路径已体检并改完，实测与回归全绿，已提交并推 main（见 `.team/notes/webapp.md` 同日条目）。
+`/plan` 的主题与点评都改完，本地 dev/prod 都能点，回归全绿，**未提交**（等钱家良发话）。
 
 ## 本轮改动（文件）
-- `components/exp/scene/scene.module.css`：拖动期间 `transition:none` + `will-change`；删器皿过渡里的 filter。
-- `app/styles/motion.css`：`.ix` 去掉常驻 will-change，只在 `[data-dragging]` 时加。
-- `components/exp/scene/tool-tray.tsx`：拖工具改 ref + rAF + dataset，移动期间 0 setState。
-- `components/exp/scene/use-bench-drag.ts`：落点矩形快照（不再每帧 elementsFromPoint）+ hover 只在变化时写。
-- `components/exp/scene/bench-scene.tsx`：按下态改 dataset 直写（不再整块重渲染）。
-- `app/exp/[id]/scene-stage.tsx`：落点快照 + rAF 合并 hover + 影子常驻隐藏 + 吞掉补发 click + 用坐标判拖动（不用 movementX）+ 补 endDrag。
-- `app/plan/{piece-library.tsx,designer.tsx,plan.module.css}`：素材可拖进「我的方案」（零 setState）。
-- `evidence/perf-samples.json` / `perf-timeline.html` / `perf-timeline.png`：原始帧样本与出图。
+- `lib/plan/topics.ts`：4 主题（情境/目标/2~3 条可判约束/难度 1-2-2-3/featured/questions/rules）+ `applyTopic()` 同一张评分卡。
+- `app/plan/topic-picker.tsx`、`plan.module.css`：难度刻度 + 两层文字卡；画布内 `topicHead` sticky。
+- `app/plan/piece-library.tsx`：`featured` 下标即置顶顺序。
+- `lib/plan/llm-assess.ts`：唯一点评入口（mock|coze|ark，12 s 上限，prompt 随主题变）；`lib/plan/assess-mock.ts` 新增（离线点评，point 必指 pieceId/ruleId）。
+- 删除 `lib/plan/assess.ts` + `assess.test.ts`（写死实验名的旧链路）。
+- `app/plan/designer.tsx`、`app/api/plan/assess/route.ts`、`lib/plan/rule-labels.ts`。
+- `scripts/stub-llm.mjs`：本机 OpenAI 兼容 stub，验真实 provider 链路；`evidence/plan-ai/`：10 张截图 + README。
 
-## 实测口径（照抄可用）
-- 帧时长 = rAF 间隔（headless 无 vsync，≈180fps，空闲 p95 6.3ms）；拖动 p95 6.2ms = 无成本。
-- 跟手 = 拖动中 `getComputedStyle(el).transition === 'none'` + transform 由 rAF 一帧一写。
-- React commit 用假 `__REACT_DEVTOOLS_GLOBAL_HOOK__.onCommitFiberRoot` 计数（prod 构建没有该钩子）。
+## 实测口径
+- `npm run lint` 0 error / 20 warning（历史文件）；`typecheck` 干净；`test` 42 files / 607；`build` 通过。
+- 干净浏览器会话 4 主题各走一遍 → `window.__errs` 为空。dev :3000 / 生产 :3001 均 200。
+- 三档：100 分全过 / 95 分 warn（平行 2 份）/ 88 分 block（删分析天平）。
+- 真 provider 用本机 stub 打通（标题「AI 点评」）；停掉 stub 会显示「AI 连不上，已用离线点评」。
 
 ## 待办
-1. 按下那一次渲染（试剂 = setSelectedId + beginDrag）仍是唯一尖峰，prod <30ms，想再压就把 draggingId 改属性直写。
-2. `components/exp/scene/reagent-rack.tsx`（旧 HTML5 拖拽）只剩预览页用，`onDragOver` 里还在 setHoverId。
-3. 拼接页拖拽在触屏上是淡的（未设 touch-action），桌面演示够用。
+1. 真扣子豆包没连过（本机无 `COZE_API_TOKEN`/`COZE_BOT_ID`）；拿到凭据后按 `evidence/plan-ai/README.md` 起一次。
+2. 素材块 `data-demo-id` 用 slug（`demo-design-piece-sodium-carbonate`），不是 pieceId——e2e 写错会静默落空。
+3. 重 build 前先停 :3001/:3002（跑在 `.next/standalone` 里，否则 EBUSY）。
 
 ## 环境
-- dev：`npm run dev`（3000）；prod 本地：`node .next/standalone/server.js`（先 `npm run build` + 复制 `.next/static`、`public`）。
-- 交互验证必须用 browser_exec（Playwright headless 访问 localhost 不 hydration）。
+- dev :3000（`npm run dev`）；生产 :3001（build 后手动复制 `.next/static`、`public`、`.env.production` 到 standalone）。
+- 交互验证必须用 browser_exec（Playwright headless 访问 localhost 不 hydration）；长页面截图用 `cdp('Page.captureScreenshot', captureBeyondViewport=False)`。

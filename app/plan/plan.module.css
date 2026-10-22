@@ -731,7 +731,7 @@
   padding: var(--sp-4) var(--sp-5) var(--sp-4);
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: var(--panel);
+  background: var(--card, #fff);
   text-align: left;
   cursor: pointer;
   transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), border-color 180ms cubic-bezier(0.23, 1, 0.32, 1),
@@ -758,6 +758,39 @@
   font-size: var(--type-meta);
   letter-spacing: 0.08em;
   color: var(--ink-2);
+}
+
+/* 难度：一行元信息（编号 + 档位 + 三条刻度），不加说明文字 */
+.topicMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.topicLevel {
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: var(--type-meta);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.topicMeter {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.topicMeterBar {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.topicMeterBar[data-on="true"] {
+  background: var(--exp-accent);
 }
 
 .topicTitle {
@@ -832,17 +865,22 @@
   }
 }
 
-/* 主题页头：进了画布也要能看见自己在做哪个主题 */
+/* 主题页头：进了画布也要能看见自己在做哪个主题；吸顶，滚动时一直在 */
 .topicHead {
+  position: sticky;
+  top: var(--sp-2);
+  z-index: 8;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 10px 14px;
+  margin: var(--sp-3) 0 var(--sp-4);
   padding: 12px 16px;
   border: 1px solid var(--line);
   border-left: 3px solid var(--exp-accent);
   border-radius: 10px;
-  background: var(--panel);
+  background: var(--card, #fff);
+  box-shadow: 0 6px 18px -16px color-mix(in srgb, var(--ink) 55%, transparent);
 }
 
 .topicHeadTitle {
@@ -878,7 +916,12 @@
   border-left: 2px solid var(--exp-accent);
 }
 
-/* 点评（P1）：总体一句话 + 指到具体片段的要点 + 追问 */
+/* 点评（P1）：一句结论 + 指到块/规则的要点（good/risk/todo 单列，不用三栏）+ 最多 2 条追问 */
+.remarkBody {
+  /* 云端点评到达前后结构一致：留底高，避免面板一跳 */
+  min-height: 168px;
+}
+
 .remarkPoints {
   display: grid;
   gap: 6px;
@@ -889,28 +932,39 @@
 
 .remarkPoint {
   position: relative;
-  padding-left: 16px;
+  padding-left: 18px;
   font-size: var(--type-body);
   line-height: 1.6;
   color: var(--ink-2, #4a5768);
 }
 
-.remarkDot {
+.remarkIcon {
   position: absolute;
-  left: 3px;
-  top: 0.62em;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--ink-3, #6b7a8c);
+  left: 1px;
+  top: 0;
+  font-family: var(--font-mono);
+  font-size: var(--type-meta);
+  line-height: 1.9;
+  color: var(--ink-2);
 }
 
-.remarkPoint[data-kind="good"] .remarkDot {
-  background: var(--ok, #2f7d5d);
+.remarkPoint[data-kind="good"] .remarkIcon {
+  color: var(--jade-600);
 }
 
-.remarkPoint[data-kind="risk"] .remarkDot {
-  background: var(--danger, #a63a3a);
+.remarkPoint[data-kind="risk"] .remarkIcon {
+  color: var(--danger);
+}
+
+.remarkPoint[data-kind="todo"] .remarkIcon {
+  color: var(--river-700);
+}
+
+.remarkFallback {
+  margin: 6px 0 0;
+  font-size: var(--type-meta);
+  line-height: 1.5;
+  color: var(--ink-2);
 }
 
 .remarkAsk {

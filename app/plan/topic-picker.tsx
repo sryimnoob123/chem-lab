@@ -24,16 +24,27 @@ export function TopicPicker({ onPick }: { onPick: (topic: PlanTopic) => void }) 
             data-demo-id={`demo-topic-${topic.id}`}
             onClick={() => onPick(topic)}
           >
-            <span className={s.topicNo}>{String(index + 1).padStart(2, "0")}</span>
+            <span className={s.topicMeta}>
+              <span className={s.topicNo}>{String(index + 1).padStart(2, "0")}</span>
+              <span className={s.topicLevel} data-demo-id={`demo-topic-level-${topic.id}`}>
+                {topic.level}
+              </span>
+              {/* 难度刻度：三条，填几条就是几档（视觉区分四张卡，不另加说明文字） */}
+              <span className={s.topicMeter} aria-hidden="true">
+                {[1, 2, 3].map((step) => (
+                  <span key={step} className={s.topicMeterBar} data-on={step <= topic.difficulty} />
+                ))}
+              </span>
+            </span>
             <span className={s.topicTitle}>{topic.title}</span>
             {/* 情境一行（超长省略，悬停看全）；目标句进画布后由主题页头承担，卡片不重复 */}
             <span className={s.topicScene} title={topic.scene}>
               {topic.scene}
             </span>
             <span className={s.topicRules}>
-              {topic.constraints.map((line) => (
-                <span key={line} className={s.topicRule} title={line}>
-                  {line}
+              {topic.constraints.map((constraint) => (
+                <span key={constraint.ruleCode} className={s.topicRule} title={constraint.text}>
+                  {constraint.text}
                 </span>
               ))}
             </span>

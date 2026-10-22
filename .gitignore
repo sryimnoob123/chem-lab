@@ -54,3 +54,4 @@ public/shots-prod/
 
 # 本机 Hermes profile 的 skill 副本（只作源，不入库）
 .dsh/skills/
+scripts/stub-llm-requests.log

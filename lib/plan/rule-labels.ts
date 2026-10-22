@@ -30,6 +30,19 @@ export const RULE_SHORT: Readonly<Record<string, string>> = Object.freeze({
   "standardization-boil-co2": "煮沸驱 CO₂",
   "blank-test": "空白试验校正",
   "acid-base-burette-match": "酸/碱滴定管匹配",
+  // 主题专属规则（topics.ts）：不登记会按 label 首句截断，出现「平行测定 ≥3 份才够判」这种半句
+  "topic-standard-needs-primary": "基准物标定",
+  "topic-standard-needs-acid-burette": "酸式滴定管",
+  "topic-standard-parallel-3": "平行 3 份",
+  "topic-acceptance-khp": "指定 KHP",
+  "topic-acceptance-single-standard": "单一基准物",
+  "topic-acceptance-parallel-blank": "平行 + 空白",
+  "topic-co2-boiled-water": "新沸冷却水",
+  "topic-co2-boil-and-blank": "煮沸 + 空白",
+  "topic-co2-endpoint": "终点判据",
+  "topic-alkalinity-dual-indicator": "双指示剂",
+  "topic-alkalinity-boil": "煮沸驱 CO₂",
+  "topic-alkalinity-blank": "空白校正",
 });
 
 const SEPARATOR = /[，；：,;:]/;

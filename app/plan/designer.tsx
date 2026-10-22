@@ -14,7 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { REFERENCE_PLAN, getPiece, type PieceKind, type PlanInput } from "@/lib/plan/pieces";
 import { validate } from "@/lib/plan/rules";
-import { offlineAssessment } from "@/lib/plan/assess";
+import { mockAssess, type AssessPointKind } from "@/lib/plan/assess-mock";
 import { applyTopic, type PlanTopic } from "@/lib/plan/topics";
 import type { LlmAssessResult } from "@/lib/plan/llm-assess";
 import { PieceLibrary } from "./piece-library";
@@ -23,6 +23,19 @@ import { TopicPicker } from "./topic-picker";
 import s from "./plan.module.css";
 
 const DEFAULT_PARAMS: Record<string, string | number | boolean> = { ...REFERENCE_PLAN.params };
+
+/** 点评要点三类：图标代替三栏堆叠（颜色由 CSS 的 data-kind 控制） */
+const KIND_ICON: Record<AssessPointKind, string> = { good: "✓", risk: "!", todo: "→" };
+
+/** 云端失败原因 → 一行小字（不改变面板结构） */
+const FALLBACK_LABEL: Record<NonNullable<LlmAssessResult["fallback"]>, string> = {
+  timeout: "AI 超时",
+  "rate-limit": "AI 限流",
+  http: "AI 接口报错",
+  empty: "AI 没返回内容",
+  error: "AI 返回格式不对",
+  network: "AI 连不上",
+};
 
 const PRETTY_PARAM: { key: string; label: string; kind: "number" | "bool" }[] = [
   { key: "dryTemp", label: "基准物干燥温度（℃）", kind: "number" },
@@ -42,15 +55,25 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
   const plan: PlanInput = useMemo(() => ({ pieces, params }), [pieces, params]);
   /** 基础 21 条 + 主题专属约束合成一份报告：一张评分卡，不出现两套分数 */
   const report = useMemo(() => applyTopic(validate(plan), plan, topic ?? undefined), [plan, topic]);
-  const assessment = useMemo(() => offlineAssessment(plan, report), [plan, report]);
   /**
-   * 点评（P1）：规则给分，AI 只点评。走 `/api/plan/assess`，provider 由服务端 env 决定；
-   * 接口挂了就用 offlineAssessment 的本地文案兜底 —— 演示时不允许空着。
+   * 点评只有一条链路（`/api/plan/assess` → `lib/plan/llm-assess.ts`）：
+   * - `local` 是本地点评（assess-mock.ts 的 mockAssess），先渲染它，永远有内容、不白屏；
+   * - 云端返回前也显示它，保证面板高度不跳；
+   * - provider 没凭据 / 超时 / 限流 / 坏 JSON 时，服务端回退的也是同一份 local。
    */
-  const [remark, setRemark] = useState<LlmAssessResult | null>(null);
+  const local = useMemo(() => mockAssess(plan, report, topic ?? undefined), [plan, report, topic]);
+
+  const [remote, setRemote] = useState<{ key: string; result: LlmAssessResult } | null>(null);
   const [remarkLoading, setRemarkLoading] = useState(false);
+  /** 云端结果必须与当前方案同 key，避免旧点评挂在新方案上 */
+  const requestKey = useMemo(
+    () => JSON.stringify([pieces, params, topic?.id ?? null]),
+    [pieces, params, topic],
+  );
+
   useEffect(() => {
     if (pieces.length === 0) return undefined;
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setRemarkLoading(true);
       void fetch("/api/plan/assess", {
@@ -60,23 +83,37 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
       })
         .then((res) => (res.ok ? res.json() : null))
         .then((data: (LlmAssessResult & { ok?: boolean }) | null) => {
-          if (data?.ok) {
-            setRemark({
+          if (cancelled || !data?.ok) return;
+          setRemote({
+            key: requestKey,
+            result: {
               provider: data.provider,
               text: data.text,
               points: data.points ?? [],
               questions: data.questions ?? [],
-            });
-          }
+              fallback: data.fallback,
+              pointsFrom: data.pointsFrom,
+            },
+          });
         })
         .catch(() => undefined)
-        .finally(() => setRemarkLoading(false));
+        .finally(() => {
+          if (!cancelled) setRemarkLoading(false);
+        });
     }, 600);
-    return () => window.clearTimeout(timer);
-  }, [pieces, params, topic]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [pieces, params, topic, requestKey]);
 
-  /** 方案清空后不显示上一次的点评：派生，不靠 effect 清 state */
-  const shownRemark = pieces.length > 0 ? remark : null;
+  /** 当前方案的点评：云端同 key 才用云端，否则本地 */
+  const shown = remote && remote.key === requestKey ? remote.result : local;
+  const busy = remarkLoading && pieces.length > 0;
+  const orderedPoints = useMemo(() => {
+    const rank: Record<string, number> = { good: 0, risk: 1, todo: 2 };
+    return [...shown.points].sort((a, b) => (rank[a.kind] ?? 9) - (rank[b.kind] ?? 9));
+  }, [shown.points]);
 
   const toggle = (id: string) =>
     setPieces((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -104,8 +141,8 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
           feasible: report.feasible,
           score: report.score,
           issues: report.issues.map((i) => ({ ruleId: i.ruleId, level: i.level, text: i.text })),
-          assessment: shownRemark?.text ?? assessment.text,
-          assessmentOffline: !shownRemark || shownRemark.provider === "mock",
+          assessment: shown.text,
+          assessmentOffline: shown.provider === "mock",
         }),
       });
       const body = (await res.json().catch(() => ({}))) as {
@@ -139,6 +176,9 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
       {topic ? (
         <div className={s.topicHead} data-demo-id="demo-topic-head">
           <span className={s.topicHeadTitle}>{topic.title}</span>
+          <span className={s.topicLevel} data-demo-id="demo-topic-level">
+            {topic.level}
+          </span>
           <span className={s.topicHeadGoal}>{topic.goal}</span>
           <button
             type="button"
@@ -163,10 +203,6 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
 
       {!topic ? null : (
         <>
-      <p className={s.lead}>
-        点块加入方案，上下调序；顶部随时给分。
-      </p>
-
       <ScorePanel report={report} pieceCount={pieces.length} />
 
       <div className={s.cols}>
@@ -300,35 +336,50 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
             </div>
           </section>
 
-          <section className={s.panel} aria-label="方案点评">
+          <section className={s.panel} aria-label="方案点评" aria-busy={busy}>
             <div className={s.panelHead}>
               <h2 className={s.panelTitle}>方案点评</h2>
               <span className={s.mono} data-demo-id="demo-remark-provider">
-                {remarkLoading ? "生成中…" : shownRemark ? (shownRemark.provider === "mock" ? "本地点评" : "AI 点评") : "本地点评"}
+                {busy ? "正在点评…" : shown.provider === "mock" ? "离线点评" : "AI 点评"}
               </span>
             </div>
-            <p className={s.remark} data-demo-id="demo-remark-text">
-              {shownRemark?.text ?? assessment.text}
-            </p>
-            {shownRemark && shownRemark.points.length > 0 ? (
-              <ul className={s.remarkPoints} data-demo-id="demo-remark-points">
-                {shownRemark.points.map((point, index) => (
-                  <li key={`${point.kind}-${index}`} className={s.remarkPoint} data-kind={point.kind}>
-                    <span className={s.remarkDot} aria-hidden="true" />
-                    {point.text}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {shownRemark && shownRemark.questions.length > 0 ? (
-              <div className={s.remarkAsk} data-demo-id="demo-remark-questions">
-                {shownRemark.questions.map((question) => (
-                  <p key={question} className={s.remarkQuestion}>
-                    {question}
-                  </p>
-                ))}
-              </div>
-            ) : null}
+            <div className={s.remarkBody}>
+              <p className={s.remark} data-demo-id="demo-remark-text">
+                {shown.text}
+              </p>
+              {shown.fallback ? (
+                <p className={s.remarkFallback} data-demo-id="demo-remark-fallback">
+                  {FALLBACK_LABEL[shown.fallback]}，已用离线点评。
+                </p>
+              ) : null}
+              {orderedPoints.length > 0 ? (
+                <ul className={s.remarkPoints} data-demo-id="demo-remark-points">
+                  {orderedPoints.map((point, index) => (
+                    <li
+                      key={`${point.kind}-${point.pieceId ?? point.ruleId ?? index}`}
+                      className={s.remarkPoint}
+                      data-kind={point.kind}
+                      data-piece={point.pieceId}
+                      data-rule={point.ruleId}
+                    >
+                      <span className={s.remarkIcon} aria-hidden="true">
+                        {KIND_ICON[point.kind]}
+                      </span>
+                      {point.text}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {shown.questions.length > 0 ? (
+                <div className={s.remarkAsk} data-demo-id="demo-remark-questions">
+                  {shown.questions.slice(0, 2).map((question) => (
+                    <p key={question} className={s.remarkQuestion}>
+                      {question}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </section>
         </div>
       </div>

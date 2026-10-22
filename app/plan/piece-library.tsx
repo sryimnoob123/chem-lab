@@ -57,10 +57,17 @@ export function PieceLibrary({
 }) {
   const groups = libraryGroups(selected, kind);
   const picked = new Set(selected);
-  const pinned = new Set(featured ?? []);
-  /** 主题相关块排到本组最前：学生先看见该主题用得上的，再看见全量 */
+  /** 主题推荐顺序：featured 的下标就是素材库置顶顺序（也是建议拼接顺序） */
+  const pinnedOrder = new Map((featured ?? []).map((id, index) => [id, index]));
   const ordered = (pieces: readonly PlanPiece[]) =>
-    [...pieces].sort((a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id)));
+    [...pieces].sort((a, b) => {
+      const ia = pinnedOrder.get(a.id);
+      const ib = pinnedOrder.get(b.id);
+      if (ia === undefined && ib === undefined) return 0;
+      if (ia === undefined) return 1;
+      if (ib === undefined) return -1;
+      return ia - ib;
+    });
 
   const ghostRef = useRef<HTMLDivElement | null>(null);
   const ghostTitleRef = useRef<HTMLSpanElement | null>(null);
@@ -200,7 +207,7 @@ export function PieceLibrary({
                     type="button"
                     className={s.piece}
                     data-demo-id={p.demoId}
-                    data-featured={pinned.has(p.id) ? "true" : undefined}
+                    data-featured={pinnedOrder.has(p.id) ? "true" : undefined}
                     aria-pressed={on}
                     draggable={false}
                     onDragStart={(event) => event.preventDefault()}

@@ -383,3 +383,25 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
 - 命中测试别单用 `elementFromPoint`：事故的爆心闪光圆（r≈0.36·max(w,h)）盖住整个瓶身，会一直返回 `circle[data-i=flash]`，测出 0 命中。要用 `elementsFromPoint` 看整叠里有没有液体 rect。
 - exp01 有前测闸：`/exp/exp01?force=1` 可跳过；正常流程要先答 1D/2B/3C 才能进操作台。
 - 真机点击用 `el.click()`（合成事件会冒泡到 React 根），`click_at_xy` 在这套页面会打空。
+
+## 2026-10-23 04:4x · t_74651dc1 拼接实验：主题打磨 + AI 点评收成一条链路
+做了什么
+- 主题（`lib/plan/topics.ts`）：4 个主题每个都有真实情境 + 明确产出 + 2~3 条**由规则兜底**的硬约束；`TopicRule` 带 `pieceId`/`forbidden`，`TopicConstraint.ruleCode` 指回规则；难度 `difficulty` 1/2/3 与 `level` 一一对应；`applyTopic()` 把主题约束叠进同一张评分卡（block −12 / warn −5，不出现两套分）。
+- 主题卡（`app/plan/topic-picker.tsx` + `plan.module.css`）：每卡只有两层文字（编号/难度刻度 + 标题 + 情境一句 + 3 条约束）；进画布后 `topicHead` 是 `position: sticky`，标题+等级+目标常驻可见，「换主题」在右。
+- 素材库（`piece-library.tsx`）：`featured` 的下标就是置顶顺序，其余块仍可选（刻意留错）。
+- 点评链路收敛：删掉 `lib/plan/assess.ts` + 它的测试（写死实验名的 `buildPrompt`/`offlineAssessment`）；离线实现搬到 `lib/plan/assess-mock.ts`（纯函数、能进 client bundle），`llm-assess.ts` 是唯一入口（`mock|coze|ark`，12 s 上限）。
+- prompt 随主题变：`buildPrompt(plan, report, topic)` 里进主题标题/情境/目标/约束+ruleCode/块+参数/判定/写作要求（「结论先行、不复述规则、不编造计量、points 必须点名 pieceId/ruleId」）。
+- 回退：所有云端失败都 `return {...local, fallback}`，永不 throw；新增 `network`（fetch 抛 TypeError）与「AI 返回格式不对」分开，UI 一行小字。
+- 结论句不再复述 risk 全文：`方案能执行，但有 1 处会掉分。先处理「平行测定」。`（细节留给 risk 要点）。
+- 新增 `scripts/stub-llm.mjs`：本机 OpenAI 兼容 stub，用真实 socket 验证「配好 COZE_LLM_URL 就会用模型点评」。
+证据
+- `evidence/plan-ai/` 10 张截图 + README（00 主题卡、01~04 四主题、06~08 三档、09 真实 provider「AI 点评」、10 端点挂掉回退「AI 连不上，已用离线点评」）。
+- 干净浏览器会话 4 主题各走一遍：`window.__errs` 为空；dev :3000 与生产 :3001 均 200。
+- lint 0 error / 20 warning（历史文件）；tsc 干净；vitest 42 files / 607 tests；next build 通过。
+踩坑
+- 素材块的 `data-demo-id` 用的是 **slug**（`demo-design-piece-sodium-carbonate`、`...potassium-hydrogen-phthalate`），不是 pieceId；照 pieceId 点会静默落空。
+- `captureScreenshot` 在很长的 dev 页面上会超时；用 `cdp('Page.captureScreenshot', captureBeyondViewport=False)` 自己写文件更稳。
+- 重建前必须先停 :3001/:3002（它们跑在 `.next/standalone` 里，build 会 EBUSY）。
+下一步
+- 真扣子豆包未连（无凭据）；拿到 `COZE_API_TOKEN`+`COZE_BOT_ID` 后按 README 的命令起一次真链路。
+- `next-env.d.ts` 在 dev/build 之间会来回改（`.next/dev/types` ↔ `.next/types`），别当业务改动提交。
