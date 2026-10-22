@@ -160,13 +160,11 @@
   background: var(--river-700);
 }
 
-/* 指引最多两行：省略号只由 CSS 截一次（JS 那侧只做字数上限） */
+/* 指引整句显示：这是学生唯一的「下一步做什么」，截断等于没说 */
 .guideText {
-  display: -webkit-box;
   min-width: 0;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* ---------------- 折叠区：详细流程 / 参数 / 提示 / 老师会说 ---------------- */
@@ -470,4 +468,18 @@
   .stepButton:hover {
     background: transparent;
   }
+}
+
+/* 本步判定标准（judge.criterion 原文）：学生要能看见判分标准（feed up），
+   所以**整句显示、允许换行**。之前是 nowrap + 单行省略，244px 卡宽下
+   一句「凹液面最低点与刻度线相切，允差 ±0.10 mL」只能看到前 14 个字，
+   等于没给判据（用户 2026-10-22 贴图：看不见指引）。 */
+.criterion {
+  display: block;
+  min-width: 0;
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }

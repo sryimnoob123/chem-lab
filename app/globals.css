@@ -2966,3 +2966,32 @@ button {
     transition: none !important;
   }
 }
+
+/* 滴定场景的器皿呼吸描边（lab-apparatus.tsx 里的 SVG 热区）：
+   只靠 opacity 呼吸，不动几何；减动效下静态常亮。 */
+.apparatus-cue-ring {
+  fill: none;
+  stroke: var(--river-700);
+  stroke-width: 2;
+  stroke-dasharray: 7 6;
+  opacity: 0.7;
+  pointer-events: none;
+  animation: apparatusCue 1800ms cubic-bezier(0.33, 1, 0.68, 1) infinite;
+}
+
+@keyframes apparatusCue {
+  0%,
+  100% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apparatus-cue-ring {
+    animation: none;
+    opacity: 0.6;
+  }
+}

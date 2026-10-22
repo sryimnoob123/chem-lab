@@ -156,6 +156,7 @@ export function applyIncident(state: ExperimentState, input: IncidentInput): App
       incidentId: input.incidentId,
       level: input.level,
       terminate: input.terminate ?? false,
+      deduct: input.deduct ?? 0,
     };
     next.incidents = [...state.incidents, record];
     events.push({
@@ -164,6 +165,7 @@ export function applyIncident(state: ExperimentState, input: IncidentInput): App
       level: input.level,
       fx: input.fx ?? "device-accident",
       terminate: record.terminate,
+      deduct: input.deduct ?? 0,
     });
     if (record.terminate) next.done = true;
   } else if (input.ruleId) {
@@ -241,22 +243,31 @@ function applyTrap(state: ExperimentState, step: StepDefinition, choice: ChoiceD
     stepLog: appendStepLog(state, step.index, choice.choiceId),
   };
 
-  if (consequence.fx && consequence.incidentId) {
+  // 只要有 fx 就按「事故」处理并播特效。
+  // 原来是 `fx && incidentId` 双条件，而 exp01 没有 incidents 记录文件、陷阱只声明了 fx，
+  // 于是全部掉进 else 分支变成普通扣分 —— 屏幕上什么都不发生，学生只看到「−N 分」。
+  // incidentId 缺省回落到 ruleId；记录查不到时 UI 会回落到 feedback 文案，不影响展示。
+  if (consequence.fx) {
+    const incidentId = consequence.incidentId ?? consequence.ruleId;
     next.incidents = [
       ...state.incidents,
       {
         stepIndex: step.index,
-        incidentId: consequence.incidentId,
+        incidentId,
         level: consequence.level,
         terminate: consequence.terminate,
+        deduct: consequence.deduct,
       },
     ];
     events.push({
       kind: "incident",
-      incidentId: consequence.incidentId,
+      incidentId,
       level: consequence.level,
       fx: consequence.fx,
       terminate: consequence.terminate,
+      // exp01 没有 lib/safety/incidents/exp01.ts，getIncident() 查不到记录，
+      // UI 的 `record?.deduct ?? 0` 会把 −5 显示成 −0；扣分随事件带出去兜底。
+      deduct: consequence.deduct,
     });
   } else {
     next.violations = [

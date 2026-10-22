@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
   experimental: {
     cpus: 4,
   },
+  /**
+   * dev 模式下 Next 16 默认拦截「跨站」访问 `/_next/*` 开发资源。
+   * 用 127.0.0.1 打开 :3000 时，页面能渲染但客户端脚本全部不执行
+   * （表现成整页点了没反应、数据已渲染但所有交互失效）。
+   * 本地验收脚本、截屏管线都用 127.0.0.1，所以显式放行。
+   */
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
 };
 
 export default nextConfig;

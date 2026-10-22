@@ -61,6 +61,12 @@ export interface MissionBoardProps {
   progress: string;
   /** 当前一步的一句指引（≤20 字） */
   guide: string;
+  /**
+   * 本步判定标准（judge.criterion 原文，不再截断）。
+   * 教学设计要求：学生必须能看见自己被判分的标准（feed up），
+   * 原来它被 whyLine 裁到 18 字只闪现一次，等于从未出现。
+   */
+  criterion?: string;
   dots: readonly StepDotState[];
   /** 折叠区的详细流程 */
   steps?: readonly MissionStep[];
@@ -83,6 +89,7 @@ export function MissionBoard({
   title,
   goal,
   progress,
+  criterion,
   guide,
   dots,
   steps,
@@ -134,6 +141,11 @@ export function MissionBoard({
             {progress}
           </span>
         </span>
+        {criterion ? (
+          <span className={styles.criterion} data-demo-id="demo-guide-criterion">
+            {criterion}
+          </span>
+        ) : null}
         <span className={styles.guide} aria-live="polite">
           <span className={styles.guideMark} aria-hidden="true" />
           <span className={styles.guideText}>{guide}</span>

@@ -1,6 +1,14 @@
 type ApparatusProps = {
   className?: string;
+  /** 本步该动的那台器皿（"flask" / "burette" / null）：常驻呼吸描边 + 「点这里」。 */
+  cue?: string | null;
+  /** 指针压着的那台（拖拽/点选时）+ 它到底接不接这瓶试剂。 */
+  hover?: string | null;
+  hoverValid?: boolean;
+  /** 点器皿 = 执行当前建议动作 / 倒进这一台。 */
+  onPick?: (id: string) => void;
 };
+
 
 const GRADUATIONS = Array.from({ length: 51 }, (_, index) => {
   const y = 84 + index * 7.6;
@@ -17,7 +25,18 @@ const GRADUATIONS = Array.from({ length: 51 }, (_, index) => {
  * 内壁用 12% 淡阴影代替白高光。"玻璃感" = 深墨线 + 极淡玻璃面 + 内壁阴影。
  * 按真实量程画 0.1 mL 刻度；只负责画，不含任何读数逻辑。
  */
-export function LabApparatus({ className }: ApparatusProps) {
+export function LabApparatus({ className, cue = null, hover = null, hoverValid = true, onPick }: ApparatusProps) {
+  /**
+   * 滴定场景的两台器皿热区（2026-10-22 演示前）：
+   * 以前整个台面只有一个大方块接投料，学生看不出「倒进哪台」。
+   * 这里给滴定管和锥形瓶各自一个热区（≥44px），点它就是执行本步动作，
+   * 拖试剂过来松手就落进这一台 —— 与实验台场景（bench-scene）同一套 data-demo-id 契约，
+   * 所以 scene-stage 的 vesselAt()/倾倒动画不用改就能识别。
+   */
+  const spots = [
+    { id: "burette", label: "酸式滴定管", x: 132, y: 20, w: 72, h: 500 },
+    { id: "flask", label: "锥形瓶", x: 100, y: 518, w: 146, h: 122 },
+  ] as const;
   return (
     <svg
       className={className}
@@ -165,6 +184,76 @@ export function LabApparatus({ className }: ApparatusProps) {
           250
         </text>
       </g>
+
+      {/* 器皿热区：每台自己亮、自己报名字（替代过去盖住整台的大方块） */}
+      {spots.map((spot) => {
+        const isCue = cue === spot.id && hover !== spot.id;
+        const isHover = hover === spot.id;
+        return (
+          <g
+            key={spot.id}
+            data-demo-id={`demo-scene-vessel-${spot.id}`}
+            data-cue={isCue ? "true" : "false"}
+            data-drop-hover={isHover ? (hoverValid ? "valid" : "invalid") : "false"}
+            role="button"
+            tabIndex={0}
+            aria-label={`${spot.label}：点一下执行这一步的动作，也可以把试剂拖进来`}
+            style={{ cursor: onPick ? "pointer" : "default" }}
+            onClick={() => onPick?.(spot.id)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              event.preventDefault();
+              onPick?.(spot.id);
+            }}
+          >
+            <rect x={spot.x} y={spot.y} width={spot.w} height={spot.h} rx={10} fill="transparent" />
+            {isCue ? (
+              <rect
+                className="apparatus-cue-ring"
+                x={spot.x}
+                y={spot.y}
+                width={spot.w}
+                height={spot.h}
+                rx={10}
+              />
+            ) : null}
+            {isHover ? (
+              <rect
+                x={spot.x}
+                y={spot.y}
+                width={spot.w}
+                height={spot.h}
+                rx={10}
+                fill="none"
+                stroke={hoverValid ? "var(--river-700)" : "#BE3E3E"}
+                strokeWidth={2.4}
+              />
+            ) : null}
+            {isCue || isHover ? (
+              <g pointerEvents="none">
+                <rect
+                  x={spot.x + spot.w / 2 - 40}
+                  y={spot.y - 26}
+                  width={80}
+                  height={22}
+                  rx={11}
+                  fill={isHover && !hoverValid ? "#BE3E3E" : "var(--river-700)"}
+                  opacity={0.94}
+                />
+                <text
+                  x={spot.x + spot.w / 2}
+                  y={spot.y - 10}
+                  textAnchor="middle"
+                  fill="#FFFFFF"
+                  fontSize={12}
+                >
+                  {isHover ? (hoverValid ? `落进 ${spot.label}` : `${spot.label} 不行`) : "点这里"}
+                </text>
+              </g>
+            ) : null}
+          </g>
+        );
+      })}
     </svg>
   );
 }

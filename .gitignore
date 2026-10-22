@@ -51,3 +51,6 @@ experiments/**/*.js
 
 # 验证截图（运行时产物，不入库）
 public/shots-prod/
+
+# 本机 Hermes profile 的 skill 副本（只作源，不入库）
+.dsh/skills/

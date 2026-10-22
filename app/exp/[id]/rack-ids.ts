@@ -10,7 +10,9 @@ type RackIds = readonly string[];
 /** exp09 那套四瓶（也是未登记实验的默认）。 */
 export const DEFAULT_RACK_IDS: RackIds = ["naoh", "hcl", "phenolphthalein", "methylOrange"];
 const RACK_IDS = DEFAULT_RACK_IDS;
-const EXP01_RACK_IDS: RackIds = ["na2co3-solid", "water"];
+// exp01 七步用到的全部试剂：认领/洗涤（蒸馏水）、溶解定容（蒸馏水）、
+// 第 7 步稀释浓硫酸（h2so4-conc，原本不在架上 → 那一步无法从场景复现）
+const EXP01_RACK_IDS: RackIds = ["na2co3-solid", "water", "h2so4-conc"];
 const EXP02_RACK_IDS: RackIds = ["na2co3-solid", "water"];
 const EXP03_RACK_IDS: RackIds = ["water"];
 const EXP04_RACK_IDS: RackIds = ["na2co3-solid", "water"];

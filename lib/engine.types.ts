@@ -128,6 +128,11 @@ export interface IncidentRecord {
   incidentId: string;
   level: IncidentLevel;
   terminate: boolean;
+  /**
+   * 本起事故扣多少分。可选：exp01 没有 lib/safety/incidents 记录文件，
+   * 分数只能从 hazard 带下来，否则 UI 会显示成「−0 分」。
+   */
+  deduct?: number;
 }
 
 /**
@@ -225,7 +230,7 @@ export type Event =
   | { kind: "hint"; level: HintLevel; text: string }
   | { kind: "stepComplete"; stepIndex: number }
   | { kind: "violation"; ruleId: string; deduct: number; competency: CompetencyCode }
-  | { kind: "incident"; incidentId: string; level: IncidentLevel; fx: FxKey; terminate: boolean }
+  | { kind: "incident"; incidentId: string; level: IncidentLevel; fx: FxKey; terminate: boolean; deduct: number }
   | { kind: "observation"; text: string; value?: number }
   | { kind: "stateChanged"; patch: Partial<ExperimentState> };
 

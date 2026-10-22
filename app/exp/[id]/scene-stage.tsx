@@ -2,9 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
+import type { StepDefinition } from "@/lib/engine.types";
+import { getSceneVessel } from "@/lib/scene/palette";
 import { getSceneReagent } from "@/lib/scene/reagents";
 import { DEFAULT_RACK_IDS, rackIdsFor } from "./rack-ids";
+import { expectedVesselId, wrongVesselLine } from "./vessel-targets";
 import { BenchScene, type SceneFeedback } from "@/components/exp/scene/bench-scene";
+import type { SceneToolId } from "@/lib/scene/tools";
 import { ComputeBench } from "@/components/exp/scene/compute-bench";
 import { PourFX } from "@/components/exp/scene/pour";
 import { EndingFlash, SuccessBurst } from "@/components/exp/feedback";
@@ -101,6 +105,9 @@ const EXP04_BENCH_CONTENTS: Readonly<Record<string, readonly string[]>> = {
   volumetric: ["water"],
 };
 
+/** 没有"已完成动作"时的空集合（避免每次渲染新建 Set 让下游 useMemo 失效）。 */
+const EMPTY_PERFORMED: ReadonlySet<string> = new Set<string>();
+
 /** 拖拽三段式的兜底判定：没有接线时只提示，不改状态。 */
 const NO_RESOLVE: (reagentId: string) => DropVerdict = () => ({
   kind: "reject",
@@ -122,10 +129,23 @@ export function SceneStage({
   nextReagent,
   hintHighlight = false,
   onQuickAction,
+  toolIds,
+  activeTool = null,
+  onSelectTool,
+  onUseTool,
+  onUseReagent,
+  onDropToNowhere,
+  onSinkUse,
+  /** 把台面上的器皿拖进洗涤槽 = 洗这台器皿（用户 2026-10-22：洗涤是拖过去洗，不是点水龙头）。 */
+  onDropToSink,
   forceBench,
   benchInstrument,
   computeMode,
   observations,
+  step,
+  performed,
+  suggestedName,
+  suggestedType,
   children,
 }: {
   expId?: string;
@@ -148,6 +168,21 @@ export function SceneStage({
   hintHighlight?: boolean;
   /** 点台面上的仪器（如天平）＝按 1，直接使用当前建议动作。 */
   onQuickAction?: () => void;
+  /** 当前建议动作的 type（observe/weigh/dissolve…）；决定「点器皿」算不算完成 */
+  suggestedType?: string;
+  /** 台面工具：水龙头/毛刷/洗瓶/玻璃棒（用户 2026-10-22 要求每个操作都有对应工具） */
+  toolIds?: readonly SceneToolId[];
+  activeTool?: SceneToolId | null;
+  onSelectTool?: (id: SceneToolId | null) => void;
+  onUseTool?: (tool: SceneToolId, vesselId: string) => void;
+  /** 把试剂拖/点到器皿上（→ 执行当前步的加液动作，试剂架不能是摆设） */
+  onUseReagent?: (reagentId: string, vesselId: string) => void;
+  /** 器皿被拖到没有去处的地方（要说一句，不能静默） */
+  onDropToNowhere?: (vesselId: string) => void;
+  /** 点洗涤槽：把当前拿着的器皿放进去冲 */
+  onSinkUse?: () => void;
+  /** 器皿被拖进洗涤槽（落点命中 sink 区域时会带器皿 id 回调）。 */
+  onDropToSink?: (vesselId: string) => void;
   /** 强制走台面场景（exp09 前两步是配溶液，不该显示滴定台）。 */
   forceBench?: boolean;
   /** 台面场景摆哪台仪器：balance / ph / none（不传按 expId 走默认）。 */
@@ -156,10 +191,20 @@ export function SceneStage({
   computeMode?: boolean;
   /** 本步已完成的观察文本，数据台据此点亮读数表 / 极差 / 浓度比。 */
   observations?: readonly string[];
+  /** 当前步骤 + 本步已做动作：用来算「这一步的试剂该落进哪台器皿」。 */
+  step?: StepDefinition;
+  performed?: ReadonlySet<string>;
+  /** 当前建议动作的名字（点错地方时用它说「这一步是 XXX」）。 */
+  suggestedName?: string;
   children?: ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * 指针当前压着的那台器皿（拖拽中 / 选好试剂后悬停时）。
+   * 每台器皿自己亮自己报名字，代替以前那个盖住整排器皿的大方块热区。
+   */
+  const [overVesselId, setOverVesselId] = useState<string | null>(null);
   const use3d = useScene3d();
   const flow = useDropFlow({
     stageRef,
@@ -254,10 +299,120 @@ export function SceneStage({
   };
 
   /** 落位：先记下落点器皿（反馈只给它），再交给 flow 播倾倒。 */
+  /** 这一步该落进哪台器皿（算不出来就是 null = 不限定，任何可倒器皿都接受）。
+   *  判定只看定义里的文案（见 vessel-targets.ts），拿不准就放宽 —— 演示现场被自己的
+   *  判定挡住，比"倒错没提醒"严重得多。 */
+  const sceneVessels = isBenchScene
+    ? ((expId === "exp01" || expId === "exp08"
+        ? EXP01_BENCH_VESSELS
+        : expId === "exp03"
+          ? EXP03_BENCH_VESSELS
+          : expId === "exp09"
+            ? EXP09_BENCH_VESSELS
+            : null) ?? [])
+    : ["flask", "burette"];
+  const vesselLabels = sceneVessels.map((id) => ({ id, label: getSceneVessel(id)?.label ?? id }));
+  /**
+   * 本步该动的那台器皿：**常驻**呼吸描边 + 「点这里」。
+   * 用户口径「我不知道下一步该做什么」—— 场景里必须有一个肉眼可见的目标，
+   * 而不是只有右侧一张卡。算不出来（本步不是倒试剂）就不亮，绝不瞎指。
+   */
+  const cueVesselId = step ? expectedVesselId(step, performed ?? EMPTY_PERFORMED, vesselLabels) : null;
+  const dropHoverValid = !cueVesselId || !overVesselId || overVesselId === cueVesselId;
+
+  /** 一句"这里不是要动的地方"——任何落空/落错都必须出声，绝不静默。 */
+  const nudge = (text: string) => {
+    onCaption(text);
+  };
+
   const dropAt = (id: string, point: { x: number; y: number }) => {
     const hit = vesselAt(point);
-    if (hit) setTargetVesselId(hit);
+    setOverVesselId(null);
+    if (!hit) {
+      nudge(`松手的地方没有器皿：把${getSceneReagent(id)?.name ?? "试剂"}拖到台面上的器皿上`);
+      return;
+    }
+    setTargetVesselId(hit);
+    if (cueVesselId && hit !== cueVesselId) {
+      const droppedLabel = getSceneVessel(hit)?.label ?? hit;
+      const expectedLabel = getSceneVessel(cueVesselId)?.label ?? cueVesselId;
+      const verdict = {
+        kind: "reject" as const,
+        ...wrongVesselLine(droppedLabel, expectedLabel, getSceneReagent(id)?.name ?? "这瓶试剂"),
+      };
+      onInput?.("drag");
+      onCaption(null);
+      setRejectFx((prev) => ({ id: hit, key: (prev?.key ?? 0) + 1 }));
+      onDropRejected?.(verdict, point);
+      return;
+    }
+    // 试剂落到器皿上 = 真的加进去（原来只发一条 info，什么也没发生 —— 用户 2026-10-22）
+    if (onUseReagent) {
+      onUseReagent(id, hit);
+      return;
+    }
     flow.drop(id, point);
+  };
+
+  /** 器皿在屏幕上的落点（命中框中心偏上 = 瓶口位置）。 */
+  const pointOfVessel = (id: string): { x: number; y: number } => {
+    if (typeof document === "undefined") return { x: 0, y: 0 };
+    const el = document.querySelector<HTMLElement>(`[data-demo-id="demo-scene-vessel-${id}"]`);
+    const rect = el?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height * 0.4 };
+  };
+
+  /**
+   * 点了台面上的某台器皿：
+   * - 手里拿着试剂 → 倒进这一台（点选模式＝拖拽同一条链路）；
+   * - 是本步该动的器皿 → 直接执行建议动作（点哪儿都有结果）；
+   * - 不是 → 抖一下 + 一句话说清这一步该动哪台（绝不静默）。
+   */
+  const activateVessel = (id: string) => {
+    if (selectedId) {
+      dropAt(selectedId, pointOfVessel(id));
+      setSelectedId(null);
+      return;
+    }
+    // 天平 / pH 计：只有「称量 / 校准 / 读数」这类动作才算点它做完。
+    // 原来无条件 onQuickAction —— review 实测连点天平 21 次就能拿 100 分收卷（2026-10-22）。
+    if (id === "balance" || id === "ph") {
+      setTargetVesselId(id);
+      // observe 也算：exp01 第 2 步的「看水平泡」「用毛刷取放称量瓶」都挂在仪器上观察，
+      // 把 observe 排除会让第二步死锁（实测点 8 次天平都不动）。
+      // 仍然挡掉 wash / dissolve / transfer / dilute —— 那些必须用工具或拖器皿。
+      // compute 也要算：第 3 步的完成动作「按 m₁ − m₂ 记差减质量」就是天平读数，
+      // 不接的话第 3 步永远过不去（7 步里唯一没有场景入口的动作）。
+      const deviceAct = ["weigh", "calibrate", "readInstrument", "observe", "compute"];
+      if (suggestedType && deviceAct.includes(suggestedType)) {
+        onQuickAction?.();
+        return;
+      }
+      nudge(`${id === "balance" ? "天平" : "pH 计"}这里现在不用动，这一步要做的是「${suggestedName ?? "别的操作"}」`);
+      return;
+    }
+    if (cueVesselId && id !== cueVesselId) {
+      setRejectFx((prev) => ({ id, key: (prev?.key ?? 0) + 1 }));
+      nudge(
+        `这一步要动的是${getSceneVessel(cueVesselId)?.label ?? cueVesselId}，不是${getSceneVessel(id)?.label ?? id}`,
+      );
+      return;
+    }
+    setTargetVesselId(id);
+    // 关键：只有「观察 / 读数」这类动作可以直接点器皿完成。
+    // 原来这里无条件 onQuickAction()，结果点到本步那台器皿就等于做对一步 ——
+    // 用户 2026-10-22 实测：连点容量瓶/试管/烧杯一路「连对 11」直达第 7 步。
+    // 洗、称、溶、转移、定容、移液必须走场景里的工具或拖试剂。
+    if (suggestedType === "observe" || suggestedType === "readInstrument") {
+      onQuickAction?.();
+      return;
+    }
+    nudge(
+      `${getSceneVessel(id)?.label ?? id}已经选中：这一步要${
+        suggestedType === "wash" ? "把器皿拖进洗涤槽" : "用台面上的工具或拖试剂来完成"
+      }`,
+    );
   };
 
   const vesselFeedback: SceneFeedback | null = rejectFx
@@ -281,10 +436,26 @@ export function SceneStage({
       className={styles.sceneStage}
       data-scene={show3d ? "3d" : "2d"}
       onClick={(event) => {
-        // 点空白取消选中；按钮自己的 click 不在这里处理
-        if ((event.target as Element).closest("button")) return;
-        setSelectedId(null);
-        flow.endDrag();
+        // 点空白取消选中；按钮/器皿自己的 click 不在这里处理
+        const target = event.target as Element;
+        if (target.closest("button")) return;
+        if (target.closest('[data-demo-id^="demo-scene-vessel"]')) return;
+        if (selectedId || flow.draggingId) {
+          // 手里还拿着试剂时点空白 = 放弃这次操作，不唠叨
+          setSelectedId(null);
+          flow.endDrag();
+          onCaption(null);
+          return;
+        }
+        // 其余情况（点在台面空白/插图上）必须有回应，绝不静默：
+        // 告诉学生这一步该点哪里，而不是让他自己猜。
+        // 建议动作卡已删除，不能再指向「右侧那张卡」（指向不存在的东西，
+        // 而且这条提示会覆盖掉真正的成功文案，7 步全程可见 —— review 报的 blocker）
+        nudge(
+          expId && isBenchScene
+            ? `这一步要「${suggestedName ?? "按看板提示操作"}」：拖下方的工具到器皿上，或把器皿拖进洗涤槽`
+            : `这一步要「${suggestedName ?? "按看板提示操作"}」：看左上角任务看板给的操作方式`,
+        );
       }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -340,6 +511,8 @@ export function SceneStage({
                   setDragGhost({ x: event.clientX, y: event.clientY, reagentId: drag.id });
                   const hit = document.elementFromPoint(event.clientX, event.clientY);
                   flow.setOverFlask(Boolean(hit?.closest('[data-demo-id="demo-scene-drop-flask"]')));
+                  // 指针压在哪台器皿上，就让哪台亮 + 报名字（落在空白则为 null）
+                  setOverVesselId(vesselAt({ x: event.clientX, y: event.clientY }));
                 }}
                 onPointerUp={(event) => {
                   // 段 3 落位：用松手坐标提交，吸附/倾倒/回弹都由 useDropFlow 播。
@@ -470,18 +643,24 @@ export function SceneStage({
                         : BENCH_CONTENTS
                 }
                 reaction={null}
-                selectedReagentId={null}
-                draggingReagentId={null}
+                selectedReagentId={selectedId}
+                draggingReagentId={flow.draggingId}
+                dropHoverId={overVesselId}
+                dropHoverValid={dropHoverValid}
+                cueVesselId={cueVesselId}
                 feedback={isBenchScene ? vesselFeedback : null}
                 onFeedbackEnd={() => undefined}
-                onDropReagent={() => undefined}
-                onActivateVessel={(id) => {
-                  // 点场景里的实体 = 执行当前建议动作。
-                  // 原来只有 balance 走 onQuickAction，点烧杯/容量瓶只记 targetVesselId、什么都不发生，
-                  // 用户 2026-10-22 实测"检查就是检查不了"——点了没反应等于不能操作。
-                  setTargetVesselId(id);
-                  onQuickAction?.();
+                onDropReagent={(id) => {
+                  if (selectedId) dropAt(selectedId, pointOfVessel(id));
                 }}
+                onActivateVessel={(id) => activateVessel(id)}
+                toolIds={toolIds}
+                activeTool={activeTool}
+                onSelectTool={onSelectTool}
+                onUseTool={onUseTool}
+                onDropToNowhere={onDropToNowhere}
+                sink={expId === "exp01" ? { x: 392, y: 424, onUse: onSinkUse } : undefined}
+                onDropToSink={onDropToSink}
                 onClearSelection={() => undefined}
                 onReveal={() => undefined}
               />
@@ -491,7 +670,13 @@ export function SceneStage({
               <ComputeBench observations={observations ?? []} />
             </div>
           ) : (
-            <LabApparatus className={styles.apparatus} />
+            <LabApparatus
+              className={styles.apparatus}
+              cue={cueVesselId}
+              hover={overVesselId}
+              hoverValid={dropHoverValid}
+              onPick={activateVessel}
+            />
           )}
           {/* 数据处理步没有可投加的容器，别留一个"锥形瓶"热区误导 */}
           {computeMode ? null : (

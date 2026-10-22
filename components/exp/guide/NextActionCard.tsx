@@ -16,6 +16,12 @@ export interface NextActionCardProps {
   name: string;
   /** 一句为什么（≤18 字） */
   why: string;
+  /**
+   * 按钮上最后一行「点下去会发生什么」（2026-10-22 演示前新增）。
+   * 用户实测：卡片上只有动作名，看不出这是按钮、也看不出点完就继续了。
+   * 所以每一类动作都给一个动词明确的收尾：看完了 → 继续 / 点这里完成 / 拖试剂进去。
+   */
+  cta?: string;
   /** 快捷键提示，如 "1" */
   keyHint?: string;
   /** 建议动作自己的 data-demo-id（沿用 demo-op-*，演示脚本不用改） */
@@ -31,6 +37,7 @@ export interface NextActionCardProps {
 export function NextActionCard({
   name,
   why,
+  cta,
   keyHint,
   demoId,
   disabled,
@@ -55,8 +62,9 @@ export function NextActionCard({
         onClick={onChoose}
       >
         {/* 动作名不靠截断，允许换行完整显示（用户 2026-10-22：按钮上被裁字看不懂） */}
-        <span className={styles.nextName}>{clip(name, 26)}</span>
-        <span className={styles.nextWhy}>{clip(why, 22)}</span>
+        <span className={styles.nextName}>{clip(name, 44)}</span>
+        <span className={styles.nextWhy}>{clip(why, 46)}</span>
+        {cta ? <span className={styles.nextCta}>{cta}</span> : null}
         {keyHint ? (
           <span className={styles.key} aria-hidden="true">
             按 {keyHint}

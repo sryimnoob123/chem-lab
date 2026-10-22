@@ -11,6 +11,7 @@
  */
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
+import postgres from "postgres";
 
 const DIR = path.resolve(process.env.PGLITE_DIR ?? "./.pgdata");
 const PURGE = process.argv.includes("--purge");
@@ -48,7 +49,20 @@ const INCIDENTS = [
   { id: "exp09-L4-001", level: "L4", label: "水入酸（热液喷溅）" },
 ];
 
-const client = new PGlite(DIR);
+/**
+ * 两种宿主：本地 PGlite（默认）或真 PostgreSQL（DATABASE_URL）。
+ * 扣子线上就是真库，所以播种脚本必须两条路都能跑；
+ * postgres.js 不支持 `$1` 之外的 API，用 unsafe + 包一层 { rows } 兼容 PGlite 调用形态。
+ */
+const client = process.env.DATABASE_URL
+  ? (() => {
+      const sql = postgres(process.env.DATABASE_URL, { prepare: false, max: 4, onnotice: () => {} });
+      return {
+        query: async (text, params) => ({ rows: await sql.unsafe(text, params ?? []) }),
+        close: () => sql.end({ timeout: 5 }),
+      };
+    })()
+  : new PGlite(DIR);
 
 if (PURGE) {
   const gone = await client.query(

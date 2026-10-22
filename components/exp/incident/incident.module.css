@@ -75,7 +75,9 @@
 .rejectTag {
   display: block;
   margin-bottom: 5px;
-  color: var(--danger);
+  /* 中性墨色：这一步用不上 ≠ 你违规了。红字会让学生以为自己做错被罚，
+     真正的惩罚只出现在真的做错（L1~L4 + 扣分）。 */
+  color: var(--ink-2);
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.08em;

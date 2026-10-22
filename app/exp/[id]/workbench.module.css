@@ -2064,3 +2064,58 @@
   background: #fff;
   color: var(--ink);
 }
+
+/* ================= 大方块热区下线（2026-10-22 演示前） =================
+   用户原话：「有一个大的方块，就是效果很差」。
+   那个 34%×27% 的大热区盖住整条台面，倒进哪台器皿都一样，还在 [data-next] 时
+   画一个虚框方框出来。现在投料由每台器皿自己的热区接（bench-scene / lab-apparatus），
+   这个元素只留"倾倒落点的兜底锚点"职责：不画任何框、不收任何指针事件。 */
+.flaskTarget,
+.flaskTarget[data-active="true"],
+.flaskTarget[data-over="true"],
+.flaskTarget[data-next="true"],
+.flaskTarget[data-hint-highlight="true"],
+.apparatusWrap[data-bench="true"] .flaskTarget {
+  border: 0 !important;
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+
+.flaskTarget::before,
+.flaskTarget::after,
+.apparatusWrap[data-bench="true"] .flaskTarget::before,
+.apparatusWrap[data-bench="true"] .flaskTarget::after {
+  content: none !important;
+  display: none !important;
+}
+
+.flaskTarget .dropLabel {
+  display: none !important;
+}
+
+/* 空闲提示浮层的落点：舞台左下角，压在试剂架右侧，不挡台面中心与主操作卡 */
+.idleSlot {
+  position: absolute;
+  left: 210px;
+  bottom: 18px;
+  z-index: 14;
+  max-width: 360px;
+}
+
+@media (max-width: 1100px) {
+  .idleSlot {
+    left: 16px;
+    bottom: 84px;
+  }
+}
+
+/* 失败动画演示条：钉在左上角（用户 2026-10-22 要求挪到左上） */
+.fxGalleryDock {
+  position: fixed;
+  left: 16px;
+  top: 72px;
+  z-index: 40;
+  width: min(330px, calc(100vw - 32px));
+}

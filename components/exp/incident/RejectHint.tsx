@@ -153,7 +153,7 @@ export function RejectHint({
         style={{ left, top }}
       >
         <div className={styles.rejectBubble} role="status" aria-live="polite" aria-atomic="true">
-          <span className={styles.rejectTag}>操作未被接受</span>
+          <span className={styles.rejectTag}>这一步用不上</span>
           {lines.map((text, index) => (
             <p key={ROW_KEYS[index]} className={styles.rejectLine}>
               <span className={styles.rejectKey}>{ROW_KEYS[index]}</span>

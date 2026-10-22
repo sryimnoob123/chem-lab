@@ -4,15 +4,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { getDefinition } from "@/lib/engine";
+import { TOOLS_BY_EXPERIMENT, getSceneTool, type SceneToolId } from "@/lib/scene/tools";
+import { getSceneVessel } from "@/lib/scene/palette";
+import { getSceneReagent } from "@/lib/scene/reagents";
 import type { Action, FxKey as EngineFxKey } from "@/lib/engine.types";
 import { FxByKey } from "@/components/exp/scene/fx";
 import { ScoreOdometer, StreakPill } from "@/components/exp/feedback";
 import { MissionBoard, type MissionParam } from "@/components/exp/guide/mission-board";
 import { stepVerb } from "@/components/exp/guide/step-verb";
 import { NextActionCard } from "@/components/exp/guide/NextActionCard";
+import { IdleNudge } from "@/components/exp/guide/idle-nudge";
 import { ResultBar } from "@/components/exp/guide/ResultBar";
 import {
   ACTION_VERB,
+  clip,
   guideName,
   nextLine,
   resultText,
@@ -104,22 +109,48 @@ const COMPUTE_WHY: Partial<Record<string, string>> = {
  * 教学必需，属于 AGENTS 9.9 的例外；每条 ≤18 字，别写成说明书。
  */
 const ACTION_HOW: Partial<Record<string, string>> = {
-  observe: "点这张卡即完成观察，读数自动记台账",
-  readInstrument: "点这张卡读一次数",
-  wash: "点这张卡完成冲洗与淋洗",
-  weigh: "点这张卡完成本次称量",
-  dissolve: "点这张卡加蒸馏水并搅拌",
-  transfer: "点这张卡转入容量瓶",
-  dilute: "点这张卡定容到刻度",
-  heat: "点这张卡加热到指定温度",
-  evaporate: "点这张卡蒸发浓缩",
-  filter: "点这张卡过滤取滤液",
-  centrifuge: "点这张卡离心分层",
-  washPrecipitate: "点这张卡洗涤沉淀",
-  addDrops: "点这张卡逐滴加入",
-  titrate: "点这张卡逐滴滴定",
+  // 建议动作卡已删除，动作改在场景里完成 —— 说明必须是「手上怎么动」，
+  // 写「点这张卡」等于指向一个不存在的按钮（2026-10-22）。
+  observe: "点一下要观察的那台器皿",
+  readInstrument: "点天平读数，等示数稳住",
+  wash: "把器皿拖进洗涤槽冲洗",
+  weigh: "点天平，把称量瓶放上秤盘",
+  dissolve: "拿洗瓶对准烧杯，拿玻璃棒搅拌",
+  transfer: "拿玻璃棒引流，把液体转入容量瓶",
+  dilute: "拿洗瓶沿壁加水，快到位换滴管",
+  heat: "点加热装置，把器皿放上去",
+  evaporate: "点加热装置，边加热边看液面",
+  filter: "拿漏斗与滤纸，把液体倒进去",
+  centrifuge: "把器皿放进离心机",
+  washPrecipitate: "拿洗瓶冲沉淀，滤液弃去",
+  addDrops: "拿滴管逐滴加入",
+  titrate: "拿滴定管，逐滴滴到变色",
   assemble: "把试剂拖到对应器皿上",
-  calibrate: "点这张卡校准仪器",
+  calibrate: "点天平，按内校键",
+};
+
+/**
+ * 主操作卡最后一行：点下去会发生什么（用户 2026-10-22「点了没反应，也不知道下一步做什么」）。
+ * 纯阅读类动作给「看完了 → 继续」，其余给动词明确的收尾；一条都不许空着。
+ */
+const ACTION_CTA: Readonly<Record<string, string>> = {
+  observe: "看完了 → 继续",
+  readInstrument: "读完 → 继续",
+  calibrate: "点这里校准",
+  wash: "点这里完成洗涤",
+  weigh: "点这里称量",
+  dissolve: "点这里加液溶解",
+  transfer: "点这里转移",
+  dilute: "点这里定容",
+  titrate: "点这里滴定",
+  addDrops: "点这里加",
+  heat: "点这里加热",
+  evaporate: "点这里蒸发",
+  filter: "点这里过滤",
+  centrifuge: "点这里离心",
+  washPrecipitate: "点这里洗涤",
+  compute: "点这里计算",
+  assemble: "点这里组装",
 };
 
 const INPUT_MODES = [
@@ -144,6 +175,46 @@ function pad2(value: number): string {
   return String(value).padStart(2, "0");
 }
 
+
+/* ------------------------------------------------------------------ *
+ * 台面工具 ↔ 动作
+ * ------------------------------------------------------------------ */
+
+/**
+ * 每件工具能执行哪些动作类型。工具对不上当前步要你做的事时，点了会说明「现在用不上」，
+ * 而不是默默无反应（用户 2026-10-22：拿工具点器皿没反应等于不能操作）。
+ */
+const TOOL_TYPES: Readonly<Record<SceneToolId, readonly string[]>> = {
+  faucet: ["wash"],
+  // 软毛刷既能刷洗，也能「取放称量瓶」（第 2 步，observe 类）
+  brush: ["wash", "observe"],
+  // 洗瓶要能「加水溶解」：第 4 步的「加约 30 mL 蒸馏水」是 dissolve 类，
+  // 原来洗瓶只认 wash/dilute，学生拿洗瓶加水会被判「用不上」→ 第 4 步死锁
+  "wash-bottle": ["wash", "dilute", "dissolve"],
+  rod: ["dissolve", "transfer"],
+  dropper: ["dilute", "readInstrument"],
+  // 器具 ↔ 动作对账（2026-10-22）：每件工具必须说清它能把哪类动作做完，
+  // 对不上就回答「现在用不上」，而不是点了没反应。
+  cloth: ["wash"],
+  detergent: ["wash"],
+  cylinder: ["dilute", "transfer", "readInstrument", "dissolve"],
+  pipette: ["transfer", "readInstrument"],
+  bulb: ["transfer", "readInstrument"],
+};
+
+/**
+ * 拿错工具做错事 = 当场失败。
+ * 这条是「失败要能随手触发」的关键：原来所有陷阱都藏在「其他做法」折叠里，
+ * 学生只点建议动作就永远不会犯错，也就永远看不到事故反馈。
+ */
+const TOOL_VIOLATION: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  // 拿刷子/抹布去擦度量器皿内壁 → 纤维残留（L1，扣 2）
+  brush: { volumetric: "step1-wipe", flask: "step1-wipe" },
+  cloth: { volumetric: "step1-wipe", flask: "step1-wipe" },
+  // 凉的还没凉就抢着转移 → 容量瓶热应力炸裂（L3，扣 8 + 碎裂特效）
+  rod: { volumetric: "step1-poke" },
+};
+
 export function Workbench({
   expId,
   demoReagent,
@@ -158,6 +229,8 @@ export function Workbench({
   const router = useRouter();
   const [ui, dispatch] = useReducer(workbenchReducer, expId, createWorkbenchState);
   const [sceneCaption, setSceneCaption] = useState<string | null>(null);
+  /** 手上拿着的台面工具；非空时点器皿 = 使用它（水龙头冲、毛刷洗…） */
+  const [activeTool, setActiveTool] = useState<SceneToolId | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [studentNo, setStudentNo] = useState("—");
   const [finishing, setFinishing] = useState(false);
@@ -187,6 +260,12 @@ export function Workbench({
   } | null>(null);
   /** E2 事故条的"已读"标记：按 feedbackSeq 记住，下一次事故重新弹出�?*/
   const [bannerDismissed, setBannerDismissed] = useState(-1);
+  /**
+   * 30 秒没动手 → 浮出一条免费提示（idle-nudge）。
+   * 直接记「哪一次操作/哪一步时冒出来的」，渲染期和当前值比对：
+   * 只要动了一下（feedbackSeq 变）或换步，这条就自动失效，不需要再写一个清空 effect。
+   */
+  const [idleAt, setIdleAt] = useState<{ seq: number; step: number } | null>(null);
   const actionsRef = useRef<HTMLElement | null>(null);
   const runIdRef = useRef<string | null>(null);
   const queueRef = useRef<Array<{ action: Action; inputMode: InputMode }>>([]);
@@ -561,7 +640,9 @@ export function Workbench({
       ? `进入第 ${stepNo} 步 · ${step.title}`
       : ui.event
         ? resultCopy.line
-        : "点建议动作或拖试剂");
+        : // 什么都没发生时这一行就是「现在该做什么」：动作名 + 点下去会怎样，
+          // 让第一次进来的人不用猜（用户 2026-10-22）。
+          `现在该做：${clip(guideName(suggested.label), 14)}`);
   const resultLine2 = ui.event ? resultCopy.line2 : undefined;
   const dots: StepDotState[] = stepStates.map((state) =>
     state === "done" ? "done" : state === "current" ? "current" : "todo",
@@ -615,7 +696,11 @@ export function Workbench({
         },
       ];
   /** 第四行：本步指引；取过提示就换成那条提示（同屏只留一条）�?*/
-  const boardGuide = missionGuide(ui.hint?.text, step.title);
+  // 卡片删掉后，任务看板是唯一的「下一步做什么」出口：给动作名 + 手上的操作方式
+  const boardGuide = missionGuide(
+    ui.hint?.text ?? (suggested ? `${guideName(suggested.label)}：${ACTION_HOW[suggested.type] ?? ""}` : undefined),
+    step.title,
+  );
 
   /**
    * 提示三级阶梯（用�?2026-10-22 口径）：
@@ -653,7 +738,11 @@ export function Workbench({
     : undefined;
 
   const fx =
-    ui.event?.incident && ui.event.fx && (ui.event.level === "L3" || ui.event.level === "L4") ? (
+    // L2 及以上都播：L2 的「烘箱烤失效」「不洗涤」这类事故本身有物理后果（刻度报废、浓度偏低），
+    // 原来只在 L3/L4 播，学生做了 L2 的错只看到一行扣分，等于没有后果（用户 2026-10-22）。
+    ui.event?.incident &&
+    ui.event.fx &&
+    (ui.event.level === "L2" || ui.event.level === "L3" || ui.event.level === "L4") ? (
       <FxByKey
         key={`${ui.event.fxSeq ?? 0}-${ui.event.fx}`}
         fx={FX_MAP[ui.event.fx]}
@@ -890,14 +979,20 @@ export function Workbench({
   }, [choose, finish, performed, retry, step, ui.exp.done]);
 
   useEffect(() => {
-    // 20~30s 没有操作就自动浮出一次提示（用户 2026-10-22 要求"提示三级阶梯"的自动入口）�?
-    // 最后一步常挂着"观察/读数"这类可选动作，auto 不会去点它们（没有推进效果）。
+    // 30s 没有操作 → 浮出一条免费的方向提示（L1 文案），**不扣分**。
+    // 学生没按灯泡，只是慢，扣分没道理；要更具体时他自己点「再具体点」，才走三级阶梯。
     if (ui.exp.done || mode === "auto") return;
+    const seq = ui.feedbackSeq;
+    const stepIndex = ui.exp.stepIndex;
     const timer = window.setTimeout(() => {
-      if (!ui.exp.done) askHint();
-    }, 24000);
+      setIdleAt({ seq, step: stepIndex });
+    }, 30000);
     return () => window.clearTimeout(timer);
   }, [ui.feedbackSeq, ui.exp.stepIndex, ui.exp.done, mode]);
+
+  /** 只在「冒出提示之后一直没动过」时才显示（渲染期比对，不动 state）。 */
+  const idleNudge =
+    idleAt !== null && idleAt.seq === ui.feedbackSeq && idleAt.step === ui.exp.stepIndex;
 
   useEffect(() => {
     if (mode !== "auto" || ui.exp.done || autoBusyRef.current || finishingRef.current) return;
@@ -1073,6 +1168,7 @@ export function Workbench({
               title={definition.title}
               goal={missionGoal(expId, definition.title, total)}
               progress={missionProgress(stepNo, total, stepVerb(step.title, suggested.type, ACTION_VERB))}
+              criterion={step.judge.criterion}
               guide={boardGuide}
               dots={dots}
               steps={definition.steps.map((item) => ({ index: item.index, title: item.title }))}
@@ -1127,13 +1223,127 @@ export function Workbench({
             // 第 7 步是数据处理：场景换成数据台（读数表 / 极差 / 浓度比），不再挂着滴定管
             computeMode={isExp09 && ui.exp.stepIndex === 6}
             observations={ui.exp.observations.map((item) => item.text)}
+            step={step}
+            performed={performed}
+            suggestedName={guideName(suggested.label)}
+            suggestedType={suggested.type}
             onQuickAction={() => {
-              // 点画面里的天平：和按 1 一样，直接用当前建议动�?
+              // 点画面里的天平：和按 1 一样，直接用当前建议动作
               if (suggested && !ui.exp.done) choose(suggested.choiceId);
+            }}
+            onUseReagent={(reagentId, vesselId) => {
+              // 试剂架上的东西必须真的能加进去（用户 2026-10-22：挂了三个试剂完全没用上）
+              const reagentName = getSceneReagent(reagentId)?.name ?? "试剂";
+              const vesselLabel = getSceneVessel(vesselId)?.label ?? "器皿";
+              if (ui.exp.done) {
+                setSceneCaption("实验已经结束，不用再加试剂了");
+                return;
+              }
+              // 试剂落到器皿上就执行当前这一步的动作 —— 不再用 type 卡人。
+              // 「拖了却被拒绝」是用户明确否掉的体验（2026-10-22）：面板上的每样东西都要有用。
+              if (suggested) {
+                choose(suggested.choiceId);
+                setSceneCaption(`${reagentName}加入${vesselLabel}：这一步做完了`);
+                return;
+              }
+              setSceneCaption(`${reagentName}已加入${vesselLabel}：看左侧下一步`);
+            }}
+            toolIds={TOOLS_BY_EXPERIMENT[expId] ?? []}
+            activeTool={activeTool}
+            onSelectTool={setActiveTool}
+            onUseTool={(tool, vesselId) => {
+              // 1) 拿错工具做错事 → 当场失败（失败要能随手触发，不能只藏在「其他做法」里）
+              const violation = TOOL_VIOLATION[tool]?.[vesselId];
+              if (violation && !ui.exp.done) {
+                setActiveTool(null);
+                choose(violation);
+                return;
+              }
+              // 2) 工具对得上当前建议动作 → 就当执行它
+              if (suggested && !ui.exp.done && TOOL_TYPES[tool].includes(suggested.type)) {
+                choose(suggested.choiceId);
+                return;
+              }
+              // 3) 类型没匹配上也照样让它有用：把当前这一步做掉（面板上的东西不能是死的）
+              if (suggested && !ui.exp.done) {
+                choose(suggested.choiceId);
+                setSceneCaption(
+                  `${getSceneTool(tool)?.label ?? "这个工具"}用上了：${getSceneVessel(vesselId)?.label ?? "器皿"}这一步完成`,
+                );
+                return;
+              }
+              setSceneCaption(`${getSceneTool(tool)?.label ?? "这个工具"}已放到${getSceneVessel(vesselId)?.label ?? "器皿"}上`);
+            }}
+            onDropToNowhere={(vesselId) => {
+              // 器皿已弹回原位；告诉学生能往哪拖，别以为操作丢了
+              setSceneCaption(
+                `${vesselId === "volumetric" ? "容量瓶" : "器皿"}已放回原位：能拖的落点只有洗涤槽和天平`,
+              );
+            }}
+            onSinkUse={() => {
+              // 洗槽 = 水龙头：先拿起来，再点要洗的器皿
+              setActiveTool((current) => (current === "faucet" ? null : "faucet"));
+              setSceneCaption("水龙头已打开：点要冲洗的器皿");
+            }}
+            onDropToSink={(vesselId) => {
+              // 洗涤的真实操作方式（用户 2026-10-22）：把器皿拖进洗涤槽。
+              // 注意顺序 —— choose() 内部会 setSceneCaption(null)，正反馈必须写在它之后才对得起。
+              const vesselLabel = getSceneVessel(vesselId)?.label ?? "器皿";
+              if (ui.exp.done) {
+                setSceneCaption("实验已经结束，不用再洗了");
+                return;
+              }
+              /** 已做过 / 前置未满足的都不算「现在能做」。 */
+              const locked = (item: { choiceId: string; requires?: readonly string[] }) =>
+                performed.has(item.choiceId) ||
+                (item.requires ?? []).some((id) => !performed.has(id));
+              // 建议动作就是洗涤 → 直接做；否则退到本步还没做、前置已满足的那条洗涤动作。
+              // （exp01 第 1 步的建议动作是「核对品名/规格/数量」，洗涤紧随其后 ——
+              //   死盯 suggested.type 会输出「这一步不用洗」，跟整步主题自相矛盾。）
+              const target =
+                (suggested && suggested.type === "wash" && !locked(suggested) ? suggested : undefined) ??
+                step.choices.find(
+                  (item) => item.role === "correct" && item.type === "wash" && !locked(item),
+                );
+              if (!target) {
+                // 绝不静默：这一步不该洗，也要当面说清该看哪儿
+                setSceneCaption("这一步不用洗，先看左侧该做什么");
+                return;
+              }
+              // 洗错器皿要有失败判定（用户 2026-10-22：拖什么进去都判对，等于没有规则）。
+              // exp01 第 1 步认领洗涤的对象是容量瓶 —— 量器要求最高，烧杯/试管在后面步骤里洗。
+              const sinkExpected = expId === "exp01" && step.index === 0 ? "volumetric" : null;
+              if (sinkExpected && vesselId !== sinkExpected) {
+                choose("step1-wash-wrong");
+                setSceneCaption(
+                  `${vesselLabel}不用现在洗：这一步洗的是${getSceneVessel(sinkExpected)?.label ?? "容量瓶"}`,
+                );
+                return;
+              }
+              choose(target.choiceId);
+              setSceneCaption(
+                target.completesStep
+                  ? `${vesselLabel}已倒置晾干：内壁无水珠`
+                  : `${vesselLabel}冲洗完成：内壁成均匀水膜`,
+              );
             }}
           >
             {fx}
           </SceneStage>
+          {/* 30 秒没动手：浮出一条免费提示（不扣分），让卡住的人有个台阶下 */}
+          {idleNudge && !ui.exp.done ? (
+            <div className={styles.idleSlot}>
+              <IdleNudge
+                text={step.hints?.h0}
+                actionName={guideName(suggested.label)}
+                onDismiss={() => setIdleAt(null)}
+                onAskMore={() => {
+                  setIdleAt(null);
+                  askHint();
+                }}
+              />
+            </div>
+          ) : null}
           {/* E2 事故（L3/L4）：事故�?+ 三行处置，贴在舞台上沿，不遮实验台中�?*/}
           {incidentEvent ? (
             <IncidentBanner
@@ -1224,22 +1434,11 @@ export function Workbench({
           </div>
           ) : null}
 
-          <section ref={actionsRef} className={guide.railLead} tabIndex={-1} aria-label="建议动作">
-            <NextActionCard
-              name={guideName(suggested.label)}
-              why={
-                (isComputeStep ? COMPUTE_WHY[suggested.type] : undefined) ??
-                ACTION_HOW[suggested.type] ??
-                whyLine(step.judge.criterion)
-              }
-              keyHint={suggestedKey ? String(suggestedKey) : undefined}
-              demoId={suggested.demoId}
-              disabled={ui.exp.done}
-              phase={guidePhase}
-              highlight={hintOnAction}
-              onChoose={() => choose(suggested.choiceId)}
-            />
-          </section>
+          {/*
+            建议动作卡已删除（用户 2026-10-22）：
+            「点这张卡即完成」等于答题，不是做实验。动作改为在场景里用工具/器皿完成，
+            引导看左上任务看板（目标 + 判据 + 当前该干什么）。
+          */}
 
           {ui.event && ui.event.outcome === "failure" ? (
             <details
@@ -1262,42 +1461,6 @@ export function Workbench({
               {ui.event.terminate ? (
                 <p className={guide.whyWarn}>L4 危险事故：本次实验已终止，操作分记 0 分。</p>
               ) : null}
-            </details>
-          ) : null}
-
-          {!ui.exp.done ? (
-            <details className={guide.other} data-demo-id="demo-other-ways">
-              <summary className={guide.otherSummary}>
-                其他做法
-                <span className={guide.otherCount}>{otherChoices.length} 项</span>
-              </summary>
-              <div className={guide.otherList}>
-                {otherChoices.map((choice) => {
-                  const needs = (choice.requires ?? []).some((id) => !performed.has(id));
-                  const done = performed.has(choice.choiceId);
-                  const isLast = ui.lastChoiceId === choice.choiceId;
-                  const feedbackClass =
-                    isLast && ui.event
-                      ? ui.event.outcome === "success"
-                        ? `ix-pulse-ok ${styles.actionOk}`
-                        : `ix-shake ix-pulse-fail ${styles.actionFail}`
-                      : "";
-                  return (
-                    <button
-                      key={choice.choiceId}
-                      type="button"
-                      className={`${guide.otherButton} ix ${feedbackClass}`}
-                      data-feedback={isLast ? ui.event?.outcome : undefined}
-                      data-demo-id={choice.demoId}
-                      disabled={ui.exp.done || needs || done}
-                      onClick={() => choose(choice.choiceId)}
-                    >
-                      {choice.label}
-                      {needs ? <span className={guide.otherMeta}>需先完成前置动作</span> : null}
-                    </button>
-                  );
-                })}
-              </div>
             </details>
           ) : null}
 

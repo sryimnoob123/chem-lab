@@ -27,6 +27,18 @@
   opacity: 0.78;
 }
 
+/* 本步判定标准：必须完整可读（教学上学生要能对照判据自查），
+   所以不 nowrap、不截断，允许占两行。 */
+.criterion {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .dots {
   display: flex;
   gap: 4px;
@@ -744,5 +756,137 @@
   .card[data-hint="true"] .next::before {
     animation: none;
     opacity: 1;
+  }
+}
+
+/* 主操作卡最后一行：点下去会发生什么（用户 2026-10-22 演示前：
+   「点了之后它没什么反应，我也不知道下一步该做什么」—— 这一行就是那句回答）。 */
+.nextCta {
+  margin-top: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.next:hover:not(:disabled) .nextCta {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+/* 主按钮常驻的"这是按钮"暗示：一次 1.6s 的外圈呼吸，不循环（循环会烦人，
+   但学生卡住时它得先被看见一次）。放在卡片首帧。 */
+.card[data-phase="next"] .next::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 4px;
+  border: 2px solid var(--river-700);
+  opacity: 0;
+  pointer-events: none;
+  animation: guide-cue 1600ms cubic-bezier(0.33, 1, 0.68, 1) 1;
+}
+
+@keyframes guide-cue {
+  0% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  40% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card[data-phase="next"] .next::before {
+    animation: none;
+  }
+}
+
+/* ---------------- 空闲提示浮层（idle-nudge.tsx） ----------------
+   30s 没动手才出现；不挡台面中部，落在左下角。 */
+.nudge {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 340px;
+  padding: 10px 12px;
+  border: 1px solid var(--river-700);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 6px 20px rgba(22, 32, 44, 0.12);
+  animation: nudgeIn 180ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes nudgeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.nudgeIcon {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.nudgeText {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-1);
+}
+
+.nudgeActions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nudgeGhost,
+.nudgeSolid {
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.nudgeGhost {
+  border: 1px solid var(--bench-line);
+  background: transparent;
+  color: var(--ink-2);
+}
+
+.nudgeSolid {
+  border: 1px solid var(--river-700);
+  background: var(--river-700);
+  color: #fff;
+}
+
+.nudgeGhost:hover {
+  border-color: var(--ink-2);
+}
+
+.nudgeSolid:hover {
+  background: var(--river-800, #1b266a);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nudge {
+    animation: none;
   }
 }

@@ -270,13 +270,14 @@ describe("陷阱与事故", () => {
       level: "L3",
       fx: "burn",
       terminate: false,
+      deduct: 10,
     });
     expect(result.events.some((event) => event.kind === "feedback" && event.severity === "danger")).toBe(true);
     expect(result.state.stepIndex).toBe(0);
     expect(result.state.done).toBe(false);
     expect(result.state.attemptOfStep).toBe(1);
     expect(result.state.incidents).toEqual([
-      { stepIndex: 0, incidentId: "exp09-H2", level: "L3", terminate: false },
+      { stepIndex: 0, incidentId: "exp09-H2", level: "L3", terminate: false, deduct: 10 },
     ]);
     expect(result.state.violations).toEqual([]);
     // 输入状态不可变
@@ -294,6 +295,7 @@ describe("陷阱与事故", () => {
       level: "L4",
       fx: "boil-over",
       terminate: true,
+      deduct: 20,
     });
     expect(result.state.done).toBe(true);
     expect(result.state.incidents[0].terminate).toBe(true);
@@ -396,7 +398,7 @@ describe("applyIncident：规则层入账", () => {
       terminate: true,
     });
     expect(result.state.incidents).toEqual([
-      { stepIndex: 0, incidentId: "exp09-X9", level: "L4", terminate: true },
+      { stepIndex: 0, incidentId: "exp09-X9", level: "L4", terminate: true, deduct: 20 },
     ]);
     expect(result.state.done).toBe(true);
     expect(result.events.some((event) => event.kind === "incident" && event.fx === "explosion")).toBe(true);

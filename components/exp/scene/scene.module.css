@@ -201,8 +201,25 @@
   pointer-events: none;
 }
 
+/* 器皿可拖：光标要说明这件事（原来一律 pointer，看不出能拖） */
+.vessel,
 .droppable {
-  cursor: pointer;
+  touch-action: none;
+}
+
+.vessel {
+  cursor: grab;
+  /* 拖动跟手：不能有 transform 过渡，否则器皿慢半拍，用户会觉得「鼠标漂移」。
+     hover/按下的微动效放在 data-pressed / data-active 上，不受这条影响。 */
+  transition: none;
+}
+
+.vessel:active {
+  cursor: grabbing;
+}
+
+.droppable {
+  cursor: grab;
 }
 
 .static {
@@ -691,4 +708,210 @@
   background: var(--pour-color, #dce9f2);
   transform-origin: center bottom;
   opacity: 0;
+}
+/* ================= 落点可见性（2026-10-22 演示前） =================
+   以前整条台面只有一个大方块热区，倒进哪台器皿都一样、也看不出会落进哪。
+   现在每个器皿自己画环：
+   - .dropRing     指针压着的、这一步允许落进去的那台（实线 + 轻微放大）
+   - .dropRingBad  指针压着但不该落进去的那台（红实线）
+   - .dropRingSoft 拖拽中其它可落器皿（淡虚线，"也能放"）
+   - .cueRing      本步推荐操作的那台（常驻呼吸，"点这里"）
+   只动 opacity / stroke，不动布局；减动效下全部静态。 */
+.dropRingSoft {
+  fill: none;
+  stroke: var(--river-700);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 6;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.dropRing,
+.dropRingBad {
+  fill: rgba(35, 48, 127, 0.05);
+  stroke: var(--river-700);
+  stroke-width: 2.4;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.dropRingBad {
+  fill: rgba(190, 62, 62, 0.06);
+  stroke: #BE3E3E;
+}
+
+.cueRing {
+  fill: none;
+  stroke: var(--river-700);
+  stroke-width: 2;
+  stroke-dasharray: 7 6;
+  opacity: 0.75;
+  pointer-events: none;
+  animation: cueBreath 1800ms cubic-bezier(0.33, 1, 0.68, 1) infinite;
+}
+
+@keyframes cueBreath {
+  0%,
+  100% {
+    opacity: 0.24;
+  }
+  50% {
+    opacity: 0.78;
+  }
+}
+
+/* 器皿名气泡：拖拽时告诉学生「松手会落进这一台」，或者「这一台不行」。 */
+.dropBadge rect {
+  fill: var(--river-700);
+  opacity: 0.94;
+}
+
+.dropBadge text {
+  fill: #FFFFFF;
+  font-size: 12px;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  letter-spacing: 0.02em;
+}
+
+.dropBadge[data-badge="bad"] rect {
+  fill: #BE3E3E;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cueRing {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* 指针压在哪台，哪台就多一点：1.03 放大（用户口径：要能看出落点）。
+   与 .vessel.vessel 同权重写在后面，压过 data-active 的 1.02。 */
+.vessel.vessel[data-drop-hover="valid"] {
+  transform: scale(1.03);
+}
+
+.vessel.vessel[data-drop-hover="invalid"] {
+  transform: scale(0.99);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vessel.vessel[data-drop-hover="valid"],
+  .vessel.vessel[data-drop-hover="invalid"] {
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * 台面工具托盘 + 洗涤槽（2026-10-22）
+ * 目的：动作要在场景里做 —— 拿工具、对准器皿，而不是点卡片一步过。
+ * ------------------------------------------------------------------ */
+
+.toolTrayBase {
+  fill: rgba(74, 87, 104, 0.05);
+  stroke: rgba(74, 87, 104, 0.14);
+  stroke-width: 1;
+}
+
+.tool {
+  cursor: grab;
+  outline: none;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.tool[data-active="true"] {
+  cursor: grabbing;
+  filter: drop-shadow(0 2px 6px rgba(74, 87, 104, 0.28));
+}
+
+.tool:focus-visible .toolLabel {
+  text-decoration: underline;
+}
+
+.toolLabel {
+  font-size: 9px;
+  fill: var(--ink-2);
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  user-select: none;
+}
+
+.tool[data-active="true"] .toolLabel {
+  fill: var(--river-700);
+  font-weight: 600;
+}
+
+.sink {
+  cursor: pointer;
+  outline: none;
+}
+
+/* 拖拽命中环：只做几何提示，默认完全透明。
+   这个 class 之前没定义，SVG 的 fill 回退成黑色 —— 洗涤槽上那块黑板就是它。 */
+.sinkHotRing {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 2;
+  transition: stroke 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.sink[data-drop-hover="true"] .sinkHotRing {
+  stroke: var(--river-700);
+}
+
+.sinkRim {
+  fill: rgba(74, 87, 104, 0.07);
+  stroke: rgba(74, 87, 104, 0.28);
+  stroke-width: 1.2;
+}
+
+/* 槽底那块"黑板"：有些浏览器把渐变里的 rgba 解析成黑色，这里给一层兜底浅色 */
+.sink path[fill^="url(#chemlab-sink-inner)"] {
+  fill-opacity: 0.9;
+}
+
+.sinkDrain {
+  fill: rgba(74, 87, 104, 0.45);
+}
+
+.sinkPipe {
+  fill: rgba(150, 165, 182, 0.85);
+  stroke: rgba(74, 87, 104, 0.55);
+  stroke-width: 1.1;
+}
+
+.sinkLabel {
+  font-size: 9px;
+  fill: var(--ink-2);
+  pointer-events: none;
+  user-select: none;
+}
+
+.sinkStream {
+  fill: rgba(112, 165, 208, 0.75);
+  animation: sinkFlow 900ms linear infinite;
+}
+
+.sinkRipple {
+  fill: none;
+  stroke: rgba(112, 165, 208, 0.6);
+  stroke-width: 1.2;
+  animation: sinkRipple 1200ms ease-out infinite;
+}
+
+@keyframes sinkFlow {
+  from { opacity: 0.95; }
+  50%  { opacity: 0.55; }
+  to   { opacity: 0.95; }
+}
+
+@keyframes sinkRipple {
+  from { opacity: 0.7; transform: scale(0.6); transform-origin: center; }
+  to   { opacity: 0;   transform: scale(1.25); transform-origin: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sinkStream,
+  .sinkRipple {
+    animation: none;
+  }
 }

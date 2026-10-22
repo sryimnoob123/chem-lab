@@ -112,8 +112,9 @@ export function workbenchReducer(
   if (action.type === "reset") return createWorkbenchState(state.exp.expId);
 
   if (action.type === "retry") {
-    // L4 终止是例外：不能在本步重做，只能从终止页重新演示整个实验。
-    if (state.exp.done) return state;
+    // L4 终止后，「重做本步」原来是死键（直接 return state，点了没反应）。
+    // 终止语义上不能在本步重做，所以这里改成「从头重新开始整个实验」。
+    if (state.exp.done) return createWorkbenchState(state.exp.expId);
     const stepIndex = state.exp.stepIndex;
     return {
       ...state,
@@ -255,7 +256,7 @@ function buildEvent(
       stepNumber: step.index + 1,
       why: record?.why ?? feedback?.why,
       correct: record?.correct ?? feedback?.correct,
-      deduction: record?.deduct ?? 0,
+      deduction: record?.deduct ?? incident.deduct ?? 0,
       level: incident.level,
       fx: incident.fx,
       fxSeq,

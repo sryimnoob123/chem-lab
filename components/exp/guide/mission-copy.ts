@@ -21,8 +21,10 @@ export const MISSION_GOALS: Readonly<Record<string, string>> = {
   exp10: "标定 HCl，测纯碱总碱度",
 };
 
-/** 当前一步一句指引的上限（字）。 */
+/** 当前一步一句指引的上限（字）。提示句短，操作说明要能说清"手上怎么动"。 */
 export const MISSION_GUIDE_MAX = 20;
+/** 操作说明（动作名 + 执行方式）的上限：20 字装不下「称量瓶连盖粗称：点天平…」 */
+export const MISSION_HOW_MAX = 42;
 
 /** 目标句：有预设用预设，没有就按步骤数推一句（不编化学内容）。 */
 export function missionGoal(expId: string, title: string, total: number): string {
@@ -39,7 +41,11 @@ export function missionProgress(stepNo: number, total: number, verb: string): st
   return `第 ${stepNo}/${total} 步 · 现在该${verb}了`;
 }
 
-/** 第四行：优先用当前提示（同屏只有这一条），没有就退回本步任务名；一律压到 20 字。 */
+/**
+ * 第四行：优先用当前提示（同屏只有这一条），没有就退回本步任务名。
+ * 提示句压到 20 字；操作说明（含「动作名：怎么做」）放宽到 42 字 ——
+ * 卡片删掉后这一行是唯一的「下一步做什么」，截断等于没说（2026-10-22）。
+ */
 export function missionGuide(hint: string | undefined, stepTitle: string, limit = MISSION_GUIDE_MAX): string {
   const source = hint && hint.trim().length > 0 ? hint : stepTitle;
   return clip(source.trim(), limit);
