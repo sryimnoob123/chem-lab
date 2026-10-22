@@ -590,9 +590,9 @@
   /* 明确给一个 scale(1) 基准：SVG <g> 从 transform:none 过渡到 scale(1.02) 在 Chrome 里
      会卡在 identity（实测点了不放大），有基准矩阵才插值。 */
   transform: scale(1);
-  transition:
-    transform 120ms cubic-bezier(0.23, 1, 0.32, 1),
-    filter 120ms ease;
+  /* 只过渡 transform：filter 过渡会让每次状态切换都跑一遍滤镜重绘（拖动时最贵的属性）。
+     拖动中的位移另有一条 [data-lifted] 规则把过渡整个关掉。 */
+  transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .vessel.vessel[data-active="true"] {
@@ -829,6 +829,16 @@
   transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
+/* 拖动中：位移由 JS 一帧写一次 transform。
+   这里必须关掉 160ms 过渡（否则工具被拖着走还慢半拍，实测 p95 滞后 9.3px），
+   同时停掉 drop-shadow —— 滤镜每帧重绘是拖动最贵的一笔。 */
+.tool[data-dragging="true"] {
+  transition: none;
+  will-change: transform;
+  filter: none;
+  cursor: grabbing;
+}
+
 .tool[data-active="true"] {
   cursor: grabbing;
   filter: drop-shadow(0 2px 6px rgba(74, 87, 104, 0.28));
@@ -938,6 +948,9 @@
 }
 
 .vessel[data-lifted="true"] {
+  /* 拖动中的位移由 JS 一帧写一次 transform —— 这里必须没有过渡，
+     否则浏览器会把每帧位移再插值 120ms，手就是「拖着一条橡皮筋」（实测 p95 滞后 3.6px）。 */
+  transition: none;
   will-change: transform;
 }
 

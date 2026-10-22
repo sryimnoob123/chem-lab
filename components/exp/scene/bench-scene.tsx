@@ -142,7 +142,18 @@ export function BenchScene({
   children,
 }: BenchSceneProps) {
   const [hoverId, setHoverId] = useState<string | null>(null);
-  const [pressedId, setPressedId] = useState<string | null>(null);
+  /**
+   * 按下态（data-pressed）**不走 React 状态**（2026-10-22 性能体检）：
+   * 旧实现按下就 setPressedId → 整块台面（4 台器皿 + 工具托盘 + 天平）重渲染一次，
+   * 实测按下这一帧在 6x CPU 降速下要 180ms。按下只是变个样子，直接写属性即可。
+   */
+  const pressedElRef = useRef<HTMLElement | null>(null);
+  const paintPressed = (el: HTMLElement | null) => {
+    const prev = pressedElRef.current;
+    if (prev && prev !== el) delete prev.dataset.pressed;
+    pressedElRef.current = el;
+    if (el) el.dataset.pressed = "true";
+  };
   /**
    * 器皿液位（0..1）：倒一次涨一格，涨上去不回落（用户 2026-10-22：液面要随倒液上升）。
    * 只记「倒了几次」，液位由次数算出来 —— 这样倾倒动画的起止液位在整段动画里都是常量，
@@ -677,7 +688,6 @@ export function BenchScene({
               }`}
               role="button"
               tabIndex={0}
-              data-pressed={pressedId === vessel.id ? "true" : "false"}
               data-active={activeVesselId === vessel.id ? "true" : "false"}
               data-drag-over={droppable && hovered && draggingReagentId ? "true" : "false"}
               data-drop-hover={isDropHover ? (dropHoverValid ? "valid" : "invalid") : "false"}
@@ -688,15 +698,17 @@ export function BenchScene({
                 // 关键——拖动过程中不 setState、不重渲染，一帧只写一次 transform。
                 if (event.pointerType === "mouse" && event.button !== 0) return;
                 event.stopPropagation();
-                setPressedId(vessel.id);
+                paintPressed(event.currentTarget as unknown as HTMLElement);
                 drag.begin(event, vessel.id, offsets[vessel.id] ?? ZERO_OFFSET);
               }}
+              onPointerUp={() => paintPressed(null)}
+              onPointerCancel={() => paintPressed(null)}
               aria-label={
                 droppable
                   ? `${vessel.label}，内含${describeContents(contents[vessel.id] ?? [])}，可接收试剂`
                   : `${vessel.label}，只装标准溶液，不接受投加试剂；拖入会给出规范提示`
               }
-              onPointerLeave={() => setPressedId(null)}
+              onPointerLeave={() => paintPressed(null)}
               onClick={(event) => {
                 // 必须停冒泡：舞台层的 onClick 是「点空白」处理，会把
                 // 「这一步要…拖工具到器皿上」的提示写到 caption 上，

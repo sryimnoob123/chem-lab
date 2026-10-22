@@ -101,35 +101,55 @@ export function useBenchDrag({ svgRef, bounds, validate, onDrop, onDragged }: Us
       let current: BenchOffset = offset;
       let frame = 0;
       let hoverEl: Element | null = null;
+      let hoverState: "ok" | "bad" | null = null;
       let alive = true;
+
+      /**
+       * 落点目标一次性算好（2026-10-22 性能体检）。
+       *
+       * 旧实现每个 rAF 都调 document.elementsFromPoint 做一遍命中测试：命中测试要让
+       * 浏览器先 flush 样式与布局，等于**拖动的每一帧都在强制同步布局**。
+       * 现在按下时把带 data-drop-kind 的元素的屏幕矩形读一次（此时布局是干净的），
+       * 之后每帧只做「点在不在矩形里」的整数比较 —— 零布局、零命中测试。
+       * 拖动中器皿不会动（只有被拖的那台在动），所以这份快照在整段拖动里都成立。
+       */
+      const dropTargets: { kind: "vessel" | "sink" | "bench"; id: string; el: Element; rect: DOMRect }[] = [];
+      for (const node of document.querySelectorAll<HTMLElement>("[data-drop-kind]")) {
+        const kind = node.dataset.dropKind;
+        if (kind !== "vessel" && kind !== "sink" && kind !== "bench") continue;
+        const rect = node.getBoundingClientRect();
+        if (!rect.width || !rect.height) continue;
+        dropTargets.push({ kind, id: node.dataset.vesselId ?? "", el: node, rect });
+      }
 
       const clampOffset = (next: BenchOffset): BenchOffset => ({
         dx: Math.min(limits.maxX, Math.max(limits.minX, next.dx)),
         dy: Math.min(limits.maxY, Math.max(limits.minY, next.dy)),
       });
 
-      /** 落点元素：从指针下穿透整叠，找第一个带 data-drop-kind 的（跳过自己）。 */
+      /** 落点：器皿优先，其次洗涤槽，最后台面；都不在 = 台面外。 */
       const targetAt = (clientX: number, clientY: number): { target: BenchTarget; el: Element | null } => {
-        if (typeof document === "undefined") return { target: { kind: "outside" }, el: null };
-        for (const node of document.elementsFromPoint(clientX, clientY)) {
-          const hit = node.closest?.("[data-drop-kind]");
-          if (!hit) continue;
-          const kind = (hit as HTMLElement).dataset.dropKind;
-          if (kind === "vessel") {
-            const vesselId = (hit as HTMLElement).dataset.vesselId ?? "";
-            if (vesselId === id) continue;
-            return { target: { kind: "vessel", id: vesselId }, el: hit };
-          }
-          if (kind === "sink") return { target: { kind: "sink" }, el: hit };
-          if (kind === "bench") return { target: { kind: "bench" }, el: hit };
+        const inside = (t: { rect: DOMRect }) =>
+          clientX >= t.rect.left && clientX <= t.rect.right && clientY >= t.rect.top && clientY <= t.rect.bottom;
+        for (const t of dropTargets) {
+          if (t.kind !== "vessel" || t.id === id) continue;
+          if (inside(t)) return { target: { kind: "vessel", id: t.id }, el: t.el };
+        }
+        for (const t of dropTargets) {
+          if (t.kind === "sink" && inside(t)) return { target: { kind: "sink" }, el: t.el };
+        }
+        for (const t of dropTargets) {
+          if (t.kind === "bench" && inside(t)) return { target: { kind: "bench" }, el: t.el };
         }
         return { target: { kind: "outside" }, el: null };
       };
 
-      /** hover 只改 DOM 属性，不触发 React 渲染。 */
+      /** hover 只改 DOM 属性，且**只在命中目标真的变了的时候**写。 */
       const paintHover = (el: Element | null, state: "ok" | "bad" | null) => {
+        if (el === hoverEl && state === hoverState) return;
         if (hoverEl && hoverEl !== el) delete (hoverEl as HTMLElement).dataset.drop;
         hoverEl = el;
+        hoverState = state;
         if (!el) return;
         if (state) (el as HTMLElement).dataset.drop = state;
         else delete (el as HTMLElement).dataset.drop;
@@ -146,6 +166,8 @@ export function useBenchDrag({ svgRef, bounds, validate, onDrop, onDragged }: Us
         current = next;
         el.style.transform = offsetTransform(next);
         const { target, el: hitEl } = targetAt(pointer.x, pointer.y);
+        // 落点没换台：判定与高亮都不用重算（每帧都算一遍白白喂给 React 校验函数）
+        if (hitEl === hoverEl && hoverState !== null) return;
         const verdict = validate ? validate(id, target) : target.kind === "vessel" ? "bad" : "ok";
         paintHover(hitEl, target.kind === "bench" || target.kind === "outside" ? null : verdict);
       };
@@ -222,7 +244,11 @@ export function useBenchDrag({ svgRef, bounds, validate, onDrop, onDragged }: Us
         finish(true);
       };
 
-      el.setPointerCapture?.(pointerId);
+      try {
+        el.setPointerCapture?.(pointerId);
+      } catch {
+        /* 合成事件（demo 脚本 / e2e）没有真实指针，捕获失败不影响后续 dispatch */
+      }
       el.dataset.lifted = "true";
       svg.dataset.drag = id;
       el.addEventListener("pointermove", onMove);

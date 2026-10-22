@@ -403,11 +403,66 @@
   text-align: left;
   cursor: pointer;
   transition: transform 120ms var(--ease-out);
+  /* 拖动素材时不要触发浏览器原生「拖选文字」：原生的 dragstart 会紧接着发 pointercancel，
+     自定义拖拽当场被打断（2026-10-22 实测：pointercancel 在 8ms 后到达）。 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
 .piece[aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--river-700) 45%, var(--line));
   background: var(--river-100);
+}
+
+/* 拖动中：关掉过渡（120ms 过渡会让卡片慢半拍），并抬成一层 */
+.piece[data-dragging="true"] {
+  transition: none;
+  will-change: transform;
+  opacity: 0.55;
+}
+
+/* 拖动影子：位置由 rAF 写 transform（不动 left/top），拖动期间不跑滤镜 */
+.dragPiece {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  max-width: 260px;
+  padding: 7px 10px;
+  border: 1px solid var(--river-700);
+  border-radius: 10px;
+  background: var(--card, #fff);
+  color: var(--ink);
+  font-size: var(--text-13);
+  font-weight: 600;
+  pointer-events: none;
+  will-change: transform;
+  box-shadow: 0 10px 22px rgba(22, 32, 44, 0.18);
+  opacity: 0.96;
+}
+
+.dragPiece[data-on="false"] {
+  display: none;
+}
+
+.dragPieceSub {
+  font-size: var(--text-12);
+  font-weight: 400;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 拖到方案区上方：给方案面板一圈描边（只改属性，不重排）。
+   注意 CSS Modules 要求选择器里有本地类，所以带上 .panel。 */
+.panel[data-plan-drop="list"][data-over="true"] {
+  outline: 2px solid var(--river-700);
+  outline-offset: 2px;
 }
 
 .piece:active {

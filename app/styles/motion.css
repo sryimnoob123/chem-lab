@@ -51,7 +51,8 @@
     box-shadow var(--hover) var(--ease-press),
     border-color var(--hover) var(--ease-press),
     filter var(--hover) var(--ease-press);
-  will-change: transform;
+  /* 不常驻 will-change：全站 .ix 有几十个，常驻等于几十个合成层。
+     只在真的拖动期间（[data-dragging]）才提层，松手即撤。 */
 }
 
 /* 悬停：80ms 内描边点亮 + 轻微浮起 */
@@ -163,6 +164,7 @@
   box-shadow: 0 8px 20px rgba(22, 32, 44, 0.18);
   opacity: 0.92;
   z-index: 10;
+  will-change: transform;
 }
 
 /* 可投放目标：用伪元素画脉冲环，**不动元素本身的 transform**，

@@ -55,7 +55,7 @@ function howToFor(type?: string | null): string {
     case "evaporate":
       return "把器皿放到电热套上";
     default:
-      return "看左上角任务看板给的操作方式";
+      return "点台面上亮起的那一步，或按住器皿拖动";
   }
 }
 
@@ -140,7 +140,7 @@ const EMPTY_PERFORMED: ReadonlySet<string> = new Set<string>();
 const NO_RESOLVE: (reagentId: string) => DropVerdict = () => ({
   kind: "reject",
   line: "先按上方步骤操作",
-  lines: ["这一步还没接上判定", "投放只在当前步骤有对应动作时才生效", "按上方「建议动作」做这一步"],
+  lines: ["这一步还没接上判定", "投放只在当前步骤有对应动作时才生效", "在台面上按住器皿或试剂瓶拖一下"],
 });
 
 export function SceneStage({
@@ -336,17 +336,49 @@ export function SceneStage({
    * 指针拖拽的临时状态（用户 2026-10-22 口径：演示与手操都走 pointerdown/move/up）。
    * 只有移动超过阈值才算"拖"，原地按下松手仍按普通点击处理（点选模式）。
    */
-  const pointerDragRef = useRef<{ id: string; pointerId: number; moved: boolean } | null>(null);
+  const pointerDragRef = useRef<{
+    id: string;
+    pointerId: number;
+    moved: boolean;
+    /** 按下点：判「这是拖动还是点击」用它，**不用 movementX**
+     *  （合成事件 / 触控 / 部分浏览器上 movementX 恒为 0，会把所有拖动判成点击） */
+    x: number;
+    y: number;
+  } | null>(null);
+  /** 刚拖过一瓶试剂：用来吞掉拖动后浏览器补发的那个 click */
+  const reagentDraggedRef = useRef(false);
   /**
-   * 跟手的拖动影子（性能版，2026-10-22）：
+   * 跟手的拖动影子（性能版，2026-10-22）。
+   *
    * 旧实现每个 pointermove 都 setDragGhost(x, y) —— 一次拖拽能把这块 800 行的组件
-   * 重渲染上百次，手感就是「有延迟、不跟手」。现在 state 只在「影子出现/消失」时变一次，
-   * 位置在 rAF 里直接写 transform（一帧最多一次），全程不触发 React 渲染。
+   * 重渲染上百次，手感就是「有延迟、不跟手」。
+   *
+   * 2026-10-22 第二轮：影子改成**常驻渲染 + 隐藏态**（display:none），
+   * 出现/消失只切一个 data 属性、位置在 rAF 里写 transform。
+   * 之前「出现时 setGhostReagent(id)」虽然只提交一次，但那一次恰好落在拖动的第一帧，
+   * 实测就是 1 次 React commit —— 现在拖动全程 0 次。
    */
-  const [ghostReagent, setGhostReagent] = useState<string | null>(null);
   const dragGhostRef = useRef<HTMLDivElement | null>(null);
   const ghostPos = useRef({ x: 0, y: 0 });
   const ghostFrame = useRef(0);
+
+  const showGhost = (on: boolean) => {
+    const node = dragGhostRef.current;
+    if (node) node.dataset.on = on ? "true" : "false";
+  };
+  /** 落点高亮同样一帧只算一次（高刷鼠标 120~240Hz 的 move 会被合并到帧） */
+  const hoverPoint = useRef({ x: 0, y: 0 });
+  const hoverFrame = useRef(0);
+  /** 3D/滴定场景的落点状态：先跟 ref 比，值没变就不 setState */
+  const overFlaskRef = useRef(false);
+  const overVesselRef = useRef<string | null>(null);
+  useEffect(
+    () => () => {
+      if (hoverFrame.current) window.cancelAnimationFrame(hoverFrame.current);
+      hoverFrame.current = 0;
+    },
+    [],
+  );
 
   const moveGhost = (x: number, y: number) => {
     ghostPos.current = { x, y };
@@ -355,6 +387,7 @@ export function SceneStage({
       ghostFrame.current = 0;
       const node = dragGhostRef.current;
       if (node) {
+        node.dataset.on = "true";
         node.style.transform = `translate3d(${ghostPos.current.x - 14}px, ${ghostPos.current.y - 18}px, 0)`;
       }
     });
@@ -363,7 +396,7 @@ export function SceneStage({
   const clearGhost = () => {
     if (ghostFrame.current) window.cancelAnimationFrame(ghostFrame.current);
     ghostFrame.current = 0;
-    setGhostReagent(null);
+    showGhost(false);
   };
 
   const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
@@ -393,7 +426,40 @@ export function SceneStage({
   const [rejectFx, setRejectFx] = useState<{ id: string; key: number } | null>(null);
 
   /** 松手点下面压着的器皿 id：大热区按钮盖在 SVG 上，必须逐层穿透才拿得到器皿。 */
+  /**
+   * 落点判定（2026-10-22 性能体检）。
+   *
+   * 旧实现每个 pointermove 都做一次 document.elementsFromPoint —— 命中测试要让浏览器
+   * 先 flush 样式与布局，等于拖一瓶试剂时每一帧都在强制同步布局。
+   * 现在按下时把台上器皿的屏幕矩形读一次（此刻布局是干净的），之后只做矩形比较；
+   * 快照缺失（3D 场景 / 非台面）才回落到命中测试。拖动中器皿不会动，快照整段有效。
+   */
+  const dropTargetsRef = useRef<{ id: string; el: HTMLElement; rect: DOMRect }[] | null>(null);
+
+  const snapshotDropTargets = () => {
+    if (typeof document === "undefined") return;
+    dropTargetsRef.current = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-drop-kind="vessel"]'),
+    )
+      .map((el) => ({
+        id: el.dataset.vesselId ?? el.dataset.demoId?.replace("demo-scene-vessel-", "") ?? "",
+        el,
+        rect: el.getBoundingClientRect(),
+      }))
+      .filter((target) => target.rect.width > 0 && target.rect.height > 0);
+  };
+
   const vesselAt = (point: { x: number; y: number }): string | null => {
+    const snapshot = dropTargetsRef.current;
+    if (snapshot) {
+      for (const target of snapshot) {
+        const { rect } = target;
+        if (point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom) {
+          return target.id;
+        }
+      }
+      return null;
+    }
     if (typeof document === "undefined") return null;
     for (const el of document.elementsFromPoint(point.x, point.y)) {
       const hit = el.closest<HTMLElement>('[data-demo-id^="demo-scene-vessel"]');
@@ -406,19 +472,53 @@ export function SceneStage({
   /**
    * 拖拽中的落点高亮：直接改 SVG 属性（data-drop），不 setState。
    * 台上每台器皿的环与气泡都由属性驱动，命中哪台亮哪台 —— 一次拖拽 React 一次都不重渲染。
+   *
+   * 2026-10-22：只在「命中目标或判定结果真的变了」时才写属性。旧实现每帧都把
+   * data-drop 重写一遍，等于每帧给 SVG 打一次样式失效 + 重启动画。
    */
+  const dropPaintedRef = useRef<{ el: HTMLElement; state: string } | null>(null);
+
   const paintDropHover = (hitId: string | null) => {
     if (typeof document === "undefined") return;
-    const painted = document.querySelectorAll<HTMLElement>('[data-drop-kind="vessel"][data-drop]');
-    painted.forEach((el) => {
-      delete el.dataset.drop;
-    });
-    if (!hitId) return;
-    const el = Array.from(document.querySelectorAll<HTMLElement>('[data-drop-kind="vessel"]')).find(
-      (node) => node.dataset.vesselId === hitId || node.dataset.demoId === `demo-scene-vessel-${hitId}`,
-    );
-    if (!el) return;
-    el.dataset.drop = !cueVesselId || cueVesselId === hitId ? "ok" : "bad";
+    const state: string | null = hitId ? (!cueVesselId || cueVesselId === hitId ? "ok" : "bad") : null;
+    const nextEl = hitId ? (dropTargetsRef.current?.find((target) => target.id === hitId)?.el ?? null) : null;
+    const prev = dropPaintedRef.current;
+    if (!nextEl || !state) {
+      if (prev) {
+        delete prev.el.dataset.drop;
+        dropPaintedRef.current = null;
+      }
+      return;
+    }
+    if (prev && prev.el === nextEl && prev.state === state) return;
+    if (prev && prev.el !== nextEl) delete prev.el.dataset.drop;
+    nextEl.dataset.drop = state;
+    dropPaintedRef.current = { el: nextEl, state };
+  };
+
+  /**
+   * 拖动中的落点绘制：一帧最多一次。
+   * 台面场景只改属性（零 setState）；3D/滴定场景需要 React 状态，但先跟 ref 比，
+   * 值没变就不发更新 —— 旧实现每个 pointermove 都 setState 一次。
+   */
+  const paintHoverAt = () => {
+    hoverFrame.current = 0;
+    const point = hoverPoint.current;
+    if (isBenchScene) {
+      paintDropHover(vesselAt(point));
+      return;
+    }
+    const hit = typeof document === "undefined" ? null : document.elementFromPoint(point.x, point.y);
+    const onFlask = Boolean(hit?.closest('[data-demo-id="demo-scene-drop-flask"]'));
+    if (overFlaskRef.current !== onFlask) {
+      overFlaskRef.current = onFlask;
+      flow.setOverFlask(onFlask);
+    }
+    const overId = vesselAt(point);
+    if (overVesselRef.current !== overId) {
+      overVesselRef.current = overId;
+      setOverVesselId(overId);
+    }
   };
 
   /** 落位：先记下落点器皿（反馈只给它），再交给 flow 播倾倒。 */
@@ -584,8 +684,8 @@ export function SceneStage({
         // 而且这条提示会覆盖掉真正的成功文案，7 步全程可见 —— review 报的 blocker）
         nudge(
           expId && isBenchScene
-            ? `这一步要「${suggestedName ?? "按看板提示操作"}」：${howToFor(suggestedType)}`
-            : `这一步要「${suggestedName ?? "按看板提示操作"}」：看左上角任务看板给的操作方式`,
+            ? `这一步要「${suggestedName ?? "按高亮操作"}」：${howToFor(suggestedType)}`
+            : `这一步要「${suggestedName ?? "按高亮操作"}」：点台面上亮起的那台器皿`,
         );
       }}
       onKeyDown={(event) => {
@@ -626,7 +726,18 @@ export function SceneStage({
                   } catch {
                     /* 合成事件（演示脚本）没有真实指针，捕获失败不影响后续 dispatch */
                   }
-                  pointerDragRef.current = { id: reagent.id, pointerId: event.pointerId, moved: false };
+                  pointerDragRef.current = {
+                    id: reagent.id,
+                    pointerId: event.pointerId,
+                    moved: false,
+                    x: event.clientX,
+                    y: event.clientY,
+                  };
+                  // 落点矩形快照：整段拖动只做矩形比较，不再每帧命中测试
+                  if (isBenchScene) snapshotDropTargets();
+                  dropPaintedRef.current = null;
+                  overFlaskRef.current = false;
+                  overVesselRef.current = null;
                   flow.beginDrag(reagent.id);
                   setSelectedId(reagent.id);
                   onCaption(null);
@@ -636,19 +747,14 @@ export function SceneStage({
                   const drag = pointerDragRef.current;
                   if (!drag || drag.pointerId !== event.pointerId) return;
                   if (!drag.moved) {
-                    if (Math.abs(event.movementX) + Math.abs(event.movementY) < 3) return;
+                    if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 3) return;
                     drag.moved = true;
-                    setGhostReagent(drag.id);
                   }
                   moveGhost(event.clientX, event.clientY);
-                  if (isBenchScene) {
-                    // 台面场景：落点高亮直接改属性，命中哪台亮哪台
-                    paintDropHover(vesselAt({ x: event.clientX, y: event.clientY }));
-                  } else {
-                    const hit = document.elementFromPoint(event.clientX, event.clientY);
-                    flow.setOverFlask(Boolean(hit?.closest('[data-demo-id="demo-scene-drop-flask"]')));
-                    setOverVesselId(vesselAt({ x: event.clientX, y: event.clientY }));
-                  }
+                  // 落点高亮合并到帧（一帧最多一次），不再逐事件算
+                  hoverPoint.current = { x: event.clientX, y: event.clientY };
+                  if (hoverFrame.current) return;
+                  hoverFrame.current = window.requestAnimationFrame(paintHoverAt);
                 }}
                 onPointerUp={(event) => {
                   // 段 3 落位：用松手坐标提交，吸附/倾倒/回弹都由 useDropFlow 播。
@@ -657,21 +763,46 @@ export function SceneStage({
                   pointerDragRef.current = null;
                   clearGhost();
                   event.currentTarget.releasePointerCapture?.(event.pointerId);
+                  if (hoverFrame.current) {
+                    window.cancelAnimationFrame(hoverFrame.current);
+                    hoverFrame.current = 0;
+                  }
                   flow.setOverFlask(false);
                   paintDropHover(null);
+                  // 拖动结束立刻摘掉「拿着」态：onUseReagent 那条链路不会自己清
+                  flow.endDrag();
                   if (!drag.moved) {
-                    flow.endDrag();
+                    reagentDraggedRef.current = false;
+                    dropTargetsRef.current = null;
                     return;
                   }
+                  /**
+                   * 拖动成功后浏览器还会补发一个 click：旧实现没拦，于是
+                   * onClick 又把刚选中的试剂取消、并 onCaption(null) 把落点提示擦掉 ——
+                   * 学生拖完一瓶试剂看不见任何回应（2026-10-22 实测 root cause）。
+                   */
+                  reagentDraggedRef.current = true;
+                  // 落点仍用快照矩形判定（松手这一下不做命中测试）
                   dropAt(drag.id, { x: event.clientX, y: event.clientY });
+                  dropTargetsRef.current = null;
                 }}
                 onPointerCancel={() => {
                   pointerDragRef.current = null;
+                  reagentDraggedRef.current = false;
                   clearGhost();
+                  if (hoverFrame.current) {
+                    window.cancelAnimationFrame(hoverFrame.current);
+                    hoverFrame.current = 0;
+                  }
                   paintDropHover(null);
+                  dropTargetsRef.current = null;
                   flow.endDrag();
                 }}
                 onClick={() => {
+                  if (reagentDraggedRef.current) {
+                    reagentDraggedRef.current = false;
+                    return;
+                  }
                   setSelectedId((current) => (current === reagent.id ? null : reagent.id));
                   onCaption(null);
                 }}
@@ -880,8 +1011,9 @@ export function SceneStage({
         </button>
       ) : null}
 
-      {/* 跟手的拖动影子：只在拖出阈值后出现，位置由 rAF 写 transform（不重渲染） */}
-      {ghostReagent ? (
+      {/* 跟手的拖动影子：常驻渲染、默认隐藏（display:none）。
+          出现/消失只切 data-on，位置由 rAF 写 transform —— 拖动全程 0 次 React 提交。 */}
+      {selected ? (
         <div
           ref={(node) => {
             dragGhostRef.current = node;
@@ -890,17 +1022,18 @@ export function SceneStage({
             node.style.transform = `translate3d(${ghostPos.current.x - 14}px, ${ghostPos.current.y - 18}px, 0)`;
           }}
           className={styles.dragGhost}
+          data-on="false"
           aria-hidden="true"
           data-demo-id="demo-drag-ghost"
         >
           <ReagentBottle
             className={styles.dragGhostBottle}
-            color={getSceneReagent(ghostReagent)?.colorHex ?? "#DCE9F2"}
+            color={selected.colorHex}
             width={28}
             height={40}
           />
           <span className={styles.dragGhostName}>
-            {getSceneReagent(ghostReagent)?.name ?? ""}
+            {selected.name}
           </span>
         </div>
       ) : null}

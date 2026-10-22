@@ -17,7 +17,7 @@
  * 这里的 x/y 只在导轨内均分 —— 不再各画各的绝对坐标。
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SCENE_TOOLS, type SceneTool, type SceneToolId } from "@/lib/scene/tools";
 import styles from "./scene.module.css";
 
@@ -129,32 +129,51 @@ function art(tool: SceneTool, active: boolean) {
 }
 
 export function ToolTray({ area, toolIds, activeTool, onSelectTool, onUseTool }: ToolTrayProps) {
-  const [dragging, setDragging] = useState<SceneToolId | null>(null);
+  /** 悬停是「进入/离开」级别的状态，不在拖动热路径上，可以留在 React 里。 */
   const [hovered, setHovered] = useState<SceneToolId | null>(null);
-  const [pressed, setPressed] = useState<SceneToolId | null>(null);
-  const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
   /**
    * 一次按下→抬起的会话放在 ref 里（2026-10-22 修）：
    * 之前 pointerup 里读 React 的 dragging 状态判断「这是不是拖动」，
    * 快速点击时两次事件落在同一帧、状态还没重渲染 → 直接 return，工具永远拿不起来
    * （用户报「连玻璃棒都没有」就是这条）。ref 一定是最新的。
+   *
+   * 2026-10-22 性能体检：会话里还记了「按下时的基准位置」和「屏幕→SVG 的缩放」，
+   * 拖动期间只改 DOM（dataset + style.transform），**一次 setState 都不发**。
+   * 旧实现在每个 pointermove 里 setGhost(point)，一次拖动触发 50 次整块台面重渲染，
+   * 帧时长 p95 33ms（实测）。
    */
-  const sessionRef = useRef<{ id: SceneToolId; x: number; y: number; moved: boolean } | null>(null);
+  const sessionRef = useRef<{
+    id: SceneToolId;
+    el: SVGGElement;
+    x: number;
+    y: number;
+    moved: boolean;
+    base: { x: number; y: number };
+    scale: { x: number; y: number };
+  } | null>(null);
+  /** 最近一次指针位置：rAF 里读，一帧只写一次 transform */
+  const pointerRef = useRef({ x: 0, y: 0 });
+  const frameRef = useRef(0);
   /** 刚刚是一次拖动（不是点击）：用来吞掉拖动后的 click */
   const draggedRef = useRef(false);
 
-  // 容器是响应式缩放的，clientX 必须先换算到 SVG 坐标系
-  const toSvg = useCallback((element: Element, clientX: number, clientY: number) => {
-    const svg = (element as SVGGraphicsElement).ownerSVGElement;
-    if (!svg) return null;
-    const matrix = svg.getScreenCTM();
-    if (!matrix) return null;
-    const point = svg.createSVGPoint();
-    point.x = clientX;
-    point.y = clientY;
-    const mapped = point.matrixTransform(matrix.inverse());
-    return { x: mapped.x, y: mapped.y };
+  /** 一帧一次：把「指针位移」换算成 SVG 单位，写成 transform（不动 transform 属性）。 */
+  const flush = useCallback(() => {
+    frameRef.current = 0;
+    const session = sessionRef.current;
+    if (!session) return;
+    const dx = (pointerRef.current.x - session.x) / (session.scale.x || 1);
+    const dy = (pointerRef.current.y - session.y) / (session.scale.y || 1);
+    session.el.style.transform = `translate(${(session.base.x + dx).toFixed(1)}px, ${(session.base.y + dy).toFixed(1)}px)`;
   }, []);
+
+  useEffect(
+    () => () => {
+      if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
+      frameRef.current = 0;
+    },
+    [],
+  );
 
   const tools = SCENE_TOOLS.filter((tool) => toolIds.includes(tool.id));
   if (tools.length === 0) return null;
@@ -186,34 +205,46 @@ export function ToolTray({ area, toolIds, activeTool, onSelectTool, onUseTool }:
       />
       {tools.map((tool, index) => {
         const active = activeTool === tool.id;
-        const lifted = dragging === tool.id;
         const base = home(index);
-        const position = lifted && ghost ? ghost : base;
         return (
           <g
             key={tool.id}
-            transform={`translate(${position.x} ${position.y})`}
+            transform={`translate(${base.x} ${base.y})`}
             className={styles.tool}
             data-active={active}
-            data-dragging={lifted ? "true" : "false"}
             data-hover={hovered === tool.id ? "true" : "false"}
-            data-pressed={pressed === tool.id ? "true" : "false"}
             data-demo-id={`demo-tool-${tool.id}`}
             role="button"
             tabIndex={0}
             aria-label={`${tool.label}${active ? "（已拿起）" : "，可拖到器皿上"}`}
             aria-pressed={active}
-            onPointerEnter={() => setHovered(tool.id)}
+            onPointerEnter={() => {
+              // 拖动中不改悬停态：少一帧重渲染，也避免拖出托盘时状态打架
+              if (sessionRef.current) return;
+              setHovered(tool.id);
+            }}
             onPointerLeave={() => {
+              if (sessionRef.current) return;
               setHovered(null);
-              setPressed(null);
             }}
             onPointerDown={(event) => {
               event.stopPropagation();
               event.preventDefault();
-              (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
-              sessionRef.current = { id: tool.id, x: event.clientX, y: event.clientY, moved: false };
-              setPressed(tool.id);
+              const el = event.currentTarget as SVGGElement;
+              el.setPointerCapture?.(event.pointerId);
+              const ctm = el.ownerSVGElement?.getScreenCTM();
+              sessionRef.current = {
+                id: tool.id,
+                el,
+                x: event.clientX,
+                y: event.clientY,
+                moved: false,
+                base,
+                scale: { x: ctm?.a || 1, y: ctm?.d || 1 },
+              };
+              pointerRef.current = { x: event.clientX, y: event.clientY };
+              // 按下态直接写属性：不 setState（这一帧不用重渲染任何东西）
+              el.dataset.pressed = "true";
               // 注意：这里**不能**调 onSelectTool —— 抬起时还会 toggle，
               // 按下就选中等于「选中又取消」，工具永远拿不起来（2026-10-22 实测）。
             }}
@@ -223,28 +254,34 @@ export function ToolTray({ area, toolIds, activeTool, onSelectTool, onUseTool }:
               if (!session.moved) {
                 if (Math.hypot(event.clientX - session.x, event.clientY - session.y) < 4) return;
                 session.moved = true;
-                setDragging(tool.id);
-                setGhost({ x: base.x, y: base.y });
+                // 拿起态：属性切换交给 CSS（transition 在 [data-dragging] 里已关掉）
+                session.el.dataset.dragging = "true";
+                delete session.el.dataset.pressed;
               }
               event.stopPropagation();
-              const point = toSvg(event.currentTarget as Element, event.clientX, event.clientY);
-              if (point) setGhost(point);
+              pointerRef.current = { x: event.clientX, y: event.clientY };
+              if (frameRef.current) return;
+              frameRef.current = window.requestAnimationFrame(flush);
             }}
             onPointerUp={(event) => {
               const session = sessionRef.current;
               if (!session || session.id !== tool.id) return;
               event.stopPropagation();
               sessionRef.current = null;
-              setDragging(null);
-              setPressed(null);
-              setGhost(null);
+              if (frameRef.current) {
+                window.cancelAnimationFrame(frameRef.current);
+                frameRef.current = 0;
+              }
+              session.el.style.transform = "";
+              delete session.el.dataset.dragging;
+              delete session.el.dataset.pressed;
               draggedRef.current = session.moved;
               if (!session.moved) {
                 // 位移太小 = 一次点击：走「点选后再点器皿」
                 onSelectTool(active ? null : tool.id);
                 return;
               }
-              // 被拖的元素就在指针下，所以取整叠命中再挑器皿
+              // 被拖的元素就在指针下，所以取整叠命中再挑器皿（松手只判一次）
               const stack = document.elementsFromPoint(event.clientX, event.clientY);
               const hit = stack.find((element) => element.closest(VESSEL_SELECTOR));
               const vessel = hit?.closest(VESSEL_SELECTOR)?.getAttribute("data-demo-id");
@@ -253,10 +290,17 @@ export function ToolTray({ area, toolIds, activeTool, onSelectTool, onUseTool }:
               onSelectTool(null);
             }}
             onPointerCancel={() => {
+              const session = sessionRef.current;
               sessionRef.current = null;
-              setDragging(null);
-              setPressed(null);
-              setGhost(null);
+              if (frameRef.current) {
+                window.cancelAnimationFrame(frameRef.current);
+                frameRef.current = 0;
+              }
+              if (session) {
+                session.el.style.transform = "";
+                delete session.el.dataset.dragging;
+                delete session.el.dataset.pressed;
+              }
             }}
             onClick={(event) => {
               event.stopPropagation();

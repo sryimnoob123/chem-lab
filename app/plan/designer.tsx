@@ -179,7 +179,7 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
         />
 
         <div className={s.right}>
-          <section className={s.panel} aria-label="我的方案">
+          <section className={s.panel} aria-label="我的方案" data-plan-drop="list">
             <div className={s.panelHead}>
               <h2 className={s.panelTitle}>我的方案</h2>
               <span className={s.mono} data-demo-id="demo-design-piece-count">

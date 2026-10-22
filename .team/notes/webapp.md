@@ -314,3 +314,37 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
 下一步（可选）
 - /scene-preview 的试剂架仍是旧方瓶（reagent-rack.tsx，只有预览页用），要统一就换成 reagent-bottle.tsx。
 - exp09 的 LabApparatus 倒液（pour.tsx）还是 CSS 方块瓶，未搬 2.5D。
+
+
+## 2026-10-22 深 · t_b0e892be 拖拽/动画性能体检（全站热路径）
+
+做了什么（按「根因 → 改法」记）
+- **器皿/工具拖动慢半拍的真根因是 CSS 过渡，不是 JS**：`.vessel.vessel` 有 `transition: transform 120ms`、`.tool` 有 `transform 160ms`，而拖动的位移是逐帧写 transform —— 浏览器又把每帧位移插值了 120/160ms，手感就是「拖着一条橡皮筋」。改：`[data-lifted]` / `[data-dragging]` 期间 `transition: none`，并把 `filter 120ms ease` 从器皿过渡里删掉（拖动中不再跑滤镜）。
+- **工具托盘拖动每帧 setState**：`setGhost(point)` 在 pointermove 里 → 一次拖动 50 次整块台面重渲染（实测 commits=50、p95 33.4ms、53 帧 >20ms）。改：会话放 ref，位置在 rAF 里写 `style.transform`，按下/拿起/悬停全部改成 dataset 直写 → 移动期间 commit 0、p95 6.1ms。
+- **每帧命中测试 = 每帧强制同步布局**：`use-bench-drag` 每 rAF 调 `elementsFromPoint`，`scene-stage` 每个 pointermove 也调一次。改：按下时把 `[data-drop-kind]` 的屏幕矩形读一次做快照，之后纯矩形比较；`paintHover` 只在命中目标真的变了时写属性。
+- **器皿按下就整块台面重渲染**（`setPressedId`）：改 dataset 直写，按下不再提交。
+- **拖动影子改成常驻隐藏**：原来「影子出现」那次 setState 正好落在拖动第一帧（commits_move=1）；现在 `data-on` 切显示、位置 rAF 写，拖动全程 0 commit。
+- **拖动后的补偿 click 会擦掉落点提示**：试剂拖到器皿后浏览器补发 click → `onCaption(null)` 把「碳酸钠这一步用不上…」清掉，学生看到的是「拖了没反应」（实测 root cause）。改：`reagentDraggedRef` 吞掉那一次 click，并在 pointerup 里补 `flow.endDrag()`（原来拿着态会一直挂着）。
+- **拖动判定用 `movementX` 不可靠**（合成事件/触控上是 0）→ 改成按下点与当前点的距离。
+- **拼接实验补上拖拽**：素材卡可直接拖进「我的方案」（影子 fixed + rAF、落点只改属性、松手落点才调一次 onToggle）。原来只有点击加块，现在两条路并存。
+- 常驻 `will-change` 清理：`.ix` 去掉了常驻 `will-change: transform`（全站几十个元素=几十个合成层），只在本轮拖动期间加；`.dragGhost` 的 `will-change: left, top`（我们从不动 left/top）删掉。
+
+实测（dev :3000，热机，CDP 真实指针驱动；`evidence/perf-samples.json` + `evidence/perf-timeline.png`）
+| 场景 | 改前 p95 | 改后 p95 | 改前 >20ms | 改后 >20ms | 改前 移动期间 commit | 改后 |
+|---|---|---|---|---|---|---|
+| exp01 拖试剂 | 6.3 | 6.2 | 3 | 0 | 1 | 0 |
+| exp01 拖器皿 | 11.7 | 6.2 | 6 | 0 | 0 | 0 |
+| exp01 拖工具 | 33.4 | 6.3 | 53 | 0 | 50 | 0 |
+| 拼接 拖碎片 | —（原来没有拖拽） | 6.2 | — | 0 | — | 0 |
+- 空闲基线 p50 5.4 / p95 6.3（headless 无 vsync，rAF ≈180fps），所以「拖拽期间 p95 6.2」= 与空闲无差别。
+- CPU 降速 6×：三处 p95 仍 6.1ms；dev 模式下按下/松手各会出现一次 100~180ms 尖峰（未压缩 React 的开发态渲染），拖动移动期间 0 长任务。
+- 生产构建（`node .next/standalone/server.js` :3001，React prod）：拖试剂 p95 6.2 / max 26.8、拖器皿 p95 6.2 / max 8.7、拖工具 p95 6.3 / max 6.7，**长任务 0**（6× 降速下也 0）。
+- 拖动中实测：器皿 `transition:none`、`will-change:transform`、子元素 `filter:none`；工具同理；松手后属性全部撤掉。
+
+回归
+- exp01 七步（`?teach=1` 自动演示）跑到「实验完成 100 操作分、0 违规 0 事故 0 提示」；exp03/exp09 渲染正常、console 0 error。
+- tsc 0 error；ESLint 0 error；vitest 40 文件 555 条全过；next build 通过（cpus=4）。
+
+下一步
+- 按下那一次提交仍是唯一贵的地方（试剂按下 = setSelectedId + beginDrag → 整块台面重渲染）。dev+6× 才看得出，prod 下 <30ms；真要再压就把 `flow.draggingId` 也改成属性直写。
+- `reagent-rack.tsx`（旧 HTML5 拖拽）只剩预览页用，还在 `onDragOver` 里 setHoverId，删掉或改造时记得一起收。
