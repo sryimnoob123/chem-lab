@@ -195,7 +195,7 @@ const step1: StepDefinition = {
   scene: "实验台 + 水槽",
   demoId: "exp01-step1-wash",
   judge: {
-    criterion: "内壁形成均匀水膜、无水珠挂壁；认领单签字完整",
+    criterion: "内壁形成均匀水膜、无水珠挂壁",
     competency: ["S2"],
   },
   hints: {
@@ -698,7 +698,7 @@ const step6: StepDefinition = {
     correct(
       "step6-drain",
       "transfer",
-      "移液管润洗后吸液，管尖靠壁放出",
+      "移液管润洗后吸液，管尖靠壁放出 25.00 mL 入锥形瓶",
       "demo-op-step6-drain",
       "S2",
       {

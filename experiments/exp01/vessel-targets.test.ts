@@ -12,6 +12,7 @@ import { expectedVesselId } from "../../app/exp/[id]/vessel-targets";
 const VESSELS = [
   { id: "beaker", label: "烧杯 250 mL" },
   { id: "volumetric", label: "容量瓶 100 mL" },
+  { id: "flask", label: "锥形瓶" },
   { id: "tube-a", label: "试管 A" },
   { id: "tube-b", label: "试管 B" },
 ];
@@ -26,6 +27,12 @@ describe("expectedVesselId · exp01", () => {
 
   it("第 5 步（定容）指向容量瓶", () => {
     expect(expectedVesselId(definition.steps[4], new Set(), VESSELS)).toBe("volumetric");
+  });
+
+  it("第 6 步（移取 25.00 mL）指向锥形瓶，不是容量瓶", () => {
+    // 容量瓶里装的是刚配好的溶液，移液管是把它取出来放进锥形瓶；
+    // 判定若退化成「transfer 默认容量瓶」，指引会把学生指回容量瓶。
+    expect(expectedVesselId(definition.steps[5], new Set(), VESSELS)).toBe("flask");
   });
 
   it("第 7 步（浓硫酸稀释）指向烧杯，不是容量瓶", () => {
