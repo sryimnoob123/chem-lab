@@ -65,6 +65,33 @@ export const BENCH = {
 /** 器具与右栏之间留的净空（viewBox 单位）。16 单位在 1280 宽下约 12px。 */
 export const RAIL_GAP = 16;
 
+/**
+ * 分析天平画出来的外沿（局部坐标 = `<g transform="scale(1.2)">` 里面的坐标系）。
+ *
+ * 数值就是底座 0..132 / 底边 126 —— 底边与台面线（`BENCH.top`）对齐，防风罩顶在 y=2。
+ * 命中区不许再手写第二组数字：写死过一次（宽高各少 1 个单位），结果就是
+ * 「点图形最外一圈没反应 = 命中区比图形小一圈」（2026-10-23 实测边缘外 0.5px 是 MISS）。
+ * 命中区一律由本常量 + 描边半宽推（见 `balanceHitBox`），并且有单测 + e2e 守着。
+ */
+export const BALANCE_ART = { x: 0, y: 0, w: 132, h: 126 } as const;
+
+/** 天平描边宽度（底座 / 防风罩 1.6；显示屏 1.2 更细，按最粗的算）。 */
+export const BALANCE_STROKE = 1.6;
+
+/**
+ * 天平命中区：绘制外沿 + 描边半宽，再留 `pad` 单位的余量（默认 1，1440 宽下约 0.9px）。
+ * 左右上下对称扩，保证「画得到的地方都点得到」，又不至于把旁边洗涤槽的点击抢走。
+ */
+export function balanceHitBox(pad = 1): BenchBox {
+  const p = Math.max(pad, BALANCE_STROKE / 2);
+  return {
+    x: BALANCE_ART.x - p,
+    y: BALANCE_ART.y - p,
+    w: BALANCE_ART.w + p * 2,
+    h: BALANCE_ART.h + p * 2,
+  };
+}
+
 /** 托盘最窄也要放得下 8 件工具（每件约 56 单位宽 + 缝）。 */
 const TRAY_MIN_W = 480;
 

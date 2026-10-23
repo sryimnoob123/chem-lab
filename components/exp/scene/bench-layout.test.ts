@@ -8,7 +8,15 @@
  * - 视口 1440：safeRight ≈ 1320 > 满宽 1290 → 宽度一点不缩（大屏版面保持不动）。
  */
 import { describe, expect, it } from "vitest";
-import { BENCH, RAIL_GAP, fitTray, shiftInsideRight } from "./bench-layout";
+import {
+  BALANCE_ART,
+  BALANCE_STROKE,
+  BENCH,
+  RAIL_GAP,
+  balanceHitBox,
+  fitTray,
+  shiftInsideRight,
+} from "./bench-layout";
 
 const FULL = BENCH.tray;
 
@@ -43,6 +51,37 @@ describe("fitTray", () => {
     const a = fitTray(FULL, 700);
     expect(a.w).toBe(480);
     expect(a.x).toBe(FULL.x);
+  });
+});
+
+/**
+ * 天平命中区（A2）：命中区必须盖满「画出来的外沿 + 描边」，且不许乱扩把旁边的点击吞掉。
+ * 数值来自实测（2026-10-23，dev :3000 /exp/exp01?force=1，1440×900）：
+ * 手写 132×126 时，图形左右边缘外 0.5px 采样是 MISS（描边外沿 0.8 单位在命中区外）。
+ */
+describe("balanceHitBox", () => {
+  const half = BALANCE_STROKE / 2;
+
+  it("四边都不许比图形小（含描边外沿）—— 这是「点最外一圈没反应」的根因", () => {
+    const hit = balanceHitBox();
+    expect(hit.x).toBeLessThanOrEqual(BALANCE_ART.x - half);
+    expect(hit.y).toBeLessThanOrEqual(BALANCE_ART.y - half);
+    expect(hit.x + hit.w).toBeGreaterThanOrEqual(BALANCE_ART.x + BALANCE_ART.w + half);
+    expect(hit.y + hit.h).toBeGreaterThanOrEqual(BALANCE_ART.y + BALANCE_ART.h + half);
+  });
+
+  it("也不许乱扩：每边最多放 3 单位（再大就抢洗涤槽的点击）", () => {
+    const hit = balanceHitBox();
+    expect(BALANCE_ART.x - hit.x).toBeLessThanOrEqual(3);
+    expect(BALANCE_ART.y - hit.y).toBeLessThanOrEqual(3);
+    expect(hit.x + hit.w - (BALANCE_ART.x + BALANCE_ART.w)).toBeLessThanOrEqual(3);
+    expect(hit.y + hit.h - (BALANCE_ART.y + BALANCE_ART.h)).toBeLessThanOrEqual(3);
+  });
+
+  it("要比图形大一圈（不是刚好齐边）：否则描边压边时又回到漏点", () => {
+    const hit = balanceHitBox();
+    expect(hit.w).toBeGreaterThan(BALANCE_ART.w);
+    expect(hit.h).toBeGreaterThan(BALANCE_ART.h);
   });
 });
 

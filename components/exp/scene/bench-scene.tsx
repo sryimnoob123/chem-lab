@@ -14,7 +14,7 @@ import { hasLiquidContent } from "./vessels/glass-vessel";
 import { ActionLayer, type SceneAction } from "./actions/action-layer";
 
 import type { SceneToolId } from "@/lib/scene/tools";
-import { BENCH, fitTray, shiftInsideRight } from "./bench-layout";
+import { BENCH, balanceHitBox, fitTray, shiftInsideRight } from "./bench-layout";
 import { useSafeRight } from "./use-safe-right";
 import { LabBackdrop } from "./lab-backdrop";
 import {
@@ -24,6 +24,9 @@ import {
   type BenchOffset,
   type BenchTarget,
 } from "./use-bench-drag";
+
+/** 天平命中区（局部坐标，随 `<g scale(1.2)>` 一起放大）：绘制外沿 + 描边半宽，见 `balanceHitBox`。 */
+const BALANCE_HIT = balanceHitBox();
 
 /** 现象动画时长（与 CSS keyframes 对齐）。 */
 const FX_MS: Record<SceneFx, number> = {
@@ -710,8 +713,18 @@ export function BenchScene({
           {/* 命中区：天平画的是「线框 + 文字」，中间大片是空的 —— 只有描边能吃到点击，
               bbox 左右两侧（底座圆角外、防风罩框内）点下去直接漏到台面上，
               坐标点测（CDP）落在图形左边界就等于点空了（2026-10-23 实测）。
-              补一块和图形同尺寸的透明热区，垫在所有绘制内容之下，只负责吃点击。 */}
-          <rect data-balance-hit className={styles.hit} x={0} y={0} width={132} height={126} />
+              补一块透明热区，垫在所有绘制内容之下，只负责吃点击。
+              尺寸不再手写：由 BALANCE_ART + 描边半宽推出来（`balanceHitBox()`）——
+              手写的 132×126 比描边外沿小 0.8 单位，图形最外一圈点不动，就是用户说的
+              「命中区比图形小一圈」。 */}
+          <rect
+            data-balance-hit
+            className={styles.hit}
+            x={BALANCE_HIT.x}
+            y={BALANCE_HIT.y}
+            width={BALANCE_HIT.w}
+            height={BALANCE_HIT.h}
+          />
           {/* 底座 + 立柱 */}
           <rect x="0" y="108" width="132" height="18" rx="3" fill="var(--canvas-glass-fill)" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
           <rect x="56" y="44" width="20" height="64" fill="var(--canvas-glass-fill)" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
