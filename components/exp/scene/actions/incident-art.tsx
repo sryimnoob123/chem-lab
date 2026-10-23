@@ -16,7 +16,9 @@
 import type { ReactNode } from "react";
 import type { Beat } from "./timeline";
 import { EASE_BACK, EASE_IN_OUT, EASE_OUT } from "./timeline";
-import type { VesselAnchor } from "./geometry";
+import { bodyTransform, type VesselAnchor } from "./geometry";
+import { bodyBox } from "../vessels/vessel-geometry";
+import { glassCrackPaths } from "./crack-geometry";
 
 export type IncidentFx = "glassBreak" | "explosion" | "boilOver" | "fire" | "burn" | "toxicGas";
 
@@ -27,15 +29,27 @@ export type HazardArgs = {
   iy: number;
 };
 
-/** 碎玻璃：每条一个方向 / 旋转（确定性常量，每次播放一致，截图可复现） */
-const SHARDS = [
-  { dx: -44, dy: -30, rot: -150, d: 10 },
-  { dx: 40, dy: -40, rot: 128, d: 12 },
-  { dx: 56, dy: 6, rot: 84, d: 9 },
-  { dx: -54, dy: 14, rot: -92, d: 11 },
-  { dx: 28, dy: 46, rot: 56, d: 10 },
-  { dx: -32, dy: 44, rot: -64, d: 9 },
-  { dx: 10, dy: -52, rot: 22, d: 8 },
+/** 碎玻璃：大块（飞得近、转得慢）+ 细屑（飞得远、碎得快）分两层，才读得出「大块 + 细屑」。
+ *  每条一个方向 / 旋转（确定性常量，每次播放一致，截图可复现）。 */
+const SHARDS_BIG = [
+  { dx: -34, dy: -26, rot: -84, d: 17 },
+  { dx: 30, dy: -32, rot: 96, d: 19 },
+  { dx: 36, dy: 16, rot: 58, d: 15 },
+  { dx: -30, dy: 24, rot: -66, d: 16 },
+] as const;
+
+/** 细屑：尺寸 3~6 的小三角，飞 2 倍远、消失快（大块负责「碎」，细屑负责「炸」） */
+const SHARDS_FINE = [
+  { dx: -78, dy: -34, rot: -160, d: 5 },
+  { dx: -62, dy: -62, rot: -120, d: 4 },
+  { dx: -20, dy: -86, rot: -96, d: 3.6 },
+  { dx: 18, dy: -92, rot: 88, d: 4.4 },
+  { dx: 56, dy: -70, rot: 120, d: 5 },
+  { dx: 84, dy: -32, rot: 150, d: 3.8 },
+  { dx: 92, dy: 6, rot: 62, d: 4.6 },
+  { dx: 70, dy: 44, rot: 40, d: 3.4 },
+  { dx: -72, dy: 36, rot: -48, d: 4.2 },
+  { dx: -44, dy: 58, rot: -76, d: 3.2 },
 ] as const;
 
 /** 飞溅液滴：7 个方向 */
@@ -65,29 +79,43 @@ function Flash({ a, ix, iy, big = false }: HazardArgs & { big?: boolean }) {
   );
 }
 
-/** 裂纹：三条从撞击点放射的折线（从撞击点「长」出来） */
+/** 裂纹：从撞击点裂向**器壁**的 8 条折线（长度由器身包围盒决定，见 crack-geometry.ts）。
+ *  整组挂在器身 clipPath 里 —— 裂纹只长在玻璃上，不会飞出台面。 */
 function Cracks({ a, ix, iy }: HazardArgs) {
-  const paths = [
-    `M${ix} ${iy} l${-a.rx * 0.34} -${a.rx * 0.3} l-${a.rx * 0.22} ${a.rx * 0.17} l-${a.rx * 0.34} -${a.rx * 0.1}`,
-    `M${ix} ${iy} l${a.rx * 0.36} -${a.rx * 0.16} l${a.rx * 0.24} ${a.rx * 0.21} l${a.rx * 0.3} -${a.rx * 0.06}`,
-    `M${ix} ${iy} l-${a.rx * 0.1} ${a.rx * 0.4} l${a.rx * 0.16} ${a.rx * 0.26} l-${a.rx * 0.2} ${a.rx * 0.3}`,
-  ];
+  const box = bodyBox(a.kind);
+  /* 撞击点从 viewBox 绝对坐标换算到器皿局部坐标（与 bodyPath 同一坐标系） */
+  const lx = (ix - a.x) / a.scale;
+  const ly = (iy - a.y) / a.scale;
+  const paths = glassCrackPaths(lx, ly, {
+    left: box.x + 3,
+    right: box.x + box.w - 3,
+    top: box.y + 3,
+    bottom: box.y + box.h - 3,
+  });
+  const clipId = `incident-crack-${a.id}`;
   return (
     <>
-      {paths.map((path, index) => (
-        <path
-          key={`crack-${index}`}
-          data-i="crack"
-          d={path}
-          fill="none"
-          stroke="var(--scene-crack)"
-          strokeWidth={3.2}
-          strokeLinecap="round"
-          opacity={0}
-          style={{ transformBox: "view-box", transformOrigin: `${ix}px ${iy}px` }}
-          aria-hidden="true"
-        />
-      ))}
+      <defs>
+        <clipPath id={clipId}>
+          <path d={a.bodyD} />
+        </clipPath>
+      </defs>
+      <g transform={bodyTransform(a)} clipPath={`url(#${clipId})`}>
+        {paths.map((path, index) => (
+          <path
+            key={`crack-${index}`}
+            data-i="crack"
+            d={path}
+            fill="none"
+            stroke="var(--scene-crack)"
+            strokeWidth={2.4}
+            strokeLinecap="round"
+            opacity={0}
+            style={{ transformBox: "view-box", transformOrigin: `${lx}px ${ly}px` }}
+            aria-hidden="true"
+          />
+        ))}
+      </g>
     </>
   );
 }
@@ -116,19 +144,32 @@ function Rings({ ix, iy }: HazardArgs) {
   );
 }
 
-/** 碎玻璃 + 飞溅液滴：从撞击点 / 器口各自朝自己的方向飞 */
+/** 碎玻璃 + 飞溅液滴：大块（四边形）飞得近、细屑（小三角）飞得远 */
 function Particles({ a, ix, iy }: HazardArgs) {
   return (
     <>
-      {SHARDS.map((shard, index) => (
+      {SHARDS_BIG.map((shard, index) => (
         <path
-          key={`shard-${index}`}
-          data-i={`shard-${index}`}
-          d={`M${ix} ${iy} l${shard.d * 1.45} -${shard.d * 0.6} l${shard.d * 0.62} ${shard.d * 1.15} z`}
+          key={`shard-big-${index}`}
+          data-i={`shard-big-${index}`}
+          /* 四边形玻璃片：比三角形更像「从器身掉下来的一块」 */
+          d={`M${ix} ${iy} l${shard.d} ${-shard.d * 0.5} l${shard.d * 0.85} ${shard.d * 1.05} l${-shard.d * 0.55} ${shard.d * 0.4} z`}
           fill="var(--scene-shard)"
           stroke="var(--scene-crack)"
-          strokeWidth={0.9}
+          strokeWidth={1.1}
+          strokeLinejoin="round"
           opacity={0}
+          style={{ transformBox: "view-box", transformOrigin: `${ix}px ${iy}px` }}
+          aria-hidden="true"
+        />
+      ))}
+      {SHARDS_FINE.map((shard, index) => (
+        <path
+          key={`shard-fine-${index}`}
+          data-i={`shard-fine-${index}`}
+          d={`M${ix} ${iy} l${shard.d} ${-shard.d * 0.45} l${shard.d * 0.6} ${shard.d * 0.9} z`}
+          fill="var(--scene-shard)"
+          opacity={0.9}
           style={{ transformBox: "view-box", transformOrigin: `${ix}px ${iy}px` }}
           aria-hidden="true"
         />
@@ -150,24 +191,48 @@ function Particles({ a, ix, iy }: HazardArgs) {
   );
 }
 
-function shardBeats(delay: number): Beat[] {
-  return SHARDS.map((shard, index) => ({
-    sel: `[data-i="shard-${index}"]`,
+/** 大块：飞 1.15 倍、转一整圈、末尾落下去（重、慢） */
+function shardBigBeats(delay: number): Beat[] {
+  return SHARDS_BIG.map((shard, index) => ({
+    sel: `[data-i="shard-big-${index}"]`,
     frames: [
-      { opacity: 0, transform: "translate(0px, 0px) rotate(0deg) scale(.4)" },
-      { opacity: 1, offset: 0.14 },
+      { opacity: 0, transform: "translate(0px, 0px) rotate(0deg) scale(.3)" },
+      { opacity: 1, offset: 0.12 },
       {
         opacity: 1,
-        transform: `translate(${shard.dx * 1.5}px, ${shard.dy * 1.5}px) rotate(${shard.rot}deg) scale(1)`,
-        offset: 0.6,
+        transform: `translate(${shard.dx * 1.15}px, ${shard.dy * 1.15}px) rotate(${shard.rot}deg) scale(1)`,
+        offset: 0.62,
       },
       {
         opacity: 0,
-        transform: `translate(${shard.dx * 1.9}px, ${shard.dy * 1.9 + 28}px) rotate(${shard.rot * 1.5}deg) scale(.85)`,
+        transform: `translate(${shard.dx * 1.5}px, ${shard.dy * 1.5 + 34}px) rotate(${shard.rot * 1.4}deg) scale(.9)`,
       },
     ],
-    duration: 960,
-    delay: delay + index * 18,
+    duration: 980,
+    delay: delay + index * 24,
+    easing: EASE_OUT,
+  }));
+}
+
+/** 细屑：飞 2 倍远、转得更快、520ms 内消失（轻、快） */
+function shardFineBeats(delay: number): Beat[] {
+  return SHARDS_FINE.map((shard, index) => ({
+    sel: `[data-i="shard-fine-${index}"]`,
+    frames: [
+      { opacity: 0, transform: "translate(0px, 0px) rotate(0deg) scale(.4)" },
+      { opacity: 1, offset: 0.1 },
+      {
+        opacity: 1,
+        transform: `translate(${shard.dx * 1.9}px, ${shard.dy * 1.9}px) rotate(${shard.rot * 2}deg) scale(1)`,
+        offset: 0.55,
+      },
+      {
+        opacity: 0,
+        transform: `translate(${shard.dx * 2.4}px, ${shard.dy * 2.4 + 40}px) rotate(${shard.rot * 3}deg) scale(.7)`,
+      },
+    ],
+    duration: 520,
+    delay: delay + index * 12,
     easing: EASE_OUT,
   }));
 }
@@ -347,7 +412,8 @@ export function hazardArt(fx: IncidentFx, args: HazardArgs): { node: ReactNode; 
           delay: 80,
           easing: EASE_OUT,
         },
-        ...shardBeats(40),
+        ...shardBigBeats(36),
+        ...shardFineBeats(54),
         ...dropBeats(50, 620),
         steamBeats(180),
       ],
@@ -420,7 +486,8 @@ export function hazardArt(fx: IncidentFx, args: HazardArgs): { node: ReactNode; 
           delay: 100,
           easing: EASE_OUT,
         },
-        ...shardBeats(40),
+        ...shardBigBeats(36),
+        ...shardFineBeats(54),
         ...dropBeats(30, 720),
         steamBeats(120),
       ],

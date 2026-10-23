@@ -120,6 +120,14 @@
   will-change: transform;
 }
 
+/* 液面远端亮弧（B2）：1.8px 白弧，横向渐变由 JSX 给（两端淡出）。
+   这里只管端点形状；不能写 stroke，否则会盖掉渐变。 */
+.liquidSurfaceRim {
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .liquidGroup {
     will-change: auto;

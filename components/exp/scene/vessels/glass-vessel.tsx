@@ -29,7 +29,11 @@ import {
   mouthOf,
   mouthRimArc,
   reflectArc,
+  sedimentHeight,
+  sedimentPath,
+  sedimentTopArc,
   sheenPath,
+  surfaceRimArc,
   surfaceRxAt,
   surfaceRyAt,
 } from "./vessel-geometry";
@@ -76,6 +80,10 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
   const volumeId = `vol-${uid}`;
   const liquidTopId = `liqTop-${uid}`;
   const liquidDeepId = `liqDeep-${uid}`;
+  /* 液体分层（B2）：液面反光带 / 远端亮弧 / 沉淀内部压深 */
+  const surfaceSheenId = `liqSurf-${uid}`;
+  const surfaceRimId = `liqRim-${uid}`;
+  const sedimentShadeId = `liqSed-${uid}`;
   /* 玻璃五层（B1）：Tint / Specular rim / Sheen —— 三个渐变各一份，id 带 uid 防多器皿串色 */
   const tintId = `gTint-${uid}`;
   const rimId = `gRim-${uid}`;
@@ -97,6 +105,8 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
   const surfaceRx = surfaceRxAt(kind, top);
   const solid = kind === "burette" ? null : solidColorOf(contents);
   const powderTop = box.bottom - POWDER_H;
+  /* 器底沉淀（B2）：只有真的固相沉底才画 —— 逸出气体（CO₂ / H₂S）不沉底。 */
+  const sediment = showLiquid && mix.sediment === true && sedimentHeight(box, top) > 0;
 
   return (
     <g transform={`translate(${vessel.x} ${vessel.y}) scale(${scale})`} className={styles.art} data-vessel-art={vessel.id}>
@@ -112,19 +122,44 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
         </clipPath>
         {/* 2.5D 体积：横向渐变（左亮 → 中透 → 右暗），让平面轮廓读成圆柱。
             视角固定，靠明暗分左右壁 —— 不引 3D 引擎，性能与体积零代价。 */}
-        {/* 液体层次（2026-10-23 用户：不能是一块纯色）：
-            液面附近反光偏亮，往下越深越沉 —— 两条叠在液柱上的渐变，被主体轮廓裁住。
+        {/* 液体层次（B2，2026-10-24 收口）：
+            ① 上层明带：液面下面那一圈被水透上来的光（远端亮、往深了化开）；
+            ② 下层沉色：越深越沉 —— 两条上下叠在液柱上，被主体轮廓裁住，读出「一柱液体」而不是一块平色片。
             只动静态填充，不参与任何动画。 */}
         <linearGradient id={liquidTopId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.30" />
-          <stop offset="42%" stopColor="#FFFFFF" stopOpacity="0.04" />
-          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+          {/* 0.40 会把液柱上段刷白，跟液面盘的亮度差摊平（读成「水面下垫了层白」）→ 压到 0.24 */}
+          <stop offset="0%" stopColor="var(--canvas-liquid-sheen)" stopOpacity="0.24" />
+          <stop offset="30%" stopColor="var(--canvas-liquid-sheen)" stopOpacity="0.10" />
+          <stop offset="55%" stopColor="var(--canvas-liquid-sheen)" stopOpacity="0" />
         </linearGradient>
         <linearGradient id={liquidDeepId} x1="0" y1="0" x2="0" y2="1">
-          {/* stop-color 只写十六进制 + stop-opacity 分开：rgba() 在部分浏览器会被当成黑色 */}
-          <stop offset="0%" stopColor="#4A5768" stopOpacity="0" />
-          <stop offset="62%" stopColor="#4A5768" stopOpacity="0.06" />
-          <stop offset="100%" stopColor="#4A5768" stopOpacity="0.20" />
+          {/* stop-color 只写十六进制（走 token）+ stop-opacity 分开：rgba() 在部分浏览器会被当成黑色 */}
+          <stop offset="0%" stopColor="var(--canvas-liquid-depth)" stopOpacity="0" />
+          <stop offset="45%" stopColor="var(--canvas-liquid-depth)" stopOpacity="0.07" />
+          <stop offset="100%" stopColor="var(--canvas-liquid-depth)" stopOpacity="0.24" />
+        </linearGradient>
+        {/* 液面反光带：只洗**远端那一小片**（0.22 → 55% 归零）。
+            2026-10-24 实测：峰值 0.52 会把整个液面盘刷成纸白（L 239 vs 液柱 212），
+            盘的下半圈就成了一个「亮透镜」，读成水面上漂了片玻璃 —— 液面该亮的是**那圈边**，
+            不是整块盘，所以这里压到 0.22，亮度交给下面的远端亮弧。 */}
+        <linearGradient id={surfaceSheenId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--canvas-liquid-sheen)" stopOpacity="0.22" />
+          <stop offset="30%" stopColor="var(--canvas-liquid-sheen)" stopOpacity="0.10" />
+          <stop offset="55%" stopColor="var(--canvas-liquid-sheen)" stopOpacity="0" />
+          <stop offset="100%" stopColor="var(--canvas-liquid-sheen)" stopOpacity="0" />
+        </linearGradient>
+        {/* 液面远端亮弧：横向左亮 → 右淡出（光源统一左上），两端收掉 —— 整圈描亮会读成「液面套了个白圈」。
+            这是液面上唯一「最亮」的一笔（用户口径：液面那圈不够亮），所以峰值给到 1.0。 */}
+        <linearGradient id={surfaceRimId} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="var(--canvas-liquid-rim)" stopOpacity="0.18" />
+          <stop offset="26%" stopColor="var(--canvas-liquid-rim)" stopOpacity="0.92" />
+          <stop offset="62%" stopColor="var(--canvas-liquid-rim)" stopOpacity="0.72" />
+          <stop offset="100%" stopColor="var(--canvas-liquid-rim)" stopOpacity="0.10" />
+        </linearGradient>
+        {/* 沉淀内部：堆内最底部再压一档，沉淀不跟液体同亮度（否则白沉淀在白玻璃上等于没有） */}
+        <linearGradient id={sedimentShadeId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--canvas-liquid-sediment-shade)" stopOpacity="0" />
+          <stop offset="100%" stopColor="var(--canvas-liquid-sediment-shade)" stopOpacity="0.18" />
         </linearGradient>
         <linearGradient id={volumeId} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.42" />
@@ -173,8 +208,28 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
         </linearGradient>
       </defs>
 
-      {/* 接地阴影（drag-pour 的 .shadow 椭圆） */}
-      <ellipse cx={cx} cy={box.bottom + 2} rx={surfaceRx * 1.06} ry={7} fill={`url(#${shadowId})`} />
+      {/* 接地阴影（B4）：光源统一左上 → 影子落在器底**右下**。
+          两笔叠加，不新增 filter：
+          ① 接触影：几乎压器底（cy 只比底沿高 0.6），极扁 —— 读成「器皿真的放在台面上」；
+          ② 落影：向右下偏 7.5 单位、更淡更大 —— 读成被器身挡住的那片光。
+          径向渐变本身中心最深、边缘化开，叠两笔就有方向，不需要第二个渐变。 */}
+      <ellipse
+        data-ground-shadow="contact"
+        cx={cx + 3}
+        cy={box.bottom + 2}
+        rx={surfaceRx * 1.06}
+        ry={6}
+        fill={`url(#${shadowId})`}
+      />
+      <ellipse
+        data-ground-shadow="cast"
+        cx={cx + 13}
+        cy={box.bottom + 3.6}
+        rx={surfaceRx * 1.34}
+        ry={9}
+        fill={`url(#${shadowId})`}
+        opacity={0.5}
+      />
 
       {/* 玻璃面（① Tint）：淡暖白洗底 + 竖向渐变，比纸白略低一档 —— rim/sheen 才读得出来 */}
       <path d={body} className={styles.glassBody} data-glass-layer="tint" fill={`url(#${tintId})`} />
@@ -187,7 +242,8 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
         </g>
       ) : null}
 
-      {/* 液体：矩形 + 液面椭圆，被主体轮廓裁出来。倒液时整组按底边 scaleY 长高。 */}
+      {/* 液体：矩形 + 液面，被主体轮廓裁出来。倒液时整组按底边 scaleY 长高。
+          分层（B2）：底色 → 上层明带 → 下层沉色 → 器底沉淀 → 液面（盘 + 反光带 + 远端亮弧 + 弯月面线） */}
       {showLiquid ? (
         <g
           clipPath={`url(#${clipId})`}
@@ -197,6 +253,7 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
         >
           <rect
             data-liquid-rect
+            data-liquid-layer="body"
             x={box.x}
             y={top}
             width={box.w}
@@ -204,8 +261,9 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
             fill={liquid}
             fillOpacity={0.88}
           />
-          {/* 上层反光 / 下层沉色：让液柱有厚度（用户 2026-10-23：不能一块纯色） */}
+          {/* 上层明带 / 下层沉色：让液柱有厚度（用户 2026-10-23：不能一块纯色） */}
           <rect
+            data-liquid-layer="sheen-top"
             x={box.x}
             y={top}
             width={box.w}
@@ -213,15 +271,35 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
             fill={`url(#${liquidTopId})`}
           />
           <rect
+            data-liquid-layer="deep"
             x={box.x}
             y={top}
             width={box.w}
             height={Math.max(0, box.bottom - top)}
             fill={`url(#${liquidDeepId})`}
           />
+          {/* 器底沉淀（B2）：只有「沉淀 / 气体」现象才画 —— 一层拱起堆顶的粉积在器底，
+              比液体更实（opacity 1），底部再压一档，白沉淀才不会和白玻璃糊在一起。 */}
+          {sediment ? (
+            <g data-liquid-layer="sediment" aria-hidden="true">
+              <path d={sedimentPath(box, top)} fill={liquid} fillOpacity={1} />
+              <path d={sedimentPath(box, top)} fill={`url(#${sedimentShadeId})`} />
+              {/* 堆顶分界线：沉淀与上清液的分界，靠它读成「积了一层」而不是「下半截更暗」 */}
+              <path
+                data-liquid-layer="sediment-edge"
+                d={sedimentTopArc(box, top)}
+                fill="none"
+                stroke="var(--canvas-liquid-sediment-edge)"
+                strokeOpacity={0.3}
+                strokeWidth={1}
+                vectorEffect="non-scaling-stroke"
+              />
+            </g>
+          ) : null}
           {/* 液面：同色椭圆压在矩形上沿，露出上半 = 有厚度的液面（实色，不掺玻璃色）
               ry 按同一视角压缩比推（rx × VIEW_K），细颈容器窄、烧杯宽，才对得上俯视 */}
           <ellipse
+            data-liquid-layer="surface"
             data-liquid-surface
             cx={box.cx}
             cy={top}
@@ -230,7 +308,29 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
             fill={liquid}
             fillOpacity={1}
           />
+          {/* 液面反光带：盘面远端亮 → 近端淡出。液面那圈不够亮，就是少了这一层。 */}
           <ellipse
+            data-liquid-layer="surface-sheen"
+            cx={box.cx}
+            cy={top}
+            rx={Number((surfaceRx * 0.94).toFixed(2))}
+            ry={Number((surfaceRyAt(surfaceRx) * 0.94).toFixed(2))}
+            fill={`url(#${surfaceSheenId})`}
+            aria-hidden="true"
+          />
+          {/* 液面远端亮弧（上半圈）：全瓶最亮的一圈水光，两端淡出不闭环 */}
+          <path
+            data-liquid-layer="surface-rim"
+            d={surfaceRimArc(box.cx, top, surfaceRx, surfaceRyAt(surfaceRx), 0.9)}
+            fill="none"
+            stroke={`url(#${surfaceRimId})`}
+            className={styles.liquidSurfaceRim}
+            vectorEffect="non-scaling-stroke"
+            aria-hidden="true"
+          />
+          {/* 弯月面：贴壁那一圈细墨，把液面和液柱分开 */}
+          <ellipse
+            data-liquid-layer="meniscus"
             cx={box.cx}
             cy={top}
             rx={surfaceRx}

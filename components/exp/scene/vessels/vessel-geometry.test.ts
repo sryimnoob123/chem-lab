@@ -12,11 +12,17 @@ import { describe, expect, it } from "vitest";
 import {
   BASE_Y,
   BODY_BOX,
+  SEDIMENT_MAX_H,
   bodyBox,
   levelTopY,
   liquidBox,
   mouthOf,
   mouthRimArc,
+  sedimentDomeRy,
+  sedimentHeight,
+  sedimentPath,
+  sedimentTopY,
+  surfaceRimArc,
   surfaceRxAt,
   defaultLevel,
   MOUTH_Y,
@@ -140,6 +146,73 @@ describe("玻璃五层几何（B1：Tint / Specular rim / Sheen）", () => {
       expect(y0).toBeCloseTo(mouth.y, 2);
       expect(y1).toBeCloseTo(mouth.y, 2);
     }
+  });
+});
+
+describe("液体分层（B2）：液面远端亮弧 / 器底沉淀", () => {
+  const KINDS = ["flask", "beaker", "volumetric", "tube", "dish", "burette"] as const;
+
+  it("液面亮弧：只画上半圈（sweep=1）、半径缩进到液面盘里侧、两端落在液面中线上", () => {
+    for (const kind of KINDS) {
+      const box = liquidBox(kind);
+      const top = levelTopY(box, 0.38);
+      const rx = surfaceRxAt(kind, top);
+      const ry = Number((rx * 0.62).toFixed(2));
+      const arc = surfaceRimArc(box.cx, top, rx, ry, 0.9);
+      expect(arc).toContain(" 0 0 1 ");
+      const numbers = arc.replace(/[MA]/g, " ").trim().split(/\s+/).map(Number);
+      const [x0, y0, arx, ary, , , , x1, y1] = numbers;
+      // 缩进 10%：亮弧压在液面盘内，不贴器壁描边（贴上去会被外描边的深墨吃掉）
+      expect(arx).toBeCloseTo(rx * 0.9, 1);
+      expect(ary).toBeCloseTo(ry * 0.9, 1);
+      expect(x0).toBeCloseTo(box.cx - arx, 1);
+      expect(x1).toBeCloseTo(box.cx + arx, 1);
+      expect(y0).toBeCloseTo(top, 2);
+      expect(y1).toBeCloseTo(top, 2);
+    }
+  });
+
+  it("沉淀层：贴器底、有上限、液体越浅越薄", () => {
+    for (const kind of KINDS) {
+      const box = liquidBox(kind);
+      const shallow = levelTopY(box, 0.12);
+      const deep = levelTopY(box, 0.9);
+      const hDeep = sedimentHeight(box, deep);
+      const hShallow = sedimentHeight(box, shallow);
+      // 深度 42% 收口 + 16 单位上限
+      expect(hDeep).toBeLessThanOrEqual(SEDIMENT_MAX_H);
+      expect(hDeep).toBeGreaterThan(3);
+      expect(hShallow).toBeLessThan(hDeep);
+      // 沉淀上沿必须在液面之下、器底之上（y 轴向下：堆顶 y 比液面大 = 在液面下方）
+      expect(sedimentTopY(box, deep)).toBeGreaterThan(deep);
+      expect(sedimentTopY(box, deep)).toBeLessThan(box.bottom);
+      // 太浅（深度 < 3）不给画：返回空 path，渲染层据此跳过
+      expect(sedimentHeight(box, box.bottom - 1)).toBe(0);
+      expect(sedimentPath(box, box.bottom - 1)).toBe("");
+    }
+  });
+
+  it("沉淀形状：起于器底、堆顶向上拱（第二个点比堆顶基线高）、左右贴到液体矩形的两边", () => {
+    const box = liquidBox("beaker");
+    const top = levelTopY(box, 0.38);
+    const d = sedimentPath(box, top);
+    // M left bottom → L left topY → A rx ry 0 0 1 right topY → L right bottom → Z
+    const m = d.match(
+      /^M ([-\d.]+) ([-\d.]+) L ([-\d.]+) ([-\d.]+) A ([-\d.]+) ([-\d.]+) 0 0 1 ([-\d.]+) ([-\d.]+) L ([-\d.]+) ([-\d.]+) Z$/,
+    );
+    expect(m, `沉淀 path 形状变了：${d}`).not.toBeNull();
+    const [left, bottomY, left2, topY, arx, ary, right, arcY, right2, rightBottom] = m!.slice(1).map(Number);
+    expect(left).toBeCloseTo(box.x, 2);
+    expect(left2).toBeCloseTo(box.x, 2);
+    expect(right).toBeCloseTo(box.x + box.w, 2);
+    expect(right2).toBeCloseTo(box.x + box.w, 2);
+    expect(bottomY).toBeCloseTo(box.bottom, 2);
+    expect(rightBottom).toBeCloseTo(box.bottom, 2);
+    expect(topY).toBeCloseTo(sedimentTopY(box, top), 2);
+    expect(arcY).toBeCloseTo(sedimentTopY(box, top), 2);
+    expect(arx).toBeCloseTo(box.w / 2, 2);
+    expect(ary).toBeCloseTo(sedimentDomeRy(box), 2);
+    expect(ary).toBeGreaterThan(0); // 堆顶是弧，不是一条尺线
   });
 });
 

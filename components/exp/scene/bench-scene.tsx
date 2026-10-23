@@ -600,6 +600,13 @@ export function BenchScene({
             <stop offset="0%" stopColor="var(--bench-seam)" stopOpacity="0.8" />
             <stop offset="100%" stopColor="var(--bench-seam)" stopOpacity="0" />
           </linearGradient>
+          {/* 前沿亮边（B6）：横向左亮 → 右淡（光源统一左上）。只有 2.4 高，
+              但它是「这块台面有厚度」的唯一依据 —— 去掉就只剩一张平纸。 */}
+          <linearGradient id="benchFrontEdge" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="var(--bench-front-edge)" stopOpacity="0.92" />
+            <stop offset="42%" stopColor="var(--bench-front-edge)" stopOpacity="0.62" />
+            <stop offset="100%" stopColor="var(--bench-front-edge)" stopOpacity="0.24" />
+          </linearGradient>
           {/* 台账纸网格：26×26 一格，只有 1px 细线。
               平移 5/9 —— 否则网格线正好落在器皿底沿（340 = 26×13 附近），
               看着像台面上多了一条搁板。 */}
@@ -661,6 +668,17 @@ export function BenchScene({
             width={BENCH.right - BENCH.left}
             height="28"
             fill="var(--bench-edge)"
+          />
+          {/* 前沿上沿受光亮边（B6）：2.4 高、紧贴台面与前沿的接缝，读成板材的倒角。
+              压在接缝线之上，所以先画亮边再画那条 1px 墨线 —— 墨线在下沿，亮边在上沿。 */}
+          <rect
+            data-bench-front-edge
+            x={BENCH.left}
+            y={BENCH.bottom + floorExtra - 28}
+            width={BENCH.right - BENCH.left}
+            height="2.4"
+            fill="url(#benchFrontEdge)"
+            aria-hidden="true"
           />
           <line
             x1={BENCH.left}
@@ -725,24 +743,64 @@ export function BenchScene({
             width={BALANCE_HIT.w}
             height={BALANCE_HIT.h}
           />
-          {/* 底座 + 立柱 */}
-          <rect x="0" y="108" width="132" height="18" rx="3" fill="var(--canvas-glass-fill)" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
-          <rect x="56" y="44" width="20" height="64" fill="var(--canvas-glass-fill)" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
+          {/* 金属外壳（B3）：平板靠「竖向明暗带」读成受光的金属面，棱上再压一条白渐变，
+              光源统一左上，所以顶棱最亮、往右淡出。defs 与图形同组：一台天平只渲染一次。 */}
+          <defs>
+            <linearGradient id="balMetalShell" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--canvas-metal-hi)" />
+              <stop offset="45%" stopColor="var(--canvas-metal-mid)" />
+              <stop offset="100%" stopColor="var(--canvas-metal-low)" />
+            </linearGradient>
+            <linearGradient id="balMetalEdge" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="var(--canvas-metal-edge)" stopOpacity="1" />
+              <stop offset="52%" stopColor="var(--canvas-metal-edge)" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="var(--canvas-metal-edge)" stopOpacity="0.1" />
+            </linearGradient>
+            <linearGradient id="balMetalEdgeDown" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--canvas-metal-edge)" stopOpacity="0.92" />
+              <stop offset="100%" stopColor="var(--canvas-metal-edge)" stopOpacity="0.08" />
+            </linearGradient>
+            <radialGradient id="balMetalPan" cx="0.36" cy="0.24" r="0.86">
+              <stop offset="0%" stopColor="var(--canvas-metal-hi)" />
+              <stop offset="58%" stopColor="var(--canvas-metal-mid)" />
+              <stop offset="100%" stopColor="var(--canvas-metal-low)" />
+            </radialGradient>
+            <linearGradient id="balMetalSeam" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--canvas-metal-seam)" stopOpacity="0.24" />
+              <stop offset="100%" stopColor="var(--canvas-metal-seam)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {/* 底座 + 立柱：渐变填面，顶棱/左棱高光另画，底缝压深半档（和台面咬住，不飘） */}
+          <rect data-metal="balance-base" x="0" y="108" width="132" height="18" rx="3" fill="url(#balMetalShell)" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
+          <rect x="1.2" y="108.9" width="129.6" height="1.2" rx="0.6" fill="url(#balMetalEdge)" aria-hidden="true" />
+          <rect x="1.6" y="123.9" width="128.8" height="1.6" fill="url(#balMetalSeam)" aria-hidden="true" />
+          <rect data-metal="balance-column" x="56" y="44" width="20" height="64" fill="url(#balMetalShell)" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
+          <rect x="56.9" y="45" width="1.1" height="61" fill="url(#balMetalEdgeDown)" aria-hidden="true" />
           {/* 玻璃防风罩 + 称量盘（静态外形） */}
           <rect x="18" y="2" width="96" height="44" rx="2" fill="none" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
           <line x1="66" y1="2" x2="66" y2="12" stroke="var(--canvas-glass-line)" strokeWidth={1.2} />
           <ellipse
             data-balance-pan
+            data-metal="balance-pan"
             cx="66"
             cy="34"
             rx="30"
             ry="6"
-            fill="var(--canvas-glass-fill)"
+            fill="url(#balMetalPan)"
             stroke="var(--canvas-glass-line)"
             strokeWidth="1.2"
           />
-          {/* 显示屏 */}
-          <rect x="20" y="56" width="92" height="26" rx="2" fill="none" stroke="var(--canvas-glass-line)" strokeWidth={1.2} />
+          {/* 秤盘口沿：上半圈受光（盘是凹的，亮的是远端那道沿） */}
+          <path
+            d="M36 34 A30 6 0 0 1 96 34"
+            fill="none"
+            stroke="url(#balMetalEdge)"
+            strokeWidth="1.4"
+            aria-hidden="true"
+          />
+          {/* 显示屏：底比外壳亮一档（读数压得住），内嵌一道顶部阴影读成凹进去的屏 */}
+          <rect data-metal="balance-screen" x="20" y="56" width="92" height="26" rx="2" fill="var(--canvas-metal-screen)" stroke="var(--canvas-glass-line)" strokeWidth="1.2" />
+          <rect x="21.4" y="57.2" width="89.2" height="3.4" fill="url(#balMetalSeam)" aria-hidden="true" />
           <text
             data-balance-readout
             x="66"

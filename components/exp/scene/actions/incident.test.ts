@@ -108,7 +108,10 @@ describe("buildIncident 复用实验台资源", () => {
     // 裂纹 + 碎片用事故 token，不用白色高光
     expect(html).toContain('data-i="crack"');
     expect(html).toContain("var(--scene-crack)");
-    expect(html).toContain('data-i="shard-0"');
+    expect(html).toContain('data-i="shard-big-0"');
+    // B5：碎片分两层 —— 大块 4 + 细屑 10
+    expect(html.match(/data-i="shard-big-\d"/g)).toHaveLength(4);
+    expect(html.match(/data-i="shard-fine-\d+"/g)).toHaveLength(10);
     expect(html).not.toContain("fill=\"#fff\"");
     // 没有第二个视口/独立小场景
     expect(html).not.toContain("viewBox");

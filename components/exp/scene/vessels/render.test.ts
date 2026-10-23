@@ -94,6 +94,35 @@ describe("玻璃器皿 2.5D（drag-pour 画法，SSR 冒烟）", () => {
     expect(html).not.toContain("data-liquid-rect");
   });
 
+  it("液体分层（B2）：底色 + 上层明带 + 下层沉色 + 液面盘 + 反光带 + 远端亮弧 + 弯月面", () => {
+    const html = render(createElement(GlassVessel, { vessel: beaker, contents: ["water"], level: 0.5 }));
+    for (const layer of ["body", "sheen-top", "deep", "surface", "surface-sheen", "surface-rim", "meniscus"]) {
+      expect(html, `缺 ${layer} 层`).toContain(`data-liquid-layer="${layer}"`);
+    }
+    // 反光带 / 亮弧各一个渐变，颜色走 token（不写字面色）
+    expect(html).toMatch(/fill="url\(#liqSurf-/);
+    expect(html).toMatch(/stroke="url\(#liqRim-/);
+    expect(html).toContain("var(--canvas-liquid-sheen)");
+    expect(html).toContain("var(--canvas-liquid-depth)");
+    expect(html).toContain("liquidSurfaceRim");
+    // 亮弧只画上半圈（sweep=1），整圈描亮会读成"液面套了个白圈"
+    expect(html).toMatch(/data-liquid-layer="surface-rim"[^>]*d="M [^"]* A [\d.]+ [\d.]+ 0 0 1 /);
+  });
+
+  it("器底沉淀：只有真固相沉底才画（气体不画）", () => {
+    const withSediment = render(
+      createElement(GlassVessel, { vessel: beaker, contents: ["cuso4", "naoh", "water"], level: 0.5 }),
+    );
+    expect(withSediment).toContain('data-liquid-layer="sediment"');
+    expect(withSediment).toContain('data-liquid-layer="sediment-edge"');
+
+    const gas = render(createElement(GlassVessel, { vessel: beaker, contents: ["na2co3", "hcl", "water"], level: 0.5 }));
+    expect(gas).not.toContain('data-liquid-layer="sediment"');
+
+    const clear = render(createElement(GlassVessel, { vessel: beaker, contents: ["water"], level: 0.5 }));
+    expect(clear).not.toContain('data-liquid-layer="sediment"');
+  });
+
   it("只有固体时铺一层器底粉末，不画液面", () => {
     const html = render(createElement(GlassVessel, { vessel: beaker, contents: ["na2co3"], level: 0 }));
     expect(html).not.toContain("data-liquid-rect");

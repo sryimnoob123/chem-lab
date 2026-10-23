@@ -92,6 +92,9 @@
      在上面全都看不见 —— 用户要「器皿有实体感」。往暖里挪一档，纸感还在，器皿立起来了。 */
   --bench-top: #f4eee1;
   --bench-edge: #e5dcc9;
+  /* 前沿亮边（B6）：台面是一块有厚度的板子，前沿上沿要有一道 2~3px 的受光亮边。
+     纯白不行 —— 暖台面上会读成「贴了条胶带」，用暖白 + stop-opacity 分段淡出。 */
+  --bench-front-edge: #fffcf4;
   --bench-seam: rgba(58, 72, 90, 0.16);
   /* 台面纸格：.05 在暖纸白上等于看不见，抬到 .085 才有「一张实验台记录纸」的底纹 */
   --bench-grid: rgba(74, 87, 104, 0.085);
@@ -138,7 +141,7 @@
   --canvas-glass-inner: rgba(74, 87, 104, 0.20);
   --canvas-shine: rgba(74, 87, 104, 0.26);
   /* 接地影 .10 → .17：器皿得在台面上「压」出一点影子才站得住（纸白底上 .1 等于没有） */
-  --canvas-shadow: rgba(74, 87, 104, 0.17);
+  --canvas-shadow: rgba(74, 87, 104, 0.22);
   --canvas-graduation: rgba(74, 87, 104, 0.55);
   --canvas-bottle-lid: rgba(74, 87, 104, 0.45);
 
@@ -151,6 +154,29 @@
   --canvas-glass-tint-deep: rgba(74, 87, 104, 0.15); /* 器底：积色（玻璃体量） */
   --canvas-glass-rim: #ffffff; /* Specular rim：白，靠 stop-opacity 分段淡出 */
   --canvas-glass-sheen: rgba(255, 255, 255, 1); /* Sheen：45° 柔光（screen 混合） */
+
+  /* 液体分层（2026-10-24 B2）：液面反光带 / 液柱两层 / 器底沉淀。
+     纸白场上「亮」只能相对**液柱本体**才读得出：
+     液面盘整体比液柱亮一档 → 远端那圈再亮一档（水面对光的反射），
+     液柱越深越沉（墨色 stop-opacity 递进，不改液体本色），
+     沉淀靠「压深一档的堆顶弧线」读成积在器底的一层。
+     全用十六进制：stop-color 里写 rgba() 在部分浏览器会被当成黑色（B1 踩过）。 */
+  --canvas-liquid-sheen: #ffffff; /* 液面盘反光（竖向，远端亮 → 近端淡出） */
+  --canvas-liquid-rim: #ffffff; /* 液面远端亮弧（横向，左亮 → 右淡出） */
+  --canvas-liquid-depth: #4a5768; /* 液柱越深越沉（stop-opacity 控制浓度） */
+  --canvas-liquid-sediment-edge: #4a5768; /* 沉淀堆顶分界线 */
+  --canvas-liquid-sediment-shade: #4a5768; /* 沉淀内部再压一档（层内最底部最沉） */
+
+  /* 金属件（2026-10-24 B3）：天平外壳 / 秤盘 / 托盘。
+     金属的读法不是「灰一点」，而是①一条有方向的明暗带（光源统一左上）
+     ②一道比它更亮的边沿（受光的那条棱）③与台面接缝处压深半档。
+     三个面都从 hi 走到 low，边沿单独一条白色渐变，靠 stop-opacity 淡出，不写实色。 */
+  --canvas-metal-hi: #fbfcfd; /* 受光面（上 / 左） */
+  --canvas-metal-mid: #e6ecf2; /* 拉丝中段 */
+  --canvas-metal-low: #ccd6e0; /* 背光面（下 / 右） */
+  --canvas-metal-edge: #ffffff; /* 棱上高光 */
+  --canvas-metal-screen: #f7fafc; /* 显示屏底：比外壳亮，读数才压得住 */
+  --canvas-metal-seam: #4a5768; /* 接缝压深（stop-opacity 控浓度） */
 
   /* 动作层（洗涤 / 倾倒 / 转移 / 加热）用色。
      水色偏青灰、低饱和，避免纸白底上显得像荧光；描边走同一档墨色。

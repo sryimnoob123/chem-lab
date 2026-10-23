@@ -25,6 +25,12 @@ export interface LiquidMix {
   /** 液体不透明度（沉淀更浑厚） */
   opacity: number;
   kind: PhenomenonKind;
+  /**
+   * 有没有**真的沉到底**的固相（B2 画器底沉淀层用）。
+   * 和 kind === "precipitate" 不是一回事：那张表里也收录了「逸出气体」（CO₂ / H₂S），
+   * 气体不沉底，画一层沉淀就是错的。所以由表逐条标注，不在渲染层猜。
+   */
+  sediment?: boolean;
   /** 一句话现象（≤24 字）；没有明显现象时不返回 */
   note?: string;
 }
@@ -58,20 +64,22 @@ const PRECIPITATES: readonly {
   color: string;
   note: string;
   opaque?: number;
+  /** true = 固相沉到器底（画沉淀层）；省略 = 逸出气体，不沉底 */
+  sediment?: boolean;
 }[] = [
-  { pair: ["agno3", "nacl"], color: "#FFFFFF", note: "白色 AgCl 凝乳状沉淀", opaque: 0.72 },
-  { pair: ["agno3", "hcl"], color: "#FFFFFF", note: "白色 AgCl 凝乳状沉淀", opaque: 0.72 },
-  { pair: ["agno3", "kcl"], color: "#FFFFFF", note: "白色 AgCl 沉淀", opaque: 0.72 },
-  { pair: ["agno3", "ki"], color: "#FFF59D", note: "黄色 AgI 沉淀", opaque: 0.8 },
-  { pair: ["agno3", "kbr"], color: "#FFF9C4", note: "淡黄色 AgBr 沉淀", opaque: 0.75 },
-  { pair: ["agno3", "na2s"], color: "#212121", note: "黑色 Ag₂S 沉淀", opaque: 0.85 },
-  { pair: ["bacl2", "na2so4"], color: "#FFFFFF", note: "白色 BaSO₄ 沉淀", opaque: 0.74 },
-  { pair: ["bacl2", "na2co3"], color: "#FFFFFF", note: "白色 BaCO₃ 沉淀", opaque: 0.74 },
-  { pair: ["cacl2", "na2co3"], color: "#FFFFFF", note: "白色 CaCO₃ 沉淀", opaque: 0.72 },
-  { pair: ["cacl2", "na2hpo4"], color: "#FFFFFF", note: "白色 Ca₃(PO₄)₂ 沉淀", opaque: 0.7 },
-  { pair: ["cuso4", "naoh"], color: "#4FC3F7", note: "浅蓝色 Cu(OH)₂ 絮状沉淀", opaque: 0.82 },
-  { pair: ["fecl3", "naoh"], color: "#8D6E63", note: "红褐色 Fe(OH)₃ 沉淀", opaque: 0.82 },
-  { pair: ["mgcl2", "naoh"], color: "#FFFFFF", note: "白色 Mg(OH)₂ 沉淀", opaque: 0.7 },
+  { pair: ["agno3", "nacl"], color: "#FFFFFF", note: "白色 AgCl 凝乳状沉淀", opaque: 0.72, sediment: true },
+  { pair: ["agno3", "hcl"], color: "#FFFFFF", note: "白色 AgCl 凝乳状沉淀", opaque: 0.72, sediment: true },
+  { pair: ["agno3", "kcl"], color: "#FFFFFF", note: "白色 AgCl 沉淀", opaque: 0.72, sediment: true },
+  { pair: ["agno3", "ki"], color: "#FFF59D", note: "黄色 AgI 沉淀", opaque: 0.8, sediment: true },
+  { pair: ["agno3", "kbr"], color: "#FFF9C4", note: "淡黄色 AgBr 沉淀", opaque: 0.75, sediment: true },
+  { pair: ["agno3", "na2s"], color: "#212121", note: "黑色 Ag₂S 沉淀", opaque: 0.85, sediment: true },
+  { pair: ["bacl2", "na2so4"], color: "#FFFFFF", note: "白色 BaSO₄ 沉淀", opaque: 0.74, sediment: true },
+  { pair: ["bacl2", "na2co3"], color: "#FFFFFF", note: "白色 BaCO₃ 沉淀", opaque: 0.74, sediment: true },
+  { pair: ["cacl2", "na2co3"], color: "#FFFFFF", note: "白色 CaCO₃ 沉淀", opaque: 0.72, sediment: true },
+  { pair: ["cacl2", "na2hpo4"], color: "#FFFFFF", note: "白色 Ca₃(PO₄)₂ 沉淀", opaque: 0.7, sediment: true },
+  { pair: ["cuso4", "naoh"], color: "#4FC3F7", note: "浅蓝色 Cu(OH)₂ 絮状沉淀", opaque: 0.82, sediment: true },
+  { pair: ["fecl3", "naoh"], color: "#8D6E63", note: "红褐色 Fe(OH)₃ 沉淀", opaque: 0.82, sediment: true },
+  { pair: ["mgcl2", "naoh"], color: "#FFFFFF", note: "白色 Mg(OH)₂ 沉淀", opaque: 0.7, sediment: true },
   { pair: ["na2s", "hcl"], color: "#B0BEC5", note: "逸出 H₂S 气体（臭鸡蛋味）", opaque: 0.5 },
   { pair: ["na2co3", "hcl"], color: "#E3F2FD", note: "逸出 CO₂ 气泡", opaque: 0.45 },
   { pair: ["nahco3", "hcl"], color: "#E3F2FD", note: "逸出 CO₂ 气泡", opaque: 0.45 },
@@ -114,6 +122,7 @@ export function mixLiquids(rawIds: readonly string[]): LiquidMix {
         color: item.color,
         opacity: item.opaque ?? 0.75,
         kind: "precipitate",
+        sediment: item.sediment === true,
         note: item.note,
       };
     }

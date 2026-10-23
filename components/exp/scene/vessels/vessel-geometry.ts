@@ -249,6 +249,73 @@ export function mouthRimArc(kind: SceneVesselKind): string {
   return `M ${Number((m.cx - rx).toFixed(2))} ${m.y} A ${rx} ${ry} 0 0 1 ${Number((m.cx + rx).toFixed(2))} ${m.y}`;
 }
 
+/* ---------------- 液体分层（B2）：液面反光带 / 液柱两层 / 器底沉淀 ----------------
+   2026-10-23 用户口径：液体不能是一块平色片，也不能只靠「上亮下暗」两层糊过去 ——
+   液面那一圈要最亮（那是水面对光的反射），液柱要读得出深浅，沉淀要积在器底、有堆顶。 */
+
+/**
+ * 液面「远端亮弧」：椭圆**上半圈**那条弧（2.5D 俯视下离视线最远的一条边）。
+ *
+ * 为什么只画上半圈：光从左上打下来，液面远端那半圈正对着光；近端半圈背光。
+ * 整圈描亮会读成「液面上套了个白圈」，和瓶口高光同一个坑（见 `mouthRimArc`）。
+ *
+ * @param inset 半径缩进比例（0.9 = 缩到液面盘里侧 10%，亮弧压在盘内而不是压在器壁描边上）
+ */
+export function surfaceRimArc(cx: number, cy: number, rx: number, ry: number, inset = 0.9): string {
+  const r = Number((rx * inset).toFixed(2));
+  const h = Number((ry * inset).toFixed(2));
+  return `M ${Number((cx - r).toFixed(2))} ${cy} A ${r} ${h} 0 0 1 ${Number((cx + r).toFixed(2))} ${cy}`;
+}
+
+/** 沉淀层厚度上限（局部坐标）。液柱很浅时按比例收，不会把整柱液体吃掉。 */
+export const SEDIMENT_MAX_H = 16;
+/** 沉淀层占液柱深度的比例上限。 */
+export const SEDIMENT_RATE = 0.42;
+/** 沉淀堆顶的隆起高度上限。 */
+export const SEDIMENT_MAX_DOME = 5;
+
+/** 液面到器底的实际深度（倒液动画期间液位在长，沉淀跟着收）。 */
+function liquidDepth(box: LiquidBox, top: number): number {
+  return Math.max(0, box.bottom - top);
+}
+
+/** 沉淀层高度：min(上限, 液柱深度的 42%)。深度不足 3 单位时返回 0（画不出来，别硬画）。 */
+export function sedimentHeight(box: LiquidBox, top: number): number {
+  const depth = liquidDepth(box, top);
+  if (depth < 3) return 0;
+  return Number(Math.min(SEDIMENT_MAX_H, depth * SEDIMENT_RATE).toFixed(2));
+}
+
+/** 沉淀层上沿 y（= 堆顶起拱的基线）。 */
+export function sedimentTopY(box: LiquidBox, top: number): number {
+  return Number((box.bottom - sedimentHeight(box, top)).toFixed(2));
+}
+
+/** 堆顶隆起高度（撑起「积了一层粉」的弧面，而不是一条直尺线）。 */
+export function sedimentDomeRy(box: LiquidBox): number {
+  return Number(Math.min(SEDIMENT_MAX_DOME, box.w * 0.05).toFixed(2));
+}
+
+/**
+ * 沉淀层形状：器底矩形 + **向上拱起**的堆顶（A 弧从左上绕到右上）。
+ * 直接被主体轮廓裁住，所以圆底器皿的沉淀跟着器底弯。
+ */
+export function sedimentPath(box: LiquidBox, top: number): string {
+  const h = sedimentHeight(box, top);
+  if (!h) return "";
+  const y = Number((box.bottom - h).toFixed(2));
+  const rx = Number((box.w / 2).toFixed(2));
+  const ry = sedimentDomeRy(box);
+  const left = Number((box.x).toFixed(2));
+  const right = Number((box.x + box.w).toFixed(2));
+  return `M ${left} ${box.bottom} L ${left} ${y} A ${rx} ${ry} 0 0 1 ${right} ${y} L ${right} ${box.bottom} Z`;
+}
+
+/** 沉淀堆顶那条弧（堆与上清液的分界，靠它读成「积了一层」）。 */
+export function sedimentTopArc(box: LiquidBox, top: number): string {
+  return sedimentHeight(box, top) ? surfaceRimArc(box.cx, sedimentTopY(box, top), box.w / 2, sedimentDomeRy(box), 1) : "";
+}
+
 /* ---------------- 装饰细节 ---------------- */
 
 

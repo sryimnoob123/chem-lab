@@ -23,6 +23,30 @@ function initialContents(): Contents {
 }
 
 /**
+ * QA / 截图专用：`?contents=beaker=naoh,cuso4,water;flask=nacl` 直接把器皿摆到指定状态。
+ *
+ * 为什么需要：有些状态**用拖拽走不到**（现象表按组合精确匹配，拖进去的第二瓶多半是 MISS），
+ * 但视觉上必须验得到 —— 比如「液体 + 器底沉淀」这一态，现有种子数据里没有任何一条路径能到。
+ * 只在 URL 带参数时生效，不动拖拽/判定逻辑；挂载后一次性写入，避免 SSR 水合不一致。
+ */
+function contentsFromQuery(): Contents | null {
+  const raw = new URLSearchParams(window.location.search).get("contents");
+  if (!raw) return null;
+  const out: Record<string, readonly string[]> = {};
+  for (const entry of raw.split(";")) {
+    const [id, list] = entry.split("=");
+    if (!id || !list) continue;
+    const vesselId = id.trim();
+    if (!getSceneVessel(vesselId)) continue;
+    out[vesselId] = list
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/**
  * 拖拽反应场景（父组件）：
  * 试剂架 + 实验台 + 事件条。拖拽、点选、键盘三条路径都汇到 addReagent。
  */
@@ -142,6 +166,13 @@ export function ReactionScene() {
   useEffect(() => {
     addRef.current = addReagent;
   }, [addReagent]);
+
+  // QA 钩子：`?contents=` 挂载后一次性覆盖种子内容物（见 contentsFromQuery）
+  useEffect(() => {
+    const seeded = contentsFromQuery();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- URL 参数只在挂载后读一次，避免 SSR 水合不一致
+    if (seeded) setContents((prev) => ({ ...prev, ...seeded }));
+  }, []);
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);

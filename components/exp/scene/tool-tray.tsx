@@ -33,6 +33,10 @@ interface ToolTrayProps {
 
 const VESSEL_SELECTOR = '[data-demo-id^="demo-scene-vessel-"]';
 
+/** 托盘金属渐变 id：一台实验台只渲染一只托盘，固定 id 足够（不引 useId，免得 SSR/CSR 抖动）。 */
+const TRAY_METAL_ID = "trayMetalFace";
+const TRAY_EDGE_ID = "trayMetalEdge";
+
 function art(tool: SceneTool, active: boolean) {
   const stroke = "rgba(74, 87, 104, 0.72)";
   const fill = "rgba(246, 247, 245, 0.94)";
@@ -186,8 +190,54 @@ export function ToolTray({ area, toolIds, activeTool, onSelectTool, onUseTool }:
 
   return (
     <g className={styles.toolTray} data-demo-id="demo-tool-tray">
-      {/* 导轨底：一只搪瓷托盘（不是一张 UI 卡片）——底色比台面深半档，压一道内阴影 + 一圈边沿 */}
-      <rect x={area.x} y={area.y} width={area.w} height={area.h} rx={14} className={styles.toolTrayBase} />
+      {/* 金属托盘的两条渐变（B3）：面（竖向 hi→low）+ 盘口亮边（横向左亮右淡）。
+          id 固定：一台实验台只有一个托盘。 */}
+      <defs>
+        <linearGradient id={TRAY_METAL_ID} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--canvas-metal-hi)" />
+          <stop offset="38%" stopColor="var(--canvas-metal-mid)" />
+          <stop offset="100%" stopColor="var(--canvas-metal-low)" />
+        </linearGradient>
+        <linearGradient id={TRAY_EDGE_ID} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="var(--canvas-metal-edge)" stopOpacity="0.95" />
+          <stop offset="55%" stopColor="var(--canvas-metal-edge)" stopOpacity="0.48" />
+          <stop offset="100%" stopColor="var(--canvas-metal-edge)" stopOpacity="0.06" />
+        </linearGradient>
+      </defs>
+      {/* 导轨底：一只搪瓷托盘（不是一张 UI 卡片）——金属面走竖向渐变（上受光、下背光），
+          上沿压一道白亮边读成盘口，下沿一道淡影把盘子「放在」台面上。
+          渐变是静态填充，工具拖动时只有工具自己在动，托盘不重绘。 */}
+      <rect
+        data-metal="tray-base"
+        x={area.x}
+        y={area.y}
+        width={area.w}
+        height={area.h}
+        rx={14}
+        fill={`url(#${TRAY_METAL_ID})`}
+        className={styles.toolTrayBase}
+      />
+      <line
+        x1={area.x + 18}
+        y1={area.y + 2.4}
+        x2={area.x + area.w - 18}
+        y2={area.y + 2.4}
+        stroke={`url(#${TRAY_EDGE_ID})`}
+        strokeWidth={1.6}
+        strokeLinecap="round"
+        aria-hidden="true"
+      />
+      <line
+        x1={area.x + 18}
+        y1={area.y + area.h - 2.4}
+        x2={area.x + area.w - 18}
+        y2={area.y + area.h - 2.4}
+        stroke="var(--canvas-metal-seam)"
+        strokeOpacity={0.16}
+        strokeWidth={1.6}
+        strokeLinecap="round"
+        aria-hidden="true"
+      />
       <rect
         x={area.x + 3}
         y={area.y + 3}

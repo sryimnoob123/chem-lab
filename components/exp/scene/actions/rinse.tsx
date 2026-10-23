@@ -159,8 +159,8 @@ export function buildRinse(
         { transform: "scaleY(1)", opacity: 0.95, offset: 0.85 },
         { transform: "scaleY(1)", opacity: 0 },
       ],
-      duration: 900,
-      delay: 60,
+      duration: 700,
+      delay: 40,
       easing: EASE_IN_OUT,
     },
     {
@@ -171,8 +171,8 @@ export function buildRinse(
         { transform: "translate(0px, 0px)", opacity: 1, offset: 0.8 },
         { transform: "translate(0px, -8px)", opacity: 0 },
       ],
-      duration: 1000,
-      delay: 40,
+      duration: 760,
+      delay: 30,
     },
     // 水落进水里：液面从 0 升到 0.62
     {
@@ -181,8 +181,8 @@ export function buildRinse(
         { transform: `translateY(${start}px)` },
         { transform: `translateY(${wet}px)` },
       ],
-      duration: 760,
-      delay: 420,
+      duration: 560,
+      delay: 320,
     },
     // 水滴跟着水流落
     {
@@ -192,9 +192,9 @@ export function buildRinse(
         { transform: `translate(0px, ${a.mouthY - spoutY - 8}px) scale(1)`, opacity: 1, offset: 0.7 },
         { transform: `translate(0px, ${a.mouthY - spoutY}px) scale(.7)`, opacity: 0 },
       ],
-      duration: 520,
-      delay: 260,
-      stagger: 120,
+      duration: 400,
+      delay: 180,
+      stagger: 90,
     },
     // 刷洗：伸进去，来回三次，再抽出来
     {
@@ -208,8 +208,8 @@ export function buildRinse(
         { transform: "translate(0px, -2px) rotate(-6deg)", offset: 0.8 },
         { transform: "translate(0px, -34px) rotate(-8deg)", opacity: 0 },
       ],
-      duration: 1150,
-      delay: 420,
+      duration: 860,
+      delay: 320,
     },
     // 倒水：水带画出 → 液面见底
     {
@@ -220,15 +220,15 @@ export function buildRinse(
         { strokeDashoffset: 0, opacity: 1, offset: 0.8 },
         { strokeDashoffset: 0, opacity: 0 },
       ],
-      duration: 620,
-      delay: 1420,
+      duration: 460,
+      delay: 1060,
       easing: EASE_IN_OUT,
     },
     {
       sel: '[data-a="water"]',
       frames: [{ transform: `translateY(${wet}px)` }, { transform: `translateY(${empty}px)` }],
-      duration: 620,
-      delay: 1500,
+      duration: 440,
+      delay: 1100,
       easing: EASE_IN_OUT,
     },
     // 沥干：水珠沿着内壁往下滑、消失
@@ -239,12 +239,12 @@ export function buildRinse(
         { transform: "translate(0px, 6px)", opacity: 0.9, offset: 0.2 },
         { transform: `translate(0px, ${(a.baseY - a.surfaceY) * 0.75}px)`, opacity: 0 },
       ],
-      duration: 520,
-      delay: 1980,
-      stagger: 55,
+      duration: 300,
+      delay: 1480,
+      stagger: 30,
       easing: EASE_OUT,
     },
   ];
 
-  return { node, beats, ms: 2520 };
+  return { node, beats, ms: 1900 };
 }

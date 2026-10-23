@@ -124,3 +124,25 @@ describe("液体混色：id 归一化", () => {
     expect(m.note).toContain("CO₂");
   });
 });
+
+describe("液体混色：沉淀沉底标记（B2 画器底沉淀层用）", () => {
+  it("真沉淀标 sediment：AgCl / Cu(OH)₂ / AgI", () => {
+    expect(mixLiquids(["agno3", "nacl"]).sediment).toBe(true);
+    expect(mixLiquids(["cuso4", "naoh"]).sediment).toBe(true);
+    expect(mixLiquids(["agno3", "ki"]).sediment).toBe(true);
+  });
+
+  it("逸出气体不标 sediment：CO₂ / H₂S 不沉底", () => {
+    const co2 = mixLiquids(["na2co3", "hcl"]);
+    expect(co2.kind).toBe("precipitate"); // 现象表里和沉淀同一优先级
+    expect(co2.sediment).toBe(false);
+    const h2s = mixLiquids(["na2s", "hcl"]);
+    expect(h2s.note).toContain("H₂S");
+    expect(h2s.sediment).toBe(false);
+  });
+
+  it("无色液体不标 sediment（沉淀层只属于真有固相的体系）", () => {
+    expect(mixLiquids(["water"]).sediment).toBeUndefined();
+    expect(mixLiquids(["cuso4"]).sediment).toBeUndefined();
+  });
+});

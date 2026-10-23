@@ -215,6 +215,28 @@ export function buildDrops(a: VesselAnchor, opts: { clipId: string; levelStart?:
         stroke={EDGE}
         strokeWidth={1.2}
       />
+      {/* 悬滴（C6 定容）：最后一滴先挂在管口涨大、再落下 —— 读成「半滴控制到刻度」 */}
+      <circle
+        data-a="hang"
+        cx={a.mouthX}
+        cy={tipY + 3.4}
+        r={2.8}
+        fill={EDGE}
+        opacity={0}
+        style={{ transformBox: "fill-box", transformOrigin: "center" }}
+      />
+      {/* 摇匀（C6 尾段）：液面两条弧线来回摆。器皿本体不画在这一层，不能整瓶转，
+          所以用液面自身的旋转读「摇匀」 */}
+      <path
+        data-a="swirl"
+        d={`M${a.mouthX - a.rx * 0.72} ${a.surfaceY + 3} q${a.rx * 0.72} -6 ${a.rx * 1.44} 0`}
+        fill="none"
+        stroke={EDGE}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        opacity={0}
+        style={{ transformBox: "view-box", transformOrigin: `${a.mouthX}px ${a.surfaceY}px` }}
+      />
     </>
   );
 
@@ -261,7 +283,33 @@ export function buildDrops(a: VesselAnchor, opts: { clipId: string; levelStart?:
       stagger: 240,
       easing: EASE_OUT,
     },
+    // 悬滴：涨大 → 挂住 → 落下（C6）
+    {
+      sel: '[data-a="hang"]',
+      frames: [
+        { opacity: 0, transform: "scale(.3)" },
+        { opacity: 1, transform: "scale(1)", offset: 0.55 },
+        { opacity: 1, transform: "translate(0px, 2px) scale(1.15)", offset: 0.85 },
+        { opacity: 0, transform: "translate(0px, 26px) scale(.6)" },
+      ],
+      duration: 560,
+      delay: 1240,
+      easing: EASE_IN_OUT,
+    },
+    // 摇匀：液面弧线摆两下（C6）
+    {
+      sel: '[data-a="swirl"]',
+      frames: [
+        { opacity: 0, transform: "rotate(-5deg) scaleX(.72)" },
+        { opacity: 0.9, transform: "rotate(4deg) scaleX(1)", offset: 0.3 },
+        { opacity: 0.9, transform: "rotate(-4deg) scaleX(.9)", offset: 0.6 },
+        { opacity: 0, transform: "rotate(3deg) scaleX(.98)" },
+      ],
+      duration: 620,
+      delay: 1300,
+      easing: EASE_IN_OUT,
+    },
   ];
 
-  return { node, beats, ms: 1900 };
+  return { node, beats, ms: 1920 };
 }
