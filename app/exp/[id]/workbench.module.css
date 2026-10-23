@@ -1806,6 +1806,16 @@
     flex: 0 0 55vh;
     min-height: 0;
     border-bottom: 1px solid var(--bench-line);
+    /* D5（2026-10-24）：390 宽下按原比例缩放，器皿只剩 27px、工具 15px（实测 ui-metrics），
+       手指点不中。窄屏改成「按容器高度放大 + 横向滑动」，器皿 ~52px、工具 ~44px、天平 ~204px。
+       不用 scale()：缩放会连描边和字号一起糊；改 svg 的宽高让浏览器自己按 viewBox 重算。 */
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .stage::-webkit-scrollbar {
+    display: none;
   }
 
   .rail {
@@ -1834,7 +1844,9 @@
     left: 8px;
     right: 8px;
     top: auto;
-    bottom: 8px;
+    /* D5（2026-10-24）：台面底部多了一条 MobileDock（61px 高，44px 控件），
+       试剂架让到它上面 —— 否则两层叠在一起，截图里「碳酸钠」和「锥形瓶」糊成一片。 */
+    bottom: 74px;
     width: auto;
     display: flex;
     align-items: center;
@@ -2184,3 +2196,8 @@
 .skipAction:active {
   transform: scale(0.97);
 }
+
+/* ---------------- D5 · 窄屏点击目标（2026-10-24） ----------------
+   结论：靠放大 SVG 解决不了 —— 台面 viewBox 宽 1560 单位，390 屏要 44px 得放大到 2000px+（横向滑 5 屏）。
+   所以窄屏只把「可点」这件事搬到 HTML：MobileDock 里器皿/工具/天平都是 ≥44px 的按钮，
+   SVG 退化为「看现象」的展示层。见 components/exp/scene/mobile-dock.tsx。 */

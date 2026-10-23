@@ -1,0 +1,76 @@
+/**
+ * MobileDock（D5，2026-10-24）
+ *
+ * 只在 ≤560px 出现：PC 上直接点/拖 SVG 里的器皿与工具，不需要这条。
+ * 尺寸硬线：每个 chip 最小 44×44（WCAG 2.5.5 / 用户口径「手指点得准」）。
+ * 视觉语言跟实验台一致：纸白底、1px 墨线、2px 圆角（不是 Material 胶囊），
+ * 选中用河大蓝描边 + 极淡蓝底，不新增颜色 token。
+ */
+
+.dock {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .dock {
+    display: flex;
+    /* 钉在台面底部（stage 是 position:relative）。窄屏 SVG 里的托盘本来就点不中，
+       被这条盖住不损失功能；场景上半部（器皿 + 天平）仍完整可见。 */
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 12;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    border-top: 1px solid var(--bench-line, rgba(74, 87, 104, 0.16));
+    background: rgba(246, 247, 245, 0.98);
+  }
+
+  .dock::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chip {
+    flex: 0 0 auto;
+    /* 44px 硬线：窄屏唯一的可点入口，不许再小 */
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid rgba(74, 87, 104, 0.28);
+    border-radius: 2px;
+    background: #fff;
+    color: var(--ink, #16202c);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 140ms cubic-bezier(0.23, 1, 0.32, 1), background-color 140ms cubic-bezier(0.23, 1, 0.32, 1), transform 90ms;
+  }
+
+  .chip:active {
+    transform: scale(0.97);
+  }
+
+  /* 已选中（器皿）或已拿起（工具） */
+  .chip[data-active="true"] {
+    border-color: var(--river-700, #23307f);
+    background: rgba(35, 48, 127, 0.07);
+    color: var(--river-700, #23307f);
+    font-weight: 600;
+  }
+
+  /* 拿着工具时的器皿：虚线 = 「点我投放」 */
+  .chip[data-active="target"] {
+    border-style: dashed;
+    border-color: var(--jade-600, #0f7b6c);
+    color: var(--jade-600, #0f7b6c);
+  }
+}

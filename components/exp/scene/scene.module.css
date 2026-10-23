@@ -179,6 +179,25 @@
   touch-action: none;
 }
 
+/* D5（2026-10-24）：窄屏的点击目标交给台面下方的 MobileDock（HTML，44px 控件）——
+   SVG 里原比例的器皿只有 27px、工具 15px，放大又会让整块台面只剩局部。
+   这里只保留横向手势的放开（万一将来恢复放大，滑动不至于被 touch-action:none 吃掉）。 */
+@media (max-width: 560px) {
+  .stage {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .stage::-webkit-scrollbar {
+    display: none;
+  }
+
+  .benchSvg {
+    touch-action: pan-x;
+  }
+}
+
 .benchMark {
   font-family: var(--font-mono);
   font-size: 14px;

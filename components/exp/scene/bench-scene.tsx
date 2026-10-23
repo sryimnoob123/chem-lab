@@ -8,6 +8,7 @@ import { DropHint } from "./drop-hint";
 import styles from "./scene.module.css";
 import { VesselArt } from "./vessel-art";
 import { ToolTray } from "./tool-tray";
+import { MobileDock } from "./mobile-dock";
 import { Sink } from "./sink";
 import { BenchPour, type BenchPourIntent } from "./bench-pour";
 import { hasLiquidContent } from "./vessels/glass-vessel";
@@ -426,8 +427,13 @@ export function BenchScene({
       // viewBox 单位 → 屏幕像素的换算（宽度方向），用来把"至少 36px"折成单位数
       const boxWidth = svg?.viewBox.baseVal.width || 570;
       const pxToUnit = svg && svg.clientWidth > 0 ? boxWidth / svg.clientWidth : 1;
-      const MIN_W = 24 * pxToUnit;
-      const MIN_H = 24 * pxToUnit;
+      /* D5（2026-10-24）：触控设备与窄屏按 44px 硬线折算（WCAG 2.5.5 / 用户口径「手指点得准」）；
+         桌面鼠标 24px 足够 —— 热区一味放大，相邻两台器皿会互相抢点击。 */
+      const coarse = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+      const narrow = typeof window !== "undefined" && window.innerWidth <= 560;
+      const minPx = coarse || narrow ? 44 : 24;
+      const MIN_W = minPx * pxToUnit;
+      const MIN_H = minPx * pxToUnit;
       for (const [id, el] of Object.entries(artRefs.current)) {
         if (!el) continue;
         const b = el.getBBox();
@@ -575,7 +581,8 @@ export function BenchScene({
   };
 
   return (
-    <div
+    <>
+      <div
       className={styles.stage}
       data-safe-right={safeRight ?? ""}
       data-layout-dx={layoutDx || ""}
@@ -1159,6 +1166,21 @@ export function BenchScene({
 
       {/* 事故特效层挂载点：绝对定位在舞台内 */}
       <div className={styles.fxSlot}>{children}</div>
-    </div>
+
+      {/* D5（2026-10-24）：窄屏点击目标层 —— SVG 里原比例只有 15~40px，手指点不中；
+          这里每个控件 ≥44×44，交互与台面「点选投放」一致。只 ≤560px 显示（见 mobile-dock.module.css）。
+          必须挂在 stage 内部并绝对定位在底部：它是 flex 容器的子元素，放到外面会被
+          「stage 占满高度」挤到看不见的地方（实测截图里场景整个消失）。 */}
+      <MobileDock
+        vesselIds={vessels.map((v) => v.id)}
+        toolIds={toolIds}
+        activeTool={activeTool}
+        activeVesselId={activeVesselId}
+        onSelectTool={onSelectTool}
+        onActivateVessel={onActivateVessel}
+        onUseTool={onUseTool}
+      />
+      </div>
+    </>
   );
 }
