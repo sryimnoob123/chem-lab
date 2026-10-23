@@ -36,14 +36,21 @@
 
 **接大模型（二选一）**
 
+> 扣子平台的自定义环境变量**不能用 `COZE_` 前缀**（系统保留），所以下面给了不带前缀的别名，两套都认。
+> 平台不会自动注入任何模型凭据（2026-10-23 容器实测：无 BOT_/LLM_/ARK_ 变量）。
+
 | 方案 | 变量 |
 |---|---|
-| 扣子 OpenAPI | `COZE_API_TOKEN=pat_…`、`COZE_BOT_ID=…` |
-| OpenAI 兼容（推荐火山方舟） | `COZE_LLM_URL=https://ark.cn-beijing.volces.com/api/v3/chat/completions`、`COZE_LLM_KEY=…`、`COZE_LLM_MODEL=doubao-seed-1-6-flash` |
-| 只给方舟 key 也行 | `ARK_API_KEY=…`（自动补地址）、可选 `ARK_MODEL` |
-| 只给 DeepSeek key | `DEEPSEEK_API_KEY=…`、可选 `DEEPSEEK_MODEL` |
+| 扣子 BOT（官方通道，推荐） | `BOT_TOKEN`（个人访问令牌 PAT）+ `BOT_ID`（BOT 的 bot_id；BOT 必须先「发布」到 API 渠道） |
+| OpenAI 兼容（火山方舟） | `LLM_BASE_URL=https://ark.cn-beijing.volces.com/api/v3/chat/completions` + `LLM_API_KEY` + `LLM_MODEL=doubao-seed-1-6-flash` |
+| 只要方舟 key | `ARK_API_KEY`（自动补方舟地址）、可选 `ARK_MODEL` |
+| 只要 DeepSeek key | `DEEPSEEK_API_KEY`、可选 `DEEPSEEK_MODEL` |
 
-可选：`PLAN_ASSESS_PROVIDER=auto|coze|ark|mock`（缺省 auto，按凭据自动判断；想强制走扣子 BOT 就写 `coze`）。
+老名字也仍然可用：`COZE_API_TOKEN`/`COZE_BOT_ID`/`COZE_LLM_URL`/`COZE_LLM_KEY`/`COZE_LLM_MODEL`（本地 `.env.local` 里随便写）。
+可选：`PLAN_ASSESS_PROVIDER=auto|coze|ark|mock`（缺省 auto，按凭据自动判断）。
+
+BOT 侧设置要点：单 Agent、把「严格按用户给的 JSON 格式输出，不要 Markdown」写进人设；`/api/plan/assess` 的提示词已经把 JSON schema 发过去了。
+接口是异步的（发起 → 轮询 → 取答案），我们的超时是 12 秒，BOT 回复要在 10 秒内。
 
 **注意**：生产变量只能在「发布管理」改，**改完必须重新部署才生效**；同名 key 已存在时先删再建。
 
