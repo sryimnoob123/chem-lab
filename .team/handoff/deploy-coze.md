@@ -87,6 +87,38 @@ BOT 侧设置要点：单 Agent、把「严格按用户给的 JSON 格式输出�
 - **内容审核**：实验事故文案（爆炸/中毒一类）已在本地验收过，属教学演示；如审核卡住，先把事故文案改成"操作失误演示"。
 - `coze code repo pull` 不可靠：判据是 `deploy status` 的 `commitHash` 有没有变；没变就让容器自己 `git reset --hard origin/main`。
 
+## 4.5 AI 助教 / AI 点评：**没有真 key 时怎么自证链路是通的**（2026-10-24 实测）
+
+不用申请任何 key、不用连外网：在本机起一个假的 OpenAI 兼容端点，把服务指过去，看回复是不是它给的。
+
+```bash
+# ① 假端点（临时脚本，只回一句带标记的话；port 4567）
+node mock-llm.mjs        # → {"choices":[{"message":{"content":"【MOCK-LLM-OK】…"}}]}
+
+# ② 带凭据起服务（COZE_LLM_URL 指向假端点；KEY 随便填，只要有值就会被当成「已配置」）
+PORT=3001 HOSTNAME=127.0.0.1 PGLITE_DIR=<repo>/.pgdata-prod2 \
+COZE_LLM_URL=http://127.0.0.1:4567/v1/chat/completions COZE_LLM_KEY=test-key \
+node .next/standalone/server.js
+
+# ③ 登录 + 问一句
+curl -s -c /tmp/ck.txt -X POST localhost:3001/api/session \
+  -H 'content-type: application/json' -d '{"studentNo":"20250101","name":"周若曦"}'
+curl -s -b /tmp/ck.txt -X POST localhost:3001/api/tutor/chat \
+  -H 'content-type: application/json' \
+  -d '{"question":"移液管怎么润洗","step":"定容","experimentId":"exp01"}'
+```
+
+两种结果（下面两行是 2026-10-24 的**原始回执**，不是改写）：
+
+| 场景 | 回执 |
+|---|---|
+| 有凭据（指向假端点） | `{"ok":true,"llm":true,"provider":"ark","reply":"【MOCK-LLM-OK】先把移液管润洗三次，再移取 25.00 mL。"}` |
+| 没有凭据（正常启动） | `{"ok":true,"llm":false,"provider":"mock","fallback":"offline","reply":"这会儿没答上来。这一步叫「定容」，做法在右侧「看原因 / 提示」里。"}` |
+
+判据三条：① 有凭据时 `llm:true` 且 `reply` 是你假端点里那句话（说明真走了 HTTP 模型调用，不是本地兜底）；
+② 没凭据时 **HTTP 仍是 200**、`fallback:"offline"`、`reply` 是本地话术（说明降级不报错，学生看到的是一句人话而不是红字）；
+③ 全过程日志里没有 5xx。AI 点评（`/api/plan/assess`）用的是同一套 provider，配一次 key 两处都通。
+
 ## 5. 本地这一版已经验过的（可复跑）
 
 ```bash
