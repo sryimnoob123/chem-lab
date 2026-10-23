@@ -30,10 +30,10 @@ export function LabBackdrop({ top }: { top: number }) {
     <g aria-hidden="true" data-layer="lab-backdrop">
       <defs>
         <linearGradient id="labWall" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#F4F1EA" />
-          <stop offset="34%" stopColor="#EDEDE7" />
-          <stop offset="72%" stopColor="#E4E7E5" />
-          <stop offset="100%" stopColor="#D9DFDF" />
+          {/* 颜色走 token（§9.8）：墙脚原来是写死的 #D9DFDF 冷青灰，和暖纸白台面撞色相 */}
+          <stop offset="0%" stopColor="var(--lab-wall)" />
+          <stop offset="40%" stopColor="var(--lab-wall)" />
+          <stop offset="100%" stopColor="var(--lab-wall-foot)" />
         </linearGradient>
         <radialGradient id="labSun" cx="0.72" cy="0.1" r="0.95">
           <stop offset="0%" stopColor="#FFFDF6" stopOpacity="0.95" />
@@ -54,9 +54,9 @@ export function LabBackdrop({ top }: { top: number }) {
       <ellipse cx={cx + 300} cy={top + h * 0.28} rx="440" ry="210" fill="url(#labSun)" />
 
 
-      {/* 挡水板：台面靠墙的那道真实厚度 */}
+      {/* 挡水板：台面靠墙的那道真实厚度。高光不能用白（§9.1：纸白底上白线看不见），改淡墨暗缝 */}
       <rect x={BENCH.viewLeft} y={wallBottom} width={BENCH.viewRight - BENCH.viewLeft} height="20" fill="url(#labSplash)" />
-      <line x1={BENCH.viewLeft} y1={wallBottom + 0.5} x2={BENCH.viewRight} y2={wallBottom + 0.5} stroke="#FFFFFF" strokeWidth="1.4" opacity="0.75" />
+      <line x1={BENCH.viewLeft} y1={wallBottom + 0.5} x2={BENCH.viewRight} y2={wallBottom + 0.5} stroke="rgba(74,87,104,.14)" strokeWidth="1.4" />
     </g>
   );
 }

@@ -96,8 +96,10 @@
   /* 台面纸格：.05 在暖纸白上等于看不见，抬到 .085 才有「一张实验台记录纸」的底纹 */
   --bench-grid: rgba(74, 87, 104, 0.085);
   /* 实验室背景（2.5D 舞台的远景层）：比台面更冷、更淡，退到后面不抢器皿 */
-  --lab-wall: #eaeeec;
-  --lab-wall-foot: #dfe4e3;
+  /* 2026-10-23：原来末档 #D9DFDF 冷青灰（h180）和暖纸白台面（h41）差 139°，墙脚看着脏。
+     整条墙往暖里挪一档，只靠明度退远，不靠色相打架。 */
+  --lab-wall: #efeadf;
+  --lab-wall-foot: #e5dfd1;
   --lab-window: #f8fbfc;
   --lab-window-frame: rgba(74, 87, 104, 0.22);
   --lab-shelf: #d9dfdd;

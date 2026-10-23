@@ -315,7 +315,8 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--river-100);
+  /* --river-100 在纸白底上等于看不见（实测 1.13:1），换 --ink-2（= rgba(74,87,104,1) 一档）让它真的起「当前状态」作用 */
+  background: var(--ink-2);
 }
 
 .resultBar[data-state="success"] .resultMark {
@@ -376,9 +377,12 @@
 }
 
 .resultLine {
-  color: var(--bench-text);
-  font-size: 12px;
-  line-height: 1.35;
+  /* 2026-10-23：这一行是学生每秒唯一要看的那句「现在该做什么」，
+     原来 12px/400 是全场最弱一层（顶栏/右栏/托盘的墨量都比它重 8 倍）→ 提到 15px/600 + 正文色。 */
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 /* 成功：青色 ✓ 配一次 240ms 的轻微上浮，只动 opacity/transform */

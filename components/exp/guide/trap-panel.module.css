@@ -82,8 +82,9 @@
 }
 
 .item[data-level="L2"] .level {
-  color: #a8700f;
-  opacity: 0.85;
+  /* 2026-10-23：原来 #a8700f@.85 在白底上 4.21:1（12px 不达 AA）→ 压到 #8a5a00（实测 5.93:1） */
+  color: #8a5a00;
+  opacity: 1;
 }
 
 .item[data-level="L3"] .level {

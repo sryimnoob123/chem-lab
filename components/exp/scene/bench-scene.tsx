@@ -592,12 +592,14 @@ export function BenchScene({
           <pattern id="benchGrid" width="26" height="26" patternUnits="userSpaceOnUse" patternTransform="translate(5 9)">
             <path d="M26 0 H0 V26" fill="none" stroke="var(--bench-grid)" strokeWidth="1" />
           </pattern>
-          {/* 台面纵深：上浅下深一点，像顶灯照在台面上 */}
+          {/* 台面纵深：上浅下深一点，像顶灯照在台面上。
+              2026-10-23：原来 0% 用 #FFFFFF@.5、底部用冷蓝 #39485A → 暖纸白台面被洗白 + 压脏
+              （实测前沿彩度从 46% 掉到 18%）。改暖白高光 + 暖棕压暗，只降明度不动色相。 */}
           <linearGradient id="benchDepth" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.5" />
-            <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0" />
-            <stop offset="88%" stopColor="#39485A" stopOpacity="0.03" />
-            <stop offset="100%" stopColor="#39485A" stopOpacity="0.075" />
+            <stop offset="0%" stopColor="rgba(255,252,244,0.28)" />
+            <stop offset="55%" stopColor="rgba(255,252,244,0)" />
+            <stop offset="88%" stopColor="rgba(90,70,40,0.03)" />
+            <stop offset="100%" stopColor="rgba(90,70,40,0.06)" />
           </linearGradient>
         </defs>
         {/* 实验室背景：墙 / 窗 / 试剂架 / 通风柜（纯矢量，零图片） */}
