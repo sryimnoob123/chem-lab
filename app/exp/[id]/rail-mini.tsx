@@ -232,35 +232,20 @@ export function AiTutor({ stepTitle }: { stepTitle: string }) {
     : undefined;
 
   /**
-   * 小对话框的位置：**贴在实验台外面**的那条空带里（右侧栏上方 / 台面下沿右边），
-   * 宽度跟着空带收（220~300），高度不超过 340。窗口太小退回右下角。
+   * 侧边栏：整条右边贴住、上下留白固定，宽度跟着视口走（260~360）。
+   * 用户 2026-10-23：小对话框在小屏上「显示不完全」，改成侧边栏形式，
+   * 宁可压住右栏一部分，也要标题 / 消息 / 快捷问法 / 输入框一次看全。
    */
   const dialogStyle = (): React.CSSProperties => {
-    /**
-     * 用 clientWidth/clientHeight（不含滚动条），否则窗口有滚动条时
-     * `innerWidth - width - 12` 正好落在滚动条底下 —— 气泡和输入框被压住，
-     * 看起来还是"贴边"（用户 2026-10-23 第二次报）。
-     */
+    /** clientWidth/clientHeight 不含滚动条，避免面板被页面滚动条压住 */
     const vw = document.documentElement.clientWidth || window.innerWidth;
     const vh = document.documentElement.clientHeight || window.innerHeight;
+    const TOP = 12;
+    /** 底部留 56：扣子平台右下角有官方徽标，贴太靠下会盖住发送键 */
+    const BOTTOM = 56;
     const GAP = 12;
-    /** 底部留 56：扣子平台右下角有官方悬浮标，贴太靠下会盖住发送键 */
-    const BOTTOM_SAFE = 56;
-    const bench = benchRect();
-    /**
-     * 宽度从"右边空带的实际可用宽度"倒推，位置只从右边算 ——
-     * 之前先算 x 再用 `max(台右+10, …)` 夹，结果被台子顶到最右，右侧只剩 2px（用户第二次报"贴边"）。
-     */
-    const bandLeft = bench ? bench.right + BENCH_MARGIN : 0;
-    const width = Math.min(320, Math.max(200, vw - GAP - bandLeft));
-    const height = Math.min(480, vh - BOTTOM_SAFE - 16);
-    const anchorY = pos ? pos.y : vh - 18 - BUTTON_SIZE;
-    const x = vw - width - GAP;
-    let y = Math.min(vh - height - BOTTOM_SAFE, Math.max(GAP, anchorY + BUTTON_SIZE - height));
-    if (bench && x < bench.right + BENCH_MARGIN && y + height > bench.top && y < bench.bottom) {
-      y = Math.max(GAP, bench.top - BENCH_MARGIN - height);
-    }
-    return { left: x, top: y, width, height };
+    const width = Math.round(Math.min(360, Math.max(260, vw * 0.3)));
+    return { left: vw - width - GAP, top: TOP, width, height: vh - TOP - BOTTOM };
   };
 
   const floating = (
