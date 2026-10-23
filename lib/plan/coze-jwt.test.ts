@@ -126,6 +126,7 @@ describe("JWT → access token → /v3/chat 全链路", () => {
   it("企业服务凭证能换 token 并拿到模型给的分，token 有缓存", async () => {
     const base = await startFake();
     process.env.PLAN_ASSESS_PROVIDER = "auto";
+    process.env.PLAN_SCORE_SOURCE = "llm";
     process.env.BOT_ID = "7499999999999999999";
     process.env.BOT_APP_ID = "310000000002";
     process.env.BOT_KID = "kid-abc";

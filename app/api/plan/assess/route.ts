@@ -43,6 +43,8 @@ export async function POST(request: Request): Promise<Response> {
       ok: true,
       provider: assessment.provider,
       llm: llmEnabled(),
+      /** AI 对方案的复述（学生先确认「系统看懂了我拼的东西」） */
+      summary: assessment.summary ?? "",
       text: assessment.text,
       points: assessment.points,
       questions: assessment.questions,

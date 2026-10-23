@@ -22,6 +22,20 @@
 - 本地开发/预览无 `DATABASE_URL` 时走 PGlite（`.pgdata`，可写），`/api/experiments` 正常 200。
 - 详见 `lib/db/index.ts` 注释与 `docs/扣子部署适配.md`。
 
+### 0.2.1 AI 接入与部署规范（2026-10-23 增）
+- **本地和线上走两条不同的模型通道，代码自动选，不要混用**：
+  - 平台内（扣子编程部署后）→ `coze-coding-dev-sdk` 的 `LLMClient(new Config(), HeaderUtils.extractForwardHeaders(req.headers))`，
+    零配置、平台注入身份、**不用管令牌有效期**；
+  - 本地 `next dev` → HTTP 通道（`api.coze.cn/v3/chat` + PAT，或 OpenAI 兼容端点 + key）。
+  - 实测：SDK 用 `pat_` 调 `integration.coze.cn` 会被拒（要三段式 JWT），所以本地别指望 SDK。
+  - 封装：`lib/ai/sdk-llm.ts`（SDK）+ `lib/plan/llm-assess.ts`（HTTP），开关 `LLM_CHANNEL=auto|sdk|http`。
+- **评分口径**：AI 先复述学生的方案、再按 5 维给分（`lib/plan/rubric.ts`）；规则引擎只当底线 ——
+  违反硬约束/不可执行一律 ≤59 分（`capScoreByReport`）。设 `PLAN_SCORE_SOURCE=rule` 可回到
+  「规则算分、模型只写评语」（分更稳但学生感受不到 AI 参与，用户 2026-10-23 选了前者）。
+- **深度思考必须关**：同一问题 `thinking: enabled` 9.9s → `disabled` 5.6s。
+- **启动指令不要写死端口**：`npm run start` 里不能带 `-p 3000`，平台会用 `--port ${PORT}` 注入。
+- 完整规范（部署限制、环境变量、16MB、300s 长连接、资源路径）见 **`docs/扣子开发与部署规范.md`**，改部署相关代码前先读。
+
 ### 0.3 干活的地方与 skill 落点
 - 开发、验收、批量测试都在 **Hermes profile `webapp`** 这边做，只维护这一套环境。
 - skill 副本在 `%LOCALAPPDATA%\hermes\profiles\webapp\skills\<category>\<name>\`；社区原件在 `~/.dsh/skills`，

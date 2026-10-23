@@ -5,7 +5,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // PGlite 依赖 WASM 与本地文件系统，不能被打进 server bundle；
   // postgres.js 自带原生 TCP 连接池，同样按外部包处理
-  serverExternalPackages: ["@electric-sql/pglite", "postgres"],
+  // coze-coding-dev-sdk 体积大且只在扣子运行时用：外部化，避免进 server bundle，
+  // 本地/CI 也是靠 lib/ai/sdk-llm.ts 的动态 import + try/catch 才加载
+  serverExternalPackages: ["@electric-sql/pglite", "postgres", "coze-coding-dev-sdk"],
   // 本机只有 15.8G 物理内存：page data 阶段默认按 CPU 核数开 worker（实测 19 个）
   // 会直接 OOM 崩 build（FATAL ERROR: AlignedAlloc Allocation failed）。
   // 压到 4 个 worker，峰值内存降一个量级；构建慢一点但不会炸。

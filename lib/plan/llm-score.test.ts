@@ -149,6 +149,7 @@ describe2("assessPlan：模型给分", () => {
       }),
     );
     process.env.PLAN_ASSESS_PROVIDER = "ark";
+    process.env.PLAN_SCORE_SOURCE = "llm";
     process.env.COZE_LLM_URL = url;
     process.env.COZE_LLM_KEY = "test-key";
 
@@ -166,6 +167,7 @@ describe2("assessPlan：模型给分", () => {
       JSON.stringify({ score: 96, text: "整体不错。", points: [{ kind: "good", pieceId: "piece-burette-acid", text: "可以。" }] }),
     );
     process.env.PLAN_ASSESS_PROVIDER = "ark";
+    process.env.PLAN_SCORE_SOURCE = "llm";
     process.env.COZE_LLM_URL = url;
     process.env.COZE_LLM_KEY = "test-key";
 
@@ -175,6 +177,98 @@ describe2("assessPlan：模型给分", () => {
 
     expect2(result.score).toBe(59);
     expect2(result.fallback).toBeUndefined();
+  });
+});
+
+/**
+ * 默认口径（参考项目「实验合并」）：分数由规则引擎定，模型只写点评。
+ * 这里把"模型想给 92 分"塞进去，断言分被丢掉、点评照收 —— 保证模型没法左右分数。
+ */
+/**
+ * 默认口径（用户 2026-10-23 定）：模型参与评分，并且先总结方案；
+ * 规则引擎退为「底线」——违反硬约束时封顶 59（capScoreByReport）。
+ * 两条用例分别锁住「模型分被采用 + 总结落库」和「硬约束一票否决」。
+ */
+describe2("assessPlan：模型给分（默认）+ 规则封顶", () => {
+  it2("模型给 92 分并给出方案总结：分数采用、总结与分项落库", async () => {
+    const url = await startMockLlm(
+      JSON.stringify({
+        summary: "你先称无水碳酸钠配标准溶液，再用酸式滴定管平行滴定三份。",
+        score: 92,
+        dimensions: [
+          { name: "完整性", score: 94, note: "关键块齐" },
+          { name: "顺序", score: 90 },
+        ],
+        text: "可以进操作台，润洗和终点控制都到位。",
+        points: [{ kind: "good", pieceId: "piece-burette-acid", text: "酸式滴定管选对了。" }],
+        questions: [],
+      }),
+    );
+    process.env.PLAN_ASSESS_PROVIDER = "ark";
+    delete process.env.PLAN_SCORE_SOURCE;
+    process.env.COZE_LLM_URL = url;
+    process.env.COZE_LLM_KEY = "test-key";
+
+    const plan: PlanInput = { pieces: REFERENCE_PLAN.pieces, params: REFERENCE_PLAN.params };
+    const report = { ...reportOf(plan), feasible: true, blockCount: 0, warnCount: 0 };
+    const result = await assessPlan(plan, report, getTopic("topic-hcl-standard"));
+
+    expect2(result.score).toBe(92);
+    expect2(result.scoreFrom).toBe("model");
+    expect2(result.summary).toContain("无水碳酸钠");
+    expect2(result.dimensions?.length).toBe(2);
+    expect2(result.commentSource).toBe("model");
+    expect2(result.text).toContain("可以进操作台");
+  });
+
+  it2("模型给 92 分但方案违反硬约束：封顶 59", async () => {
+    const url = await startMockLlm(
+      JSON.stringify({ summary: "你只放了三块。", score: 92, text: "还行。" }),
+    );
+    process.env.PLAN_ASSESS_PROVIDER = "ark";
+    delete process.env.PLAN_SCORE_SOURCE;
+    process.env.COZE_LLM_URL = url;
+    process.env.COZE_LLM_KEY = "test-key";
+
+    const plan: PlanInput = { pieces: ["piece-flask"], params: {} };
+    const report = await validate(plan);
+    const result = await assessPlan(plan, report, getTopic("topic-hcl-standard"));
+
+    expect2(result.score).toBe(59);
+    expect2(result.scoreFrom).toBe("rule");
+  });
+});
+
+/**
+ * 显式切回旧口径：分数由规则引擎定，模型只写评语（设 PLAN_SCORE_SOURCE=rule）。
+ * 这里把"模型想给 92 分"塞进去，断言分被丢掉、点评照收 —— 模型没法左右分数。
+ */
+describe2("assessPlan：规则给分（PLAN_SCORE_SOURCE=rule）", () => {
+  it2("模型给了 92 分也不采用：分数留空交回规则，点评用模型的", async () => {
+    const url = await startMockLlm(
+      JSON.stringify({
+        score: 92,
+        dimensions: [{ name: "顺序", score: 94 }],
+        text: "可以进操作台，润洗和终点控制都到位。",
+        points: [{ kind: "good", pieceId: "piece-burette-acid", text: "酸式滴定管选对了。" }],
+        questions: [],
+      }),
+    );
+    process.env.PLAN_ASSESS_PROVIDER = "ark";
+    process.env.PLAN_SCORE_SOURCE = "rule";
+    process.env.COZE_LLM_URL = url;
+    process.env.COZE_LLM_KEY = "test-key";
+
+    const plan: PlanInput = { pieces: REFERENCE_PLAN.pieces, params: REFERENCE_PLAN.params };
+    const report = { ...reportOf(plan), feasible: true, blockCount: 0, warnCount: 0 };
+    const result = await assessPlan(plan, report, getTopic("topic-hcl-standard"));
+
+    expect2(result.score).toBeUndefined();
+    expect2(result.scoreFrom).toBeUndefined();
+    expect2(result.dimensions).toBeUndefined();
+    expect2(result.commentSource).toBe("model");
+    expect2(result.text).toContain("可以进操作台");
+    delete process.env.PLAN_SCORE_SOURCE;
   });
 });
 

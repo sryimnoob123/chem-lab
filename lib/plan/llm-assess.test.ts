@@ -14,7 +14,7 @@ import { PIECES_BY_ID, REFERENCE_PLAN, type PlanInput } from "./pieces";
 import { RULES_BY_CODE, validate } from "./rules";
 import { applyTopic, getTopic, PLAN_TOPICS } from "./topics";
 import { mockAssess } from "./assess-mock";
-import { TIMEOUT_MS, assessPlan, buildPrompt, parseModelAnswer, providerOf } from "./llm-assess";
+import { TIMEOUT_MS, assessPlan, buildPrompt, parseModelAnswer, providerOf, timeoutMs } from "./llm-assess";
 
 /** 以参考方案为底：删掉某些块 */
 function planWithout(...drop: string[]): PlanInput {
@@ -431,8 +431,15 @@ describe("云端 provider：成功与失败都守住", () => {
     expect(result.provider).toBe("mock");
   });
 
-  it("超时常量是 12 秒（不是什么 30 s 默认值）", () => {
-    expect(TIMEOUT_MS).toBe(12_000);
+  it("超时按模式给：默认模型给分 26 秒（扣子异步三轮），规则给分 12 秒（只写评语）", () => {
+    delete process.env.PLAN_SCORE_SOURCE;
+    expect(timeoutMs()).toBe(26_000);
+    process.env.PLAN_SCORE_SOURCE = "llm";
+    expect(timeoutMs()).toBe(26_000);
+    process.env.PLAN_SCORE_SOURCE = "rule";
+    expect(timeoutMs()).toBe(12_000);
+    expect(TIMEOUT_MS).toBe(26_000);
+    delete process.env.PLAN_SCORE_SOURCE;
   });
 
   /**

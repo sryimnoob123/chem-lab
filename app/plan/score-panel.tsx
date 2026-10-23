@@ -11,6 +11,7 @@
 
 import type { PlanIssue, PlanReport } from "@/lib/plan/rules";
 import { shortLabel } from "@/lib/plan/rule-labels";
+import { ThinkingBottle } from "@/components/ui/thinking-bottle";
 import { verdictOf } from "@/lib/plan/verdict";
 import s from "./plan.module.css";
 
@@ -34,6 +35,7 @@ export function ScorePanel({
   pieceCount,
   scoreSource = "rule",
   dimensions = [],
+  summary = "",
   scoring = false,
 }: {
   report: PlanReport;
@@ -44,6 +46,8 @@ export function ScorePanel({
   dimensions?: { name: string; score: number; note?: string }[];
   /** AI 正在评测：分数先按规则显示，标"评测中" */
   scoring?: boolean;
+  /** AI 对方案的复述（学生先确认系统看懂了） */
+  summary?: string;
 }) {
   const verdict = verdictOf(report, pieceCount);
 
@@ -57,8 +61,17 @@ export function ScorePanel({
         <div className={s.verdictBox}>
           <p className={s.verdict}>{verdict.headline}</p>
           <p className={s.counts}>
-            <span className={s.countPass} data-demo-id="demo-design-score-source">
-              {scoring ? "AI 评测中" : scoreSource === "llm" ? "AI 评测" : "规则校验"}
+            <span className={s.countPass} data-demo-id="demo-design-score-source" aria-live="polite">
+              {scoring ? (
+                <span className={s.scoring}>
+                  <ThinkingBottle size={18} />
+                  评测中
+                </span>
+              ) : scoreSource === "llm" ? (
+                "AI 评测"
+              ) : (
+                "规则校验"
+              )}
             </span>
             <span className={s.countPass}>✓ 通过 {report.passed.length}</span>
             {report.blockCount > 0 ? (
@@ -70,6 +83,13 @@ export function ScorePanel({
           </p>
         </div>
       </div>
+
+      {summary ? (
+        <p className={s.summary} data-demo-id="demo-design-summary">
+          <span className={s.summaryTag}>方案</span>
+          {summary}
+        </p>
+      ) : null}
 
       {dimensions.length > 0 ? (
         <ul className={s.dims} data-demo-id="demo-design-dims">

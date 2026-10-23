@@ -24,8 +24,8 @@ export const dynamic = "force-dynamic";
 const MAX_QUESTION = 400;
 const OFFLINE_REPLY = (step: string) =>
   step
-    ? `还没接上大模型，我只能说到这里：现在这步是「${step}」。具体做法看右侧「看原因 / 提示」。`
-    : "还没接上大模型。具体做法看右侧「看原因 / 提示」。";
+    ? `这会儿没答上来。这一步叫「${step}」，做法在右侧「看原因 / 提示」里。`
+    : "这会儿没答上来。做法在右侧「看原因 / 提示」里。";
 
 function buildTutorPrompt(question: string, step: string, experimentId: string): string {
   return [

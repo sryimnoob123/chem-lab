@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start -p 3000",
+    "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.10",
+    "coze-coding-dev-sdk": "^0.7.32",
     "drizzle-orm": "^0.45.4",
     "next": "^16.4.2",
     "postgres": "^3.4.9",

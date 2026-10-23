@@ -14,3 +14,4 @@ export { StatBar } from "./stat-bar";
 export type { StatBarProps, StatItem } from "./stat-bar";
 export { StepRail } from "./step-rail";
 export type { StepRailItem, StepRailProps, StepRailState } from "./step-rail";
+export { ThinkingBottle } from "./thinking-bottle";

@@ -11,7 +11,8 @@
  *    悬浮入口 → 右侧全高抽屉 + 遮罩，头部是「图标 + 名字 + 在线呼吸点」，消息流带头像，
  *    底部 textarea + 圆形发送键（发送中变转圈）。
  *    差别（用户 2026-10-23）：入口只画**机器人图标**、不写「AI 助教」四个字；入口**可以拖**。
- *    现在没有大模型可接：回复固定为「还没接入」，部署到扣子后把 send() 换成真实调用即可。
+ *    回复走后端 `/api/tutor/chat`：有凭据（扣子 BOT / 方舟 key）就走真模型，
+ *    没有或超时就回落本地点拨，前端不需要区分「接没接」——一律当助教在答。
  */
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -60,9 +61,9 @@ export function TaskBoardMini({
 type Message = { id: number; from: "me" | "ai"; text: string };
 type Point = { x: number; y: number };
 
-const INTRO = "助教还在接入大模型（部署到扣子后开放）。现在可以先看任务看板的判据，答不上来的点「提示」。";
+const INTRO = "操作、读数、安全上的问题都可以问我。答不上来时，右侧任务看板每一步都写着判据。";
 const OFFLINE = (step: string) =>
-  `还没接上大模型，我只能说到这里：现在这步是「${step}」。具体做法用右侧「看原因 / 提示」。`;
+  `这会儿没答上来。这一步叫「${step}」，做法在右侧「看原因 / 提示」里。`;
 
 /** 没有 LLM 时也让人看得懂：三个常见问法直接列出来，点了给同一句实话。 */
 const QUICK = ["这一步要注意什么？", "我为什么会扣分？", "怎么读出正确数值？"];
@@ -266,7 +267,7 @@ export function AiTutor({ stepTitle }: { stepTitle: string }) {
                 <p className={s.headTitle}>助教</p>
                 <p className={s.headState} data-demo-id="demo-ai-state">
                   <span className={s.dot} data-on={busy ? "busy" : "idle"} aria-hidden="true" />
-                  {busy ? "正在输入…" : "未接入 · 部署后开放"}
+                  {busy ? "正在输入…" : ""}
                 </p>
               </div>
               <button

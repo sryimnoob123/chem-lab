@@ -18,6 +18,8 @@ import { assessPlan, providerOf } from "./llm-assess";
 
 let server: Server | null = null;
 const saved = { ...process.env };
+/** 记录发往 /v3/chat 的请求体：真实扣子对 auto_save_history / stream 的组合有硬校验，假服务器也得盯住 */
+let lastChatBody: Record<string, unknown> | null = null;
 
 /** 模型输出的 JSON（要带 score 才算"AI 评分"） */
 const ANSWER = JSON.stringify({
@@ -50,6 +52,15 @@ async function startFakeCoze(): Promise<string> {
       return;
     }
     if (url.startsWith("/v3/chat")) {
+      const chunks: Buffer[] = [];
+      req.on("data", (c: Buffer) => chunks.push(c));
+      req.on("end", () => {
+        try {
+          lastChatBody = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string, unknown>;
+        } catch {
+          lastChatBody = null;
+        }
+      });
       res.end(
         JSON.stringify({
           code: 0,
@@ -80,6 +91,7 @@ describe("扣子 BOT 通道", () => {
   it("BOT_TOKEN + BOT_ID 就能走通 v3/chat，并拿到模型给的分", async () => {
     const base = await startFakeCoze();
     process.env.PLAN_ASSESS_PROVIDER = "auto";
+    process.env.PLAN_SCORE_SOURCE = "llm";
     process.env.BOT_TOKEN = "pat_test";
     process.env.BOT_ID = "7499999999999999999";
     process.env.COZE_API_BASE = base;
@@ -95,6 +107,13 @@ describe("扣子 BOT 通道", () => {
     const result = await assessPlan(plan, report, topic);
 
     expect(result.provider).toBe("coze");
+    /**
+     * 扣子的硬校验：auto_save_history=false 时必须 stream=true。
+     * 我们走非流式，所以必须 auto_save_history=true —— 写成 false 真实接口会回 code 4000，
+     * 假服务器不会报，只有这条断言能防回归。
+     */
+    expect(lastChatBody?.auto_save_history).toBe(true);
+    expect(lastChatBody?.stream).toBe(false);
     expect(result.score).toBe(87);
     expect(result.scoreFrom).toBe("model");
     expect(result.dimensions?.map((d) => d.name)).toEqual(["完整性", "顺序"]);

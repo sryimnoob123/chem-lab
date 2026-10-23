@@ -26,7 +26,14 @@ export type AssessPoint = {
   text: string;
 };
 
-export type AssessProvider = "mock" | "coze" | "ark";
+/**
+ * 通道名：
+ *   mock —— 本地点评（无凭据 / 云端失败）
+ *   coze —— 扣子 v3/chat（PAT 或企业 JWT）
+ *   ark  —— OpenAI 兼容端点（方舟 / DeepSeek / 自建网关）
+ *   sdk  —— 扣子编程运行时 SDK（平台内零配置，见 lib/ai/sdk-llm.ts）
+ */
+export type AssessProvider = "mock" | "coze" | "ark" | "sdk";
 
 /** 云端没给出结果的原因：UI 只用它写一行小字，不改渲染结构 */
 export type AssessFallback = "timeout" | "rate-limit" | "http" | "empty" | "error" | "network";
@@ -47,8 +54,17 @@ export type LlmAssessResult = {
   score?: number;
   /** 分项得分（模型给，最多 4 条）；没有就不显示分项 */
   dimensions?: AssessDimension[];
+  /** 方案总结：AI 用自己的话复述学生拼了什么流程（学生看得懂「我刚才做了啥」） */
+  summary?: string;
   /** 分数来自模型还是规则 */
   scoreFrom?: "model" | "rule";
+  /**
+   * 点评文字的来源。
+   * 参考项目「实验合并」的做法（2026-10-23 复核）：分数由确定性脚本算，
+   * 模型只负责把「哪里对、哪里不行」讲成人话 —— 分稳、输出短、也快。
+   * 我们两端都留：`PLAN_SCORE_SOURCE=rule`（默认）时模型不给分，只写点评。
+   */
+  commentSource?: "model" | "local";
 };
 
 /** 分项得分：一项 = 一个维度（顺序 / 完整 / 参数 / 安全） */

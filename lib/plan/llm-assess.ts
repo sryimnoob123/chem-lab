@@ -19,6 +19,8 @@
  */
 
 import { cozeAccessToken, jwtConfig } from "./coze-jwt";
+import { PLAN_RUBRIC, rubricLines } from "./rubric";
+import { sdkInvoke, shouldTrySdk } from "../ai/sdk-llm";
 import { PIECES_BY_ID, type PlanInput } from "./pieces";
 import { RULES_BY_CODE, type PlanReport } from "./rules";
 import type { PlanTopic } from "./topics";
@@ -34,8 +36,25 @@ import {
 export type { AssessDimension, AssessFallback, AssessPoint, AssessPointKind, AssessProvider, LlmAssessResult } from "./assess-mock";
 export { mockAssess } from "./assess-mock";
 
-/** 12 s 上限：比原来的 8 s 宽一点给豆包轮询，但演示绝不能卡更久 */
-export const TIMEOUT_MS = 12_000;
+/**
+ * 分数由谁定（对应参考项目「实验合并」的做法：脚本算分、模型只写评语）。
+ *   rule（默认）：`lib/plan/rules.ts` 算分 → 分稳、可复现、模型输出短（快 3~5s）
+ *   llm：模型给分 + 规则封顶（旧口径，留开关便于对比/回退）
+ */
+export function scoreMode(): "rule" | "llm" {
+  /**
+   * 默认 llm：用户 2026-10-23 要求「评分时 AI 要参与，并先总结方案」。
+   * 规则的职责改为「底线」——违反硬约束时封顶 59（capScoreByReport），不再是唯一分数来源。
+   * 设 PLAN_SCORE_SOURCE=rule 可回到「规则算分、模型只写评语」。
+   */
+  return env("PLAN_SCORE_SOURCE").toLowerCase() === "rule" ? "rule" : "llm";
+}
+
+/** 超时按模式给：只写评语 12s 够；模型还要算分就走扣子异步三轮，给 26s */
+export const TIMEOUT_MS = 26_000;
+export function timeoutMs(): number {
+  return scoreMode() === "llm" ? TIMEOUT_MS : 12_000;
+}
 const COZE_POLL_MS = Math.max(100, Number(process.env.COZE_POLL_MS ?? 300) || 300);
 
 /**
@@ -138,31 +157,69 @@ export function buildPrompt(plan: PlanInput, report: PlanReport, topic?: PlanTop
     `- 得分 ${report.score}/100；可执行=${report.feasible ? "是" : "否"}；硬约束 ${report.blockCount} 条、扣分项 ${report.warnCount} 条`,
   );
 
+  /**
+   * 违规项要「先硬后软、只给最关键的几条」：
+   * 之前把所有 19 条原样塞进去，模型反而抓不住重点、点评变空话（2026-10-23 实测）。
+   */
+  const orderedIssues = [...report.issues].sort((a, b) => (a.level === b.level ? 0 : a.level === "block" ? -1 : 1));
   lines.push("【未通过】");
-  if (report.issues.length === 0) {
+  if (orderedIssues.length === 0) {
     lines.push("- 无");
   } else {
-    for (const issue of report.issues.slice(0, 10)) {
+    for (const issue of orderedIssues.slice(0, 6)) {
       lines.push(`- [${issue.level}] ${issue.ruleId}：${issue.text}（${issue.hint}）`);
+    }
+    if (orderedIssues.length > 6) {
+      lines.push(`- 另有 ${orderedIssues.length - 6} 项次要问题未展开，别逐条罗列`);
     }
   }
 
-  lines.push(`【已通过】${report.passed.length > 0 ? report.passed.slice(0, 15).join("、") : "无"}`);
+  lines.push(`【已通过】${report.passed.length > 0 ? report.passed.slice(0, 8).join("、") : "无"}`);
 
-  lines.push("【写作要求】");
+  /* 任务一：总结方案 —— 学生先要确认「系统看懂了我拼的东西」，这是可信度的前提 */
+  lines.push("【任务一 · 总结方案】");
+  lines.push("用 40~60 字复述这份方案：按顺序说清学生放入了哪几块、关键参数是多少。");
+  lines.push("只复述，不评价、不补他没放的块、不猜测意图。用「你」称呼学生（例如「你先称…再用…」），不要用「我」，不要罗列规则编号。");
+
+  if (scoreMode() === "rule") {
+    /* 分数已定，模型只写点评 */
+    lines.push("【任务二 · 分数的处理】");
+    lines.push(`总分已经由程序算定为 ${report.score}/100，你**不要重算、不要给分、不要改分**，也不要输出任何分数字段。`);
+    lines.push("你的任务是解释这个分数：哪几块撑住了，哪几处掉了分，改哪一处最划算。");
+    lines.push("【任务三 · 点评要求】");
+    lines.push("0. 不要复述规则原文，用学生听得懂的话说。");
+    lines.push("1. 结论先行：第一句就说这份方案能不能进操作台。");
+    lines.push("2. 只依据上面的判定说话，不要编造化学计量关系或数据。");
+    lines.push("3. points 必须点名具体素材块（pieceId）或规则（ruleId），只能取上面出现过的值。");
+    lines.push("4. questions 最多 2 条，必须能推动学生改方案。");
+    lines.push("5. 中文，text 不超过 120 字，不要 Markdown。");
+    lines.push('【输出】只输出 JSON：{"summary":"…","text":"…","points":[{"kind":"good|risk|todo","pieceId":"piece-…","ruleId":"…","text":"…"}],"questions":["…"]}');
+    return lines.join("\n");
+  }
+
+  /* 任务二：按评分标准给分 */
+  lines.push("【任务二 · 按评分标准给分】");
+  lines.push("五个维度，各自 0~100 分，权重见括号；你的各维度分要能解释得通：");
+  for (const line of rubricLines()) lines.push(`- ${line}`);
+  lines.push("总分 = 各维度分按权重加权（四舍五入到整数）。dimensions 必须正好这 5 项，name 照抄上面的名字。");
+  lines.push("每项的 note 不超过 12 字（可不写），不要展开成长句，控制输出长度。");
+  lines.push("【分数的底线】（优先于你自己的判断）");
+  lines.push(`- 规则引擎已判：可执行=${report.feasible ? "是" : "否"}，硬约束 ${report.blockCount} 条。`);
+  lines.push("- 违反硬约束或不可执行 → 总分不得高于 59，且「完整性」不超过 50。");
+  lines.push("- 有扣分项但可执行 → 总分不得高于 84。");
+  lines.push("- 硬约束全过且无扣分项 → 按实际表现给，可以给到 90 以上。");
+
+  /* 任务三：点评 */
+  lines.push("【任务三 · 点评要求】");
+  lines.push("0. 不要复述规则原文，用学生听得懂的话说。");
   lines.push("1. 结论先行：第一句就说这份方案能不能进操作台，不要铺垫。");
-  lines.push("2. 只依据上面的判定说话：不要复述规则原文，不要编造化学计量关系、浓度或数据。");
-  lines.push("3. points 必须点名具体素材块（pieceId）或规则（ruleId）；pieceId / ruleId 只能取上面出现过的值。");
+  lines.push("2. 说清扣分的具体位置，并指出「改哪一处最划算」；不要编造化学计量关系、浓度或数据。");
+  lines.push("3. points 必须点名具体素材块（pieceId）或规则（ruleId），只能取上面出现过的值。");
   lines.push("4. questions 最多 2 条，必须能推动学生改方案（问变量、问依据、问怎么排除）。");
   lines.push("5. 中文，text 不超过 120 字，不要 Markdown。");
-  lines.push("【评分要求】（你给的分就是学生的最终分，规则分只是你的参考下限）");
-  lines.push("- score：0~100 整数。可进操作台 + 硬约束全过 + 顺序对 + 参数合理 → 85~100；");
-  lines.push("  能进但有扣分项（顺序可优化、参数偏松、缺少润洗一类） → 60~84；");
-  lines.push("  不可执行（缺关键步骤、顺序错、硬约束被违反） → 60 以下。");
-  lines.push("- 规则引擎判为不可执行或违反硬约束时，你的分不许高于 59；这条优先于你自己对化学的判断。");
-  lines.push("- dimensions：最多 4 项，name 从「完整性 / 顺序 / 参数 / 安全规范」里选，score 同 0~100。");
+  lines.push("6. 硬约束全过时不要硬找问题：说清它为什么站得住，再给 1 条可选改进（没有就说已经够用）。");
   lines.push(
-    '【输出】只输出 JSON：{"score":88,"dimensions":[{"name":"顺序","score":90,"note":"…"}],"text":"…","points":[{"kind":"good|risk|todo","pieceId":"piece-…","ruleId":"…","text":"…"}],"questions":["…"]}',
+    '【输出】只输出 JSON：{"summary":"…","score":88,"dimensions":[{"name":"完整性","score":90,"note":"…"}],"text":"…","points":[{"kind":"good|risk|todo","pieceId":"piece-…","ruleId":"…","text":"…"}],"questions":["…"]}',
   );
   return lines.join("\n");
 }
@@ -226,9 +283,10 @@ export function sanitizeDimensions(value: unknown): AssessDimension[] {
     const name = typeof raw.name === "string" ? plainText(raw.name).slice(0, 8) : "";
     const score = sanitizeScore(raw.score);
     if (!name || score === undefined) continue;
-    const note = typeof raw.note === "string" ? plainText(raw.note).slice(0, 60) : undefined;
+    const note = typeof raw.note === "string" ? plainText(raw.note).slice(0, 24) : undefined;
     out.push({ name, score, note });
-    if (out.length === 4) break;
+    // rubric 是 5 个维度，截到 4 会让界面永远少一项（2026-10-23 实测模型只输出 4 项也是这个原因）
+    if (out.length === PLAN_RUBRIC.length) break;
   }
   return out;
 }
@@ -251,7 +309,14 @@ export function capScoreByReport(score: number, report: PlanReport): number {
 export function parseModelAnswer(
   raw: string,
   topic?: PlanTopic,
-): { text: string; points: AssessPoint[]; questions: string[]; score?: number; dimensions?: AssessDimension[] } {
+): {
+  text: string;
+  points: AssessPoint[];
+  questions: string[];
+  score?: number;
+  dimensions?: AssessDimension[];
+  summary?: string;
+} {
   const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
@@ -262,12 +327,14 @@ export function parseModelAnswer(
       const score = sanitizeScore(parsed.score);
       const dimensions = sanitizeDimensions(parsed.dimensions);
       if (text) {
+        const summary = typeof parsed.summary === "string" ? plainText(parsed.summary).slice(0, 240) : "";
         return {
           text: text.slice(0, 600),
           points: sanitizePoints(parsed.points, topic),
           questions: sanitizeQuestions(parsed.questions),
           score,
           dimensions,
+          summary: summary || undefined,
         };
       }
     } catch {
@@ -302,7 +369,13 @@ async function callCoze(prompt: string, deadline: number): Promise<string> {
       bot_id: botId,
       user_id: "chem-lab",
       stream: false,
-      auto_save_history: false,
+      /**
+       * 必须是 true。扣子的语义是「auto_save_history=false 时 stream 必须为 true」，
+       * 而我们是「非流式整段拿答案」，所以这里只能开历史保存
+       * （2026-10-23 实测踩坑：false+false 会返回 code 4000 stream field is required，
+       *  假服务器测不出来，只有真调才炸）。
+       */
+      auto_save_history: true,
       additional_messages: [{ role: "user", content: prompt, content_type: "text" }],
     }),
   });
@@ -416,7 +489,7 @@ export function llmEnabled(): boolean {
 export async function complete(prompt: string): Promise<string | null> {
   const provider = providerOf();
   if (provider === "mock") return null;
-  const deadline = Date.now() + TIMEOUT_MS;
+  const deadline = Date.now() + timeoutMs();
   try {
     const raw = provider === "coze" ? await callCoze(prompt, deadline) : await callOpenAi(prompt, deadline);
     const text = raw
@@ -441,15 +514,38 @@ export async function assessPlan(
 ): Promise<LlmAssessResult> {
   const local = mockAssess(plan, report, topic);
   const provider = providerOf();
-  if (provider === "mock") return local;
+  /** 平台运行时（扣子编程）走 SDK 零配置通道；本地 this 为 false，直接走 HTTP + PAT */
+  const viaSdk = shouldTrySdk();
+  if (provider === "mock" && !viaSdk) return local;
 
-  const deadline = Date.now() + TIMEOUT_MS;
+  const deadline = Date.now() + timeoutMs();
   try {
     const prompt = buildPrompt(plan, report, topic);
-    const raw = provider === "coze" ? await callCoze(prompt, deadline) : await callOpenAi(prompt, deadline);
+    /**
+     * 通道优先级：SDK（平台内，自动身份）→ HTTP（PAT / 方舟 key）→ 本地点评。
+     * SDK 返回 null 表示不可用或失败，绝不抛。
+     */
+    const sdkText = viaSdk ? await sdkInvoke(prompt, { temperature: 0.1, thinking: "disabled" }) : null;
+    if (sdkText === null && provider === "mock") return local;
+    const raw =
+      sdkText ??
+      (provider === "coze" ? await callCoze(prompt, deadline) : await callOpenAi(prompt, deadline));
     const parsed = parseModelAnswer(raw, topic);
-    /** 模型给的分才是学生的分；给了就按规则兜底压一压（不可执行不许高分） */
-    const score = parsed.score === undefined ? undefined : capScoreByReport(parsed.score, report);
+    /**
+     * 分数归属由 `PLAN_SCORE_SOURCE` 决定：
+     *   llm（默认）—— 采用模型分，但被规则底线封顶（硬约束 → ≤59，有扣分项 → ≤84）；
+     *   rule        —— 模型给的 score/dimensions 一律丢弃，最终分由 makeRoute 用规则分。
+     *
+     * scoreFrom 要说实话：被规则压下来的时候，这个分是规则定的，不是模型定的，
+     * 界面据此显示「规则校验」而不是「AI 评测」。
+     */
+    const modelScore =
+      scoreMode() === "llm" && parsed.score !== undefined ? capScoreByReport(parsed.score, report) : undefined;
+    const score = modelScore;
+    const capped = modelScore !== undefined && parsed.score !== undefined && modelScore < parsed.score;
+    const scoreFrom: "model" | "rule" | undefined =
+      score === undefined ? undefined : capped ? "rule" : "model";
+    const dimensions = scoreMode() === "llm" ? parsed.dimensions : undefined;
     if (!parsed.text) return { ...local, fallback: "empty" };
     if (parsed.points.length === 0) {
       // 模型只给了文字（或 JSON 坏）：文字用模型的，指到块的要点仍用本地
@@ -458,20 +554,24 @@ export async function assessPlan(
         provider,
         text: parsed.text,
         pointsFrom: "local",
+        commentSource: "model",
+        summary: parsed.summary,
         score,
-        dimensions: parsed.dimensions,
-        scoreFrom: score === undefined ? undefined : "model",
+        dimensions,
+        scoreFrom,
       };
     }
     return {
-      provider,
+      provider: sdkText ? (provider === "mock" ? "sdk" : provider) : provider,
       text: parsed.text,
       points: parsed.points,
       questions: parsed.questions.length > 0 ? parsed.questions : local.questions,
       pointsFrom: "model",
+      commentSource: "model",
+      summary: parsed.summary,
       score,
-      dimensions: parsed.dimensions,
-      scoreFrom: score === undefined ? undefined : "model",
+      dimensions,
+      scoreFrom,
     };
   } catch (error) {
     return { ...local, fallback: reasonOf(error) };
