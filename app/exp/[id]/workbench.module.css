@@ -386,35 +386,48 @@
   inset: 0;
 }
 
+/* 试剂架：不做独立面板（用户 2026-10-23）—— 瓶子直接摆在台面后沿的窄架上，
+   没有卡片边框、没有底色、没有标题；架子本身是瓶子下面那条台沿（::after）。
+   位置固定在台面左上（后沿），锁在器皿带之上，不抢器皿的点击。 */
 .rack {
   position: absolute;
-  left: 16px;
-  top: 156px;
+  left: 18px;
+  /* 站在台面后沿上（台面后沿 BENCH.backEdge 落在舞台 ~115px 处）：
+     瓶子底边 + 那条台沿压在同一条视觉线上，读成「台面上的试剂架」。 */
+  top: 66px;
   z-index: 8;
-  /* 244 -> 208 -> 176：把宽度让给中间台面（用户 2026-10-22 再要求“台面做大一点”）。
-     176 - 2*8 padding = 160 内容宽，瓶子 20 + 8 gap + 132 文字，“碳酸钠 / Na2CO3” 不换行。 */
-  width: 176px;
-  padding: 8px;
-  border: 1px solid var(--bench-line);
-  background: rgba(246, 247, 245, 0.92);
-  backdrop-filter: blur(8px);
+  width: auto;
 }
 
-.rackHead {
+/* 台沿：一条 3px 的浅板 + 下沿一道细影，瓶子站在它上面 */
+.rack::after {
+  content: "";
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  bottom: -3px;
+  height: 3px;
+  background: linear-gradient(180deg, var(--bench-line) 0%, var(--bench-seam) 100%);
+  opacity: 0.55;
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+/* 每瓶 = 瓶子 + 名字／式量，横向排，读得出一整架试剂 */
+.reagent {
+  position: relative;
+  width: auto;
+  min-height: 0;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-  color: var(--ink);
-  font-size: var(--type-meta);
-  font-weight: 500;
-}
-
-.rackHint {
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px 6px;
+  border: 1px solid transparent;
+  background: none;
   color: var(--bench-text);
-  font-size: var(--type-meta);
-  opacity: 0.6;
+  font: inherit;
+  text-align: left;
+  cursor: grab;
 }
 
 .pickHint {
@@ -445,27 +458,12 @@
 
 .rackList {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 14px;
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.reagent {
-  position: relative;
-  width: 100%;
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 7px;
-  border: 1px solid var(--bench-line);
-  background: var(--paper-2);
-  color: var(--bench-text);
-  font: inherit;
-  text-align: left;
-  cursor: grab;
 }
 
 /* 场景内流程指引：下一步该用的那瓶微亮（只动 opacity，不换色板） */
@@ -474,17 +472,21 @@
   position: absolute;
   inset: -2px;
   border: 1px solid var(--river-700);
+  border-radius: 6px;
   opacity: 0.2;
   pointer-events: none;
   animation: bench-next 2400ms ease-in-out infinite;
 }
 
+/* 悬停／选中不再画方框（面板感）：一圈淡底 + 细环，瓶子仍站在台沿上 */
 .reagent:hover {
-  border-color: var(--river-100);
+  background: rgba(74, 87, 104, 0.05);
+  border-radius: 6px;
 }
 
 .reagent[data-selected="true"] {
-  border-color: var(--river-100);
+  background: rgba(74, 87, 104, 0.07);
+  border-radius: 6px;
   box-shadow: inset 0 0 0 1px var(--river-100);
 }
 
@@ -501,10 +503,11 @@
 
 /* 试剂瓶：画法照 preview/drag-pour.html —— 一只 SVG 细颈瓶（玻璃轮廓 + 液体 + 反光），
    试剂架 / 拖动影子 / 倾倒动画共用同一个组件，三处看到的一定是同一只瓶子。 */
+/* 2026-10-23：22×32 → 26×38 —— 瓶子放大到跟器皿的比例相当，名字才读得出是哪一瓶 */
 .reagentBottle {
-  flex: 0 0 22px;
-  width: 22px;
-  height: 32px;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 38px;
   display: block;
   overflow: visible;
 }
@@ -518,7 +521,7 @@
 
 .reagentName {
   color: var(--ink);
-  font-size: var(--type-meta);
+  font-size: var(--text-13, 13px);
   line-height: 1.25;
 }
 

@@ -88,8 +88,10 @@
   /* 实验台台面（2026-10-22）：背墙 / 台面 / 前沿三层，器皿才有「站在台上」的落地感。
      台面比背墙暖半度（#fbfbf8 vs #eef1ee），接缝压一道淡墨内阴影。 */
   --bench-wall: #eef1ee;
-  --bench-top: #fbfbf8;
-  --bench-edge: #e6e9e4;
+  /* 台面：暖纸白（2026-10-23）。原来是 #fbfbf8 近纯白，玻璃器皿的暖白填充和接地影
+     在上面全都看不见 —— 用户要「器皿有实体感」。往暖里挪一档，纸感还在，器皿立起来了。 */
+  --bench-top: #f4eee1;
+  --bench-edge: #e5dcc9;
   --bench-seam: rgba(58, 72, 90, 0.16);
   --bench-grid: rgba(74, 87, 104, 0.05);
   /* 实验室背景（2.5D 舞台的远景层）：比台面更冷、更淡，退到后面不抢器皿 */
@@ -103,8 +105,9 @@
   --lab-splash: #e8ece9;
 
   /* 洗涤槽：台面开孔，槽底比台面深一档，内壁更亮，才有"凹进去"的盆感 */
-  --sink-basin: #f2f4f3;
-  --sink-wall: #f9faf8;
+  /* 2026-10-23 台面转暖后，槽底要跟着暖一档并压暗：原来 #f2f4f3 冷白在暖台面上像一块白板 */
+  --sink-basin: #e6decc;
+  --sink-wall: #f2ebdb;
 
   /* 暗场（只在事故 L3/L4 反差、以及演示浮层等需要深底的局部使用） */
   --bench-ink-dark: #0e1620;
@@ -131,7 +134,8 @@
   --canvas-glass-fill: rgba(74, 87, 104, 0.05);
   --canvas-glass-inner: rgba(74, 87, 104, 0.20);
   --canvas-shine: rgba(74, 87, 104, 0.26);
-  --canvas-shadow: rgba(74, 87, 104, 0.1);
+  /* 接地影 .10 → .17：器皿得在台面上「压」出一点影子才站得住（纸白底上 .1 等于没有） */
+  --canvas-shadow: rgba(74, 87, 104, 0.17);
   --canvas-graduation: rgba(74, 87, 104, 0.55);
   --canvas-bottle-lid: rgba(74, 87, 104, 0.45);
 

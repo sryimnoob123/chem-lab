@@ -189,9 +189,10 @@
 
 .vesselName {
   font-family: var(--font-sans);
-  /* 16 -> 14：svg 改成填满容器后整体放大，"容量瓶 100 mL" 会压到相邻器皿的"空"字 */
-  font-size: 14px;
-  font-weight: 500;
+  /* 14 -> 17（用户 2026-10-23「器皿都要标名字，易读性」）：viewBox 缩放后实际 ~13.5px，
+     器皿放大到 1.45 倍后 14px 的字显得又小又飘。加粗到 600 让纸白底上先看见名字。 */
+  font-size: 17px;
+  font-weight: 600;
   fill: var(--ink);
 }
 
@@ -810,9 +811,10 @@
  * 目的：动作要在场景里做 —— 拿工具、对准器皿，而不是点卡片一步过。
  * ------------------------------------------------------------------ */
 
+/* 托盘：暖台面上要压得下去才像一只搪瓷盘，不然读成一张浅色卡片 */
 .toolTrayBase {
-  fill: rgba(74, 87, 104, 0.045);
-  stroke: rgba(74, 87, 104, 0.18);
+  fill: rgba(74, 87, 104, 0.06);
+  stroke: rgba(74, 87, 104, 0.26);
   stroke-width: 1.2;
 }
 
@@ -905,8 +907,10 @@
 }
 
 .sinkLabel {
-  font-size: var(--type-meta);
-  fill: var(--ink-2);
+  /* 12px 缩完只剩 9px，站在台面上念不出来；跟器皿名一个口径 */
+  font-size: 14px;
+  fill: var(--ink);
+  opacity: 0.85;
   pointer-events: none;
   user-select: none;
 }

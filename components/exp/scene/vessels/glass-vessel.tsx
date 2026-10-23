@@ -72,6 +72,8 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
   const clipId = `clip-${uid}`;
   const shadowId = `shadow-${uid}`;
   const volumeId = `vol-${uid}`;
+  const liquidTopId = `liqTop-${uid}`;
+  const liquidDeepId = `liqDeep-${uid}`;
   const scale = VESSEL_SCALE[kind];
   const body = bodyPath(kind);
   const mouth = mouthOf(kind);
@@ -102,6 +104,20 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
         </clipPath>
         {/* 2.5D 体积：横向渐变（左亮 → 中透 → 右暗），让平面轮廓读成圆柱。
             视角固定，靠明暗分左右壁 —— 不引 3D 引擎，性能与体积零代价。 */}
+        {/* 液体层次（2026-10-23 用户：不能是一块纯色）：
+            液面附近反光偏亮，往下越深越沉 —— 两条叠在液柱上的渐变，被主体轮廓裁住。
+            只动静态填充，不参与任何动画。 */}
+        <linearGradient id={liquidTopId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.30" />
+          <stop offset="42%" stopColor="#FFFFFF" stopOpacity="0.04" />
+          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={liquidDeepId} x1="0" y1="0" x2="0" y2="1">
+          {/* stop-color 只写十六进制 + stop-opacity 分开：rgba() 在部分浏览器会被当成黑色 */}
+          <stop offset="0%" stopColor="#4A5768" stopOpacity="0" />
+          <stop offset="62%" stopColor="#4A5768" stopOpacity="0.06" />
+          <stop offset="100%" stopColor="#4A5768" stopOpacity="0.20" />
+        </linearGradient>
         <linearGradient id={volumeId} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.42" />
           <stop offset="14%" stopColor="#FFFFFF" stopOpacity="0.16" />
@@ -140,7 +156,22 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
             width={box.w}
             height={Math.max(0, box.bottom - top)}
             fill={liquid}
-            fillOpacity={0.9}
+            fillOpacity={0.88}
+          />
+          {/* 上层反光 / 下层沉色：让液柱有厚度（用户 2026-10-23：不能一块纯色） */}
+          <rect
+            x={box.x}
+            y={top}
+            width={box.w}
+            height={Math.max(0, box.bottom - top)}
+            fill={`url(#${liquidTopId})`}
+          />
+          <rect
+            x={box.x}
+            y={top}
+            width={box.w}
+            height={Math.max(0, box.bottom - top)}
+            fill={`url(#${liquidDeepId})`}
           />
           {/* 液面：同色椭圆压在矩形上沿，露出上半 = 有厚度的液面（实色，不掺玻璃色）
               ry 按同一视角压缩比推（rx × VIEW_K），细颈容器窄、烧杯宽，才对得上俯视 */}

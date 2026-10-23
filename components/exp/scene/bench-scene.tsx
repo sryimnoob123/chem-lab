@@ -490,10 +490,10 @@ export function BenchScene({
    * 2.5D 舞台（用户 2026-10-23）：台面上方留出实验室背景带。
    * 背景画在 BENCH.surface 之上，器皿站位不变 —— 只往上加视野，不动任何已有坐标。
    */
-  const BACKDROP_H = 214;
-  const backdropTop = BENCH.surface - 20 - BACKDROP_H;
+  const BACKDROP_H = BENCH.backEdge - 40;
+  const backdropTop = BENCH.backEdge - BACKDROP_H;
   const stageTop = Math.min(contentTop - 12, backdropTop);
-  const benchTopY = BENCH.surface - 20;
+  const benchTopY = BENCH.backEdge;
   /* 2026-10-23：横向从固定的 794 放宽到 1560（x 20..1580，中心 800 = 台面中心）。
      原来 794 宽配 container 1264px，等比缩放后左右各空 235px —— 台面缩在中间一小块。
      放宽后 viewBox 宽高比 ≈ 3.07，接近容器 3.16，画面基本铺满。 */
@@ -679,10 +679,11 @@ export function BenchScene({
         </g>
         ) : null}
 
-        {/* 工具托盘 + 洗涤槽：动作要在场景里做，不能靠点卡片一步过（用户 2026-10-22） */}
+        {/* 工具托盘 + 洗涤槽：动作要在场景里做，不能靠点卡片一步过（用户 2026-10-22）。
+            托盘位置：用户 2026-10-23「小工具放右下角」—— 器皿行占 430..1005，托盘从 900 铺到台面右沿。 */}
         {toolIds && toolIds.length > 0 && onSelectTool ? (
           <ToolTray
-            area={{ x: 578, y: 424, w: 560, h: 112 }}
+            area={{ x: 640, y: 432, w: 650, h: 112 }}
             toolIds={toolIds}
             activeTool={activeTool}
             onSelectTool={onSelectTool}

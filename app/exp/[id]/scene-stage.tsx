@@ -751,15 +751,6 @@ export function SceneStage({
       }}
     >
       <aside className={styles.rack} aria-label="试剂架">
-        <div className={styles.rackHead}>
-          <span>试剂架</span>
-          <span className={styles.rackHint}>
-            {/* 只在"下一步确实要投加某瓶试剂"时给拖拽提示。
-                否则数据处理/计算类步骤（如 exp09 第 7 步）还会挂着"拖到锥形瓶"，
-                和当前该做的事完全对不上（红队 2026-10-22 实测）。 */}
-            {nextReagent ? (isBenchScene ? "拖到烧杯 / 容量瓶" : "拖到锥形瓶") : null}
-          </span>
-        </div>
         <ul className={styles.rackList}>
           {reagents.map((reagent) => (
             <li key={reagent.id}>
@@ -975,7 +966,7 @@ export function SceneStage({
                 onSelectTool={onSelectTool}
                 onUseTool={onUseTool}
                 onDropToNowhere={onDropToNowhere}
-                sink={expId === "exp01" ? { x: 392, y: 424, onUse: onSinkUse } : undefined}
+                sink={expId === "exp01" ? { x: 110, y: 424, onUse: onSinkUse } : undefined}
                 onDropToSink={onDropToSink}
                 onClearSelection={() => undefined}
                 onReveal={() => undefined}
