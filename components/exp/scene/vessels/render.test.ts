@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { SceneOutcome, SceneVessel } from "@/lib/scene/types";
 import { GlassVessel, hasLiquidContent, solidColorOf } from "./glass-vessel";
 import { VesselArt } from "./index";
+import { VESSEL_SCALE, mouthOf } from "./vessel-geometry";
 
 const beaker: SceneVessel = { id: "beaker", kind: "beaker", label: "烧杯", x: 404, y: 205, w: 116, h: 135 };
 
@@ -15,14 +16,19 @@ describe("玻璃器皿 2.5D（drag-pour 画法，SSR 冒烟）", () => {
   it("玻璃主体：实心暖白填充 + 双层描边 + 瓶口椭圆 + 接地阴影", () => {
     const html = render(createElement(GlassVessel, { vessel: beaker, contents: [] }));
     expect(html).toContain('data-vessel-art="beaker"');
-    expect(html).toContain("translate(404 205) scale(0.72)");
+    /* 别把 scale 写死：2026-10-23 器皿统一放大到 1.45 倍，写死的 0.72 让整包测试变红。
+       断言画法，不断言数值 —— 数值从 VESSEL_SCALE 取。 */
+    expect(html).toContain(`translate(${beaker.x} ${beaker.y}) scale(${VESSEL_SCALE.beaker})`);
     // 2026-10-23 实心玻璃：填充走 .glassBody，描边拆成 .glassEdgeOuter(2.6) / .glassEdgeInner(1.4)
     expect(html).toContain("glassBody");
     expect(html).toContain("glassEdgeOuter");
     expect(html).toContain("glassEdgeInner");
     expect(html).toContain('vector-effect="non-scaling-stroke"');
-    expect(html).toContain('rx="54"');
-    expect(html).toContain('ry="7"');
+    /* 口沿：rx 写死，ry 由视角压缩比 VIEW_K 推（俯角 38°）。原来断言 ry="7" 是平视口径，
+       那个值已经不存在了。 */
+    const mouth = mouthOf("beaker");
+    expect(html).toContain(`rx="${mouth.rx}"`);
+    expect(html).toContain(`ry="${mouth.ry}"`);
     expect(html).toContain("radialGradient");
   });
 

@@ -64,6 +64,18 @@ function howToFor(type?: string | null): string {
  * 3D 试点（?scene=3d）：three.js 场景只在客户端加载，ssr:false；
  * 加载失败/不支持 WebGL 时组件内部给降级提示，去掉参数即回 2D，2D 路径零改动。
  */
+const LabScene = dynamic(() => import("@/components/scene3d/lab-scene").then((mod) => mod.LabScene), {
+  ssr: false,
+  loading: () => (
+    <div
+      style={{ display: "grid", placeItems: "center", width: "100%", height: "100%", color: "var(--ink-2)", fontSize: 13 }}
+      data-demo-id="demo-lab-scene-loading"
+    >
+      实验室加载中…
+    </div>
+  ),
+});
+
 const TitrationScene = dynamic(
   () => import("@/components/scene3d/titration-scene").then((mod) => mod.TitrationScene),
   {
@@ -79,19 +91,38 @@ const TitrationScene = dynamic(
   },
 );
 
+/**
+ * 实验室全景的演示器皿（exp01 的台面布置）。
+ * 先用固定一组把「2.5D 实验室」的视觉定下来；接真实状态要等交互迁移那一步。
+ */
+const LAB_DEMO_VESSELS = [
+  { id: "beaker", kind: "beaker" as const, x: -5.6, z: 0.9, level: 0.32, color: "#7fb2de" },
+  { id: "tubeA", kind: "tube" as const, x: -3.1, z: 1.4, level: 0.46, color: "#9fc47f" },
+  { id: "tubeB", kind: "tube" as const, x: -2.2, z: 1.4, level: 0.22, color: "#d9a86a" },
+  { id: "volumetric", kind: "volumetric" as const, x: 0.4, z: 0.6, level: 0.5, color: "#e0c86a" },
+  { id: "cylinder", kind: "cylinder" as const, x: 3.6, z: 1.1, level: 0.26, color: "#7fb2de" },
+  { id: "reagent", kind: "reagent" as const, x: 5.6, z: 0.7, level: 0.6, color: "#b9a8d9" },
+];
+
 /** 读地址栏 `?scene=3d`；只在挂载后读，避免 SSR/水合不一致，也不改 2D 首屏。 */
-function useScene3d(): boolean {
-  const [enabled, setEnabled] = useState(false);
+function useSceneParam(): string {
+  const [value, setValue] = useState("");
   useEffect(() => {
-    const read = () => {
-      const value = new URLSearchParams(window.location.search).get("scene");
-      setEnabled(value === "3d" || value === "3D");
-    };
+    const read = () => setValue(new URLSearchParams(window.location.search).get("scene") ?? "");
     read();
     window.addEventListener("popstate", read);
     return () => window.removeEventListener("popstate", read);
   }, []);
-  return enabled;
+  return value.toLowerCase();
+}
+
+function useScene3d(): boolean {
+  return useSceneParam() === "3d";
+}
+
+/** `?scene=lab`：实验室全景（2.5D 固定视角）。 */
+function useSceneLab(): boolean {
+  return useSceneParam() === "lab";
 }
 
 const RACK_IDS = DEFAULT_RACK_IDS;
@@ -340,6 +371,8 @@ export function SceneStage({
 
   // 3D 只覆盖 exp09（滴定管 + 锥形瓶）；其它实验继续走 2D，避免"半 3D 半 2D"的夹生场景
   const show3d = use3d && !isBenchScene && (expId === undefined || expId === "exp09");
+  const useLab = useSceneLab();
+  const showLab = useLab;
   // 试点参数：随操作进度（feedbackSeq）推进——滴定管液面下降、锥形瓶液面上升
   const sceneProgress = Math.min(1, feedbackSeq / 9);
   const sceneBuretteLevel = 1 - 0.52 * sceneProgress;
@@ -883,7 +916,15 @@ export function SceneStage({
               <span />
             </EndingFlash>
           ) : null}
-          {show3d ? (
+          {showLab ? (
+            <div
+              className={styles.apparatus}
+              style={{ position: "relative", width: "100%", height: "100%" }}
+              data-demo-id="demo-lab-scene-wrap"
+            >
+              <LabScene vessels={LAB_DEMO_VESSELS} label="实验室：实验台上摆放烧杯、试管、容量瓶与量筒" />
+            </div>
+          ) : show3d ? (
             <div
               className={styles.apparatus}
               style={{ position: "relative", width: "100%", height: "100%" }}

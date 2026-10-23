@@ -570,9 +570,18 @@
   max-width: 100%;
 }
 
-/* exp08 复用实验台 SVG（分析天平 / 烧杯），只做尺寸适配，不新增图形。 */
+/* exp08 复用实验台 SVG（分析天平 / 烧杯），只做尺寸适配，不新增图形。
+   2026-10-23 全幅台面：原来只写 width:100%，实测仍被压成 810px（父级 1258）——
+   宽度是被子元素固有尺寸反推出来的，width/flex 怎么写都拉不动。
+   改成绝对定位铺满 benchArea，svg 再 100%×100% 交给 preserveAspectRatio 取景。 */
 .apparatusWrap[data-bench="true"] {
-  width: 100%;
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  align-items: stretch;
+  justify-content: stretch;
 }
 
 /* 台面场景的投放热区：器皿横排铺开，不再是“底部居中一个锥形瓶”。

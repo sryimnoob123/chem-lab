@@ -12,11 +12,11 @@ import type { SceneVessel } from "./types";
 /** 实验台器皿；burette 只作场景陈设，不接受投加（resolveDrop 会温柔拒绝）。 */
 export const SCENE_VESSELS: readonly SceneVessel[] = [
   { id: "burette", kind: "burette", label: "酸式滴定管", x: 48, y: 100, w: 84, h: 239 },
-  { id: "flask", kind: "flask", label: "锥形瓶", x: 232, y: 193, w: 128, h: 134 },
-  { id: "beaker", kind: "beaker", label: "烧杯", x: 404, y: 205, w: 116, h: 135 },
-  { id: "tube-a", kind: "tube", label: "试管 A", x: 564, y: 215, w: 26, h: 125 },
-  { id: "tube-b", kind: "tube", label: "试管 B", x: 620, y: 215, w: 26, h: 125 },
-  { id: "volumetric", kind: "volumetric", label: "容量瓶 100 mL", x: 676, y: 180, w: 86, h: 160 },
+  { id: "flask", kind: "flask", label: "锥形瓶", x: 232, y: 133, w: 186, h: 194 },
+  { id: "beaker", kind: "beaker", label: "烧杯", x: 404, y: 144, w: 168, h: 196 },
+  { id: "tube-a", kind: "tube", label: "试管 A", x: 564, y: 159, w: 38, h: 181 },
+  { id: "tube-b", kind: "tube", label: "试管 B", x: 620, y: 159, w: 38, h: 181 },
+  { id: "volumetric", kind: "volumetric", label: "容量瓶 100 mL", x: 676, y: 108, w: 125, h: 232 },
 ];
 
 /** 器皿里预先装好的物质（id 见 lib/chem/substances.ts）。 */

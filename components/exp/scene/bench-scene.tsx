@@ -15,6 +15,7 @@ import { ActionLayer, type SceneAction } from "./actions/action-layer";
 
 import type { SceneToolId } from "@/lib/scene/tools";
 import { BENCH } from "./bench-layout";
+import { LabBackdrop } from "./lab-backdrop";
 import {
   useBenchDrag,
   ZERO_OFFSET,
@@ -485,7 +486,18 @@ export function BenchScene({
   // 台面翻高：器皿与工具之间留出呼吸，不然一排工具紧贴器皿标签（用户 2026-10-22）。
   // 宽度 528 → 780：右半原来全空着，现在放工具区，场景铺满工作区（用户 2026-10-22）
   // 底部空白收紧（186→126）：器皿与工具之间别隔那么死，整块台面更饱满（用户 2026-10-22）
-  const benchViewBox = `370 ${contentTop - 12} 780 ${434 - contentTop + 126}`;
+    /**
+   * 2.5D 舞台（用户 2026-10-23）：台面上方留出实验室背景带。
+   * 背景画在 BENCH.surface 之上，器皿站位不变 —— 只往上加视野，不动任何已有坐标。
+   */
+  const BACKDROP_H = 214;
+  const backdropTop = BENCH.surface - 20 - BACKDROP_H;
+  const stageTop = Math.min(contentTop - 12, backdropTop);
+  const benchTopY = BENCH.surface - 20;
+  /* 2026-10-23：横向从固定的 794 放宽到 1560（x 20..1580，中心 800 = 台面中心）。
+     原来 794 宽配 container 1264px，等比缩放后左右各空 235px —— 台面缩在中间一小块。
+     放宽后 viewBox 宽高比 ≈ 3.07，接近容器 3.16，画面基本铺满。 */
+  const benchViewBox = `${BENCH.viewLeft} ${stageTop} ${BENCH.viewRight - BENCH.viewLeft} ${BENCH.bottom - stageTop}`;
 
   useEffect(() => {
     if (!reaction) return;
@@ -553,6 +565,9 @@ export function BenchScene({
             <stop offset="100%" stopColor="#39485A" stopOpacity="0.035" />
           </linearGradient>
         </defs>
+        {/* 实验室背景：墙 / 窗 / 试剂架 / 通风柜（纯矢量，零图片） */}
+        <LabBackdrop top={backdropTop} />
+
         {/* 台面（铁架台已删除：exp01/exp03 都不用滴定台，空夹子会被当成"这是什么"） */}
         <g aria-hidden="true">
           {/*
@@ -560,27 +575,27 @@ export function BenchScene({
             之前那条「墙与台面的接缝」画在器皿高度中间，横线从玻璃里穿过去，像贴了条胶带 ——
             去掉。纵深靠「前沿 + 上浅下深的台面渐变」表达。
           */}
-          <rect x="370" y={contentTop - 12} width="780" height={560 - contentTop} fill="var(--bench-top)" />
+          <rect x={BENCH.left} y={benchTopY} width={BENCH.right - BENCH.left} height={BENCH.bottom - benchTopY} fill="var(--bench-top)" />
           <rect
-            x="370"
-            y={contentTop - 12}
-            width="780"
-            height={560 - contentTop}
+            x={BENCH.left}
+            y={benchTopY}
+            width={BENCH.right - BENCH.left}
+            height={BENCH.bottom - benchTopY}
             fill="url(#benchDepth)"
           />
           {/* 极淡网格：26 单位一格，只当纸感，不当装饰 */}
           <rect
-            x="370"
-            y={contentTop - 12}
-            width="780"
-            height={560 - contentTop}
+            x={BENCH.left}
+            y={benchTopY}
+            width={BENCH.right - BENCH.left}
+            height={BENCH.bottom - benchTopY}
             fill="url(#benchGrid)"
             opacity="0.45"
           />
           {/* 前沿（台面厚度） */}
-          <rect x="370" y="532" width="780" height="28" fill="var(--bench-edge)" />
-          <line x1="370" y1="532" x2="1150" y2="532" stroke="var(--bench-line)" strokeWidth="1" opacity="0.8" />
-          <rect x="370" y="524" width="780" height="8" fill="url(#benchSeam)" />
+          <rect x={BENCH.left} y="532" width={BENCH.right - BENCH.left} height="28" fill="var(--bench-edge)" />
+          <line x1={BENCH.left} y1="532" x2={BENCH.right} y2="532" stroke="var(--bench-line)" strokeWidth="1" opacity="0.8" />
+          <rect x={BENCH.left} y="524" width={BENCH.right - BENCH.left} height="8" fill="url(#benchSeam)" />
         </g>
 
         {/* 台面落点：落在台面任何位置 = 换了位置就留在那（用户 2026-10-22：放开拖拽范围）。
@@ -707,10 +722,15 @@ export function BenchScene({
           const hitW = vessel.kind === "burette" ? 70 : vessel.w;
 
           const fb = feedback?.vesselId === vessel.id ? feedback.kind : null;
-          const ringX = vessel.x - 10;
-          const ringY = vessel.y - 22;
-          const ringW = vessel.kind === "burette" ? 100 : vessel.w + 20;
-          const ringH = vessel.h + 34;
+          /* 框用实测 bbox（hitBoxes，已按真实绘制范围量过、并按中缝收过边），
+             不再用 vessel.w —— 2026-10-23 放大到 1.45 倍后 vessel.w 是画布宽虚胖值，
+             ringW = vessel.w + 20 会让相邻两只的热区相交 39px，
+             于是「点试管」走 elementFromPoint 命中试管、「拖试管」走矩形扫描命中烧杯。 */
+          const hb = hitBoxes[vessel.id];
+          const ringX = hb ? hb.x - 6 : vessel.x - 10;
+          const ringY = hb ? hb.y - 16 : vessel.y - 22;
+          const ringW = hb ? hb.w + 12 : vessel.kind === "burette" ? 100 : vessel.w + 20;
+          const ringH = hb ? hb.h + 22 : vessel.h + 34;
           /** 拖拽/点选时指针正压在这台器皿上（每台自己亮，替代以前盖住整排的大方块）。 */
           const isDropHover = dropHoverId === vessel.id;
           /** 本步推荐操作的那台：常驻呼吸描边，让第一次进来的人知道点哪。 */

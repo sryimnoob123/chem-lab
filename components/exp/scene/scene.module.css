@@ -849,8 +849,12 @@
 }
 
 .toolLabel {
-  font-size: var(--type-meta);
-  fill: var(--ink-2);
+  /* 12px 在 viewBox 里被缩放到 0.8，实际只有 9.6px，压在线条背景上读不出来。
+     提到 14px（渲染 ≈11px），颜色从 --ink-2 换 --ink 加八成不透明 —— 
+     学生要能直接念出「软毛刷 / 洗瓶 / 玻璃棒 / 滴管」。 */
+  font-size: 14px;
+  fill: var(--ink);
+  opacity: 0.82;
   letter-spacing: 0.02em;
   pointer-events: none;
   user-select: none;

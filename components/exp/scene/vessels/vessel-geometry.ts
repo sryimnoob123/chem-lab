@@ -15,14 +15,17 @@ import type { SceneVesselKind } from "@/lib/scene/types";
 
 export type DrawKind = Exclude<SceneVesselKind, "dish">;
 
-/** 与 scene 舞台的既有比例一致（调小会跟包围盒错位）。 */
+/** 与 scene 舞台的既有比例一致（调小会跟包围盒错位）。
+ *  2026-10-23：除滴定管外统一 ×1.7 —— 原尺寸下器皿只占舞台高度 23%，
+ *  中间一大片空；配套 palette 的 w/h 与 y 同步放大，底边仍压在 340 台面线。
+ *  滴定管本来就 239 高，再放大会把 viewBox 顶到负值、整屏被压小，故不动。 */
 export const VESSEL_SCALE: Readonly<Record<SceneVesselKind, number>> = {
-  flask: 0.8,
-  beaker: 0.72,
+  flask: 1.16,
+  beaker: 1.044,
   burette: 0.7,
-  volumetric: 0.85,
-  tube: 0.64,
-  dish: 0.64,
+  volumetric: 1.2325,
+  tube: 0.928,
+  dish: 0.928,
 };
 
 /* ---------------- 主体轮廓 ----------------
@@ -56,23 +59,29 @@ export function bodyPath(kind: SceneVesselKind): string {
 
 /* ---------------- 瓶口椭圆（2.5D 的关键：口是椭圆的，能看见「里面」） ---------------- */
 
+/**
+ * 视角压缩比 K = ry / rx，直接等于俯角的正弦值。
+ *   0.13（旧值）≈ 俯视 7.5° —— 几乎平视，口部只剩一条缝，这是「没有透视感」的根因；
+ *   0.50 ≈ 30°，0.62 ≈ 38°（本版本），0.71 ≈ 45°，1.0 = 90° 纯俯视。
+ * 用户 2026-10-23 要求 30°~45° 俯视，取中偏上 0.62。
+ * 所有椭圆（口沿 / 液面 / 器底）的 ry 都从这里推，改一个数全场景一起变。
+ */
+export const VIEW_K = 0.62;
+
 export type VesselMouth = { cx: number; y: number; rx: number; ry: number };
 
+/** 口沿半径（rx）写死，ry 由 VIEW_K 推 —— 不再手填扁平的 3.2 / 7。 */
 export function mouthOf(kind: SceneVesselKind): VesselMouth {
-  switch (kind) {
-    case "flask":
-      return { cx: 80, y: 16, rx: 17, ry: 3.2 };
-    case "beaker":
-      return { cx: 80, y: 41, rx: 54, ry: 7 };
-    case "volumetric":
-      return { cx: 80, y: 18, rx: 12, ry: 2.6 };
-    case "tube":
-      return { cx: 20, y: 10, rx: 13, ry: 3.4 };
-    case "dish":
-      return { cx: 52, y: 150, rx: 40, ry: 6 };
-    default:
-      return { cx: 60, y: 14, rx: 15, ry: 3 };
-  }
+  const mouth: Record<SceneVesselKind, { cx: number; y: number; rx: number }> = {
+    flask: { cx: 80, y: 16, rx: 17 },
+    beaker: { cx: 80, y: 41, rx: 54 },
+    volumetric: { cx: 80, y: 18, rx: 12 },
+    tube: { cx: 20, y: 10, rx: 13 },
+    dish: { cx: 52, y: 150, rx: 40 },
+    burette: { cx: 60, y: 14, rx: 15 },
+  };
+  const m = mouth[kind];
+  return { ...m, ry: Number((m.rx * VIEW_K).toFixed(2)) };
 }
 
 /** 瓶口中心 y（局部坐标）—— 倾倒时瓶口要对准这里。 */
@@ -165,8 +174,11 @@ export function surfaceRxAt(kind: SceneVesselKind, y: number): number {
   }
 }
 
-/** 液面椭圆的扁度（局部坐标，未乘 scale）。 */
-export const SURFACE_RY = 4.4;
+/** 液面椭圆的扁度：按同一视角压缩比推（ry = rx × VIEW_K）。
+ *  2026-10-23 之前是常数 4.4 —— 不管器皿多宽都一条扁线，读不出俯视，已删。 */
+export function surfaceRyAt(rx: number): number {
+  return Number((rx * VIEW_K).toFixed(2));
+}
 
 /** 默认液位（有液体但没数过体积时）：看得出「里面有水」，又不至于像满瓶。 */
 export function defaultLevel(hasLiquid: boolean): number {

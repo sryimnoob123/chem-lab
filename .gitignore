@@ -55,3 +55,8 @@ public/shots-prod/
 # 本机 Hermes profile 的 skill 副本（只作源，不入库）
 .dsh/skills/
 scripts/stub-llm-requests.log
+
+# Hermes 本机工作目录（plans/会话产物，不入库）
+.hermes/
+# .team/ego/：一次性出图脚本（生成过程产物，不入库）
+.team/ego/

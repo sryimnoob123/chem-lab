@@ -21,7 +21,6 @@ import {
   BURETTE_TICKS,
   CENTER_X,
   MOUTH_Y,
-  SURFACE_RY,
   VESSEL_SCALE,
   bodyPath,
   levelTopY,
@@ -30,6 +29,7 @@ import {
   reflectArc,
   sheenPath,
   surfaceRxAt,
+  surfaceRyAt,
 } from "./vessel-geometry";
 import styles from "./vessel.module.css";
 
@@ -71,6 +71,7 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
   const kind = vessel.kind;
   const clipId = `clip-${uid}`;
   const shadowId = `shadow-${uid}`;
+  const volumeId = `vol-${uid}`;
   const scale = VESSEL_SCALE[kind];
   const body = bodyPath(kind);
   const mouth = mouthOf(kind);
@@ -99,6 +100,15 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
         <clipPath id={clipId}>
           <path d={body} />
         </clipPath>
+        {/* 2.5D 体积：横向渐变（左亮 → 中透 → 右暗），让平面轮廓读成圆柱。
+            视角固定，靠明暗分左右壁 —— 不引 3D 引擎，性能与体积零代价。 */}
+        <linearGradient id={volumeId} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.42" />
+          <stop offset="14%" stopColor="#FFFFFF" stopOpacity="0.16" />
+          <stop offset="42%" stopColor="#FFFFFF" stopOpacity="0" />
+          <stop offset="74%" stopColor="rgba(74, 87, 104, 1)" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="rgba(74, 87, 104, 1)" stopOpacity="0.17" />
+        </linearGradient>
       </defs>
 
       {/* 接地阴影（drag-pour 的 .shadow 椭圆） */}
@@ -132,13 +142,14 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
             fill={liquid}
             fillOpacity={0.9}
           />
-          {/* 液面：同色椭圆压在矩形上沿，露出上半 = 有厚度的液面（实色，不掺玻璃色） */}
+          {/* 液面：同色椭圆压在矩形上沿，露出上半 = 有厚度的液面（实色，不掺玻璃色）
+              ry 按同一视角压缩比推（rx × VIEW_K），细颈容器窄、烧杯宽，才对得上俯视 */}
           <ellipse
             data-liquid-surface
             cx={box.cx}
             cy={top}
             rx={surfaceRx}
-            ry={SURFACE_RY}
+            ry={surfaceRyAt(surfaceRx)}
             fill={liquid}
             fillOpacity={1}
           />
@@ -146,13 +157,27 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
             cx={box.cx}
             cy={top}
             rx={surfaceRx}
-            ry={SURFACE_RY}
+            ry={surfaceRyAt(surfaceRx)}
             fill="none"
             stroke="var(--canvas-glass-inner)"
             strokeWidth={0.9}
           />
         </g>
       ) : null}
+
+      {/* 体积明暗：压在液体之上、描边之下，液体也跟着有左亮右暗 */}
+      <path d={body} fill={`url(#${volumeId})`} aria-hidden="true" />
+
+      {/* 器底：只画**下半圈**弧（不是整椭圆）。
+          整椭圆放在器底会读成「杯子里垫了个盘子」——上半圈横切杯身内部，
+          下半圈露出器身之外。真实 2.5D 的圆底就只有贴着器底的一条弧。 */}
+      <path
+        d={`M ${cx - surfaceRx * 0.94} ${box.bottom - surfaceRyAt(surfaceRx * 0.94)} A ${surfaceRx * 0.94} ${surfaceRyAt(surfaceRx * 0.94)} 0 0 0 ${cx + surfaceRx * 0.94} ${box.bottom - surfaceRyAt(surfaceRx * 0.94)}`}
+        clipPath={`url(#${clipId})`}
+        fill="none"
+        stroke="rgba(74, 87, 104, 0.22)"
+        strokeWidth={1.1}
+      />
 
       {/* 玻璃双层描边：外层 2.6px 半透明墨定住外形，内层 1.4px 极淡墨 = 玻璃的厚度
           （2026-10-23 实心玻璃口径；vectorEffect 让缩放到哪台器皿都是同一个粗细） */}

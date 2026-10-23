@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>实验台 45° · 规范器材建模</title>
+<style>
+  :root{
+    --paper:#F4F2ED; --paper-hi:#FAF8F4;
+    --ink:#4A5768; --ink-2:#6B7787;
+    --line:rgba(74,87,104,.72);
+    --line-soft:rgba(74,87,104,.26);
+    --line-fine:rgba(74,87,104,.15);
+    --glass:rgba(255,253,247,.40);
+    --card:rgba(252,251,248,.74);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;
+    font-family:"Inter","PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:var(--ink)}
+  #paper{position:fixed;inset:0;
+    background:radial-gradient(120% 92% at 50% 34%, var(--paper-hi) 0%, var(--paper) 52%, #EEEAE1 100%);}
+  #bench{position:fixed;inset:0;z-index:1;display:grid;place-items:center}
+  svg{display:block;width:100%;height:100%}
+  .slot{position:fixed;top:0;bottom:0;width:19%;z-index:3;display:flex;flex-direction:column;
+    justify-content:center;gap:12px;padding:0 20px;pointer-events:none}
+  .slot.left{left:0} .slot.right{right:0}
+  .card{background:var(--card);backdrop-filter:blur(14px) saturate(1.05);
+    border:1px solid rgba(255,255,255,.72);border-radius:14px;padding:14px 16px;
+    box-shadow:0 1px 2px rgba(74,87,104,.05),0 8px 28px -12px rgba(74,87,104,.22);}
+  .cap{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);opacity:.75;margin:0 0 10px}
+  .racklist{display:flex;flex-direction:column;gap:9px}
+  .bottle{display:flex;align-items:center;gap:10px;font-size:12.5px}
+  .swatch{width:15px;height:22px;border-radius:3px;flex:0 0 auto;border:1px solid rgba(74,87,104,.18);position:relative;overflow:hidden}
+  .swatch i{position:absolute;left:0;right:0;bottom:0;height:62%;display:block}
+  .formula{font:11px ui-monospace,Menlo,monospace;color:var(--ink-2);opacity:.7}
+  .step{font-size:13.5px;line-height:1.55;margin:0}
+  .meter{height:3px;border-radius:2px;background:rgba(74,87,104,.1);margin-top:12px;overflow:hidden}
+  .meter i{display:block;height:100%;width:29%;background:#8FA6B8}
+  .btnrow{display:flex;gap:8px}
+  .btn{flex:1;text-align:center;font-size:12px;padding:8px 0;border-radius:9px;
+    border:1px solid var(--line-soft);background:rgba(255,255,255,.5)}
+  .btn.primary{background:#3E4A5A;color:#F7F8F7;border-color:transparent}
+  .footnote{position:fixed;left:0;right:0;bottom:10px;z-index:4;text-align:center;
+    font-size:11px;color:var(--ink-2);opacity:.5;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<div id="paper"></div>
+<div id="bench"><svg id="scene" viewBox="0 0 1200 620" preserveAspectRatio="xMidYMid meet"></svg></div>
+
+<aside class="slot left" style="display:none">
+  <div class="card">
+    <p class="cap">试剂架</p>
+    <div class="racklist">
+      <div class="bottle"><span class="swatch"><i style="background:#F1F2EE"></i></span>碳酸钠 <span class="formula">Na₂CO₃</span></div>
+      <div class="bottle"><span class="swatch"><i style="background:#E6E3DA"></i></span>氢氧化钠 <span class="formula">NaOH</span></div>
+      <div class="bottle"><span class="swatch"><i style="background:#D9C64A;opacity:.6"></i></span>蒸馏水 <span class="formula">H₂O</span></div>
+      <div class="bottle"><span class="swatch"><i style="background:#C8622F;opacity:.75"></i></span>酚酞 <span class="formula">C₂₀H₁₄O₄</span></div>
+    </div>
+  </div>
+</aside>
+
+<aside class="slot right">
+  <div class="card">
+    <p class="cap">第 2 步 / 共 7 步</p>
+    <p class="step">用<b>软毛刷</b>取放称量瓶，关上天平侧门后读数。</p>
+    <div class="meter"><i></i></div>
+  </div>
+  <div class="card" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+    <div class="btnrow"><span class="btn">软毛刷</span><span class="btn">洗瓶</span></div>
+    <div class="btnrow"><span class="btn primary">天平读数</span></div>
+  </div>
+</aside>
+
+<div class="footnote" style="display:none">45° 斜俯视 · 规范器材建模 · 纸白线描</div>
+
+<script>
+const K = 0.62;                       /* 俯角 ≈ 38°：用户要 30°~45°，取中偏上 */
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('scene');
+const el = (t, a) => { const n = document.createElementNS(NS, t); for (const k in a) n.setAttribute(k, a[k]); return n; };
+const W = { edge: 1.5, struct: 1.0, fine: 0.7 };
+
+const defs = el('defs', {});
+defs.innerHTML = `
+  <radialGradient id="shadow">
+    <stop offset="0%" stop-color="#4A5768" stop-opacity=".20"/>
+    <stop offset="54%" stop-color="#4A5768" stop-opacity=".08"/>
+    <stop offset="100%" stop-color="#4A5768" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="glassRim" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#4A5768" stop-opacity=".10"/>
+    <stop offset="22%" stop-color="#4A5768" stop-opacity="0"/>
+    <stop offset="78%" stop-color="#4A5768" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#4A5768" stop-opacity=".13"/>
+  </linearGradient>
+  <linearGradient id="benchTop" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#E3DAC6"/>
+    <stop offset="48%" stop-color="#EDE5D4"/>
+    <stop offset="100%" stop-color="#F4EDDE"/>
+  </linearGradient>
+  <linearGradient id="benchEdge" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#D9D1BF"/>
+    <stop offset="100%" stop-color="#C7BEAA"/>
+  </linearGradient>
+  <linearGradient id="liqWall" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#fff" stop-opacity=".18"/>
+    <stop offset="22%" stop-color="#fff" stop-opacity="0"/>
+    <stop offset="78%" stop-color="#000" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#000" stop-opacity=".11"/>
+  </linearGradient>
+  <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".70"/>
+    <stop offset="26%" stop-color="#E3E7E7" stop-opacity=".62"/>
+    <stop offset="64%" stop-color="#C4CBCC" stop-opacity=".70"/>
+    <stop offset="100%" stop-color="#A9B3B6" stop-opacity=".72"/>
+  </linearGradient>
+  <linearGradient id="frost" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".55"/>
+    <stop offset="50%" stop-color="#F2F0E9" stop-opacity=".45"/>
+    <stop offset="100%" stop-color="#DDE0DC" stop-opacity=".40"/>
+  </linearGradient>
+  <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="1.5"/>
+  </filter>
+  <filter id="wideBlur" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="6"/>
+  </filter>
+`;
+svg.appendChild(defs);
+
+function quad(cx, yFront, wFront, wBack, depth){
+  const yB = yFront - depth;
+  return `M ${cx - wBack/2} ${yB} L ${cx + wBack/2} ${yB} L ${cx + wFront/2} ${yFront} L ${cx - wFront/2} ${yFront} Z`;
+}
+function applyScale(g, cx, by, s){
+  if (s && s !== 1) g.setAttribute('transform', `translate(${cx} ${by}) scale(${s}) translate(${-cx} ${-by})`);
+}
+function groundShadow(cx, by, r){
+  /* 双层淡墨椭圆：核心 α.16 blur1.5 + 半影 α.06 blur6。
+     单层恒定 opacity = 贴纸，眼睛立刻识别成 decal。 */
+  const g = el('g', {});
+  g.appendChild(el('ellipse', { cx, cy: by + 3, rx: r * 1.35, ry: r * 0.34,
+    fill: 'rgba(74,87,104,.06)', filter: 'url(#wideBlur)' }));
+  g.appendChild(el('ellipse', { cx, cy: by + 2, rx: r * 1.02, ry: r * 0.26,
+    fill: 'rgba(74,87,104,.16)', filter: 'url(#softBlur)' }));
+  return g;
+}
+/** 刻度文字 */
+function tickLabel(x, y, text, anchor = 'end'){
+  const t = el('text', { x, y: y + 2.3, 'text-anchor': anchor, 'font-size': '6',
+    fill: 'var(--ink-2)', opacity: '.52', 'font-family': 'ui-monospace, Menlo, monospace' });
+  t.textContent = text;
+  return t;
+}
+
+/* ══ 烧杯 ══════════════════════════════════════════
+   规范特征：直壁圆柱 / 平底带小倒角 / 口部外翻唇 / 单侧倾倒嘴 / 正面刻度 */
+function beaker(o){
+  const { cx, by, r, h, level = 0, color = '#D98324', scale = 1 } = o;
+  const g = el('g', {});
+  const mouthY = by - h;
+  const ry = r * K;
+  const wall = 2.6;                    /* 玻璃壁厚：双线之间的空隙 */
+  const innerR = r - wall;
+  const innerRy = innerR * K;
+
+  g.appendChild(groundShadow(cx, by, r));
+
+  /* 器身填充（外轮廓闭合） */
+  const outerD = `M ${cx - r} ${mouthY} L ${cx - r} ${by} A ${r} ${ry} 0 0 0 ${cx + r} ${by} L ${cx + r} ${mouthY}`;
+  g.appendChild(el('path', { d: outerD + ' Z', fill: 'var(--glass)' }));
+
+  /* 液体 */
+  const lw = innerR - 1.2;
+  const cpId = `bk${Math.round(cx)}`;
+  const cp = el('clipPath', { id: cpId });
+  cp.appendChild(el('path', { d: outerD + ' Z' }));
+  g.appendChild(cp);
+  if (level > 0.005){
+    const ly = by - h * level;
+    const liq = el('g', { 'clip-path': `url(#${cpId})` });
+    liq.appendChild(el('rect', { x: cx - lw, y: ly, width: lw*2, height: by - ly + ry, fill: color, opacity: '.68' }));
+    g.appendChild(liq);
+    /* 液面只画两条弧：上亮下暗。不画填充椭圆 —— 椭圆上下各占 ry，
+       上半截会跑到液体上方，看起来像「液体多了一截」。 */
+    const dy = lw * 0.02;
+    g.appendChild(el('path', {
+      d: `M ${cx - lw} ${ly} Q ${cx} ${ly + dy * 2} ${cx + lw} ${ly}`,
+      fill: 'none', stroke: 'rgba(255,255,255,.7)', 'stroke-width': 1.4 }));
+    g.appendChild(el('path', {
+      d: `M ${cx - lw} ${ly + 3} Q ${cx} ${ly + 3 + dy} ${cx + lw} ${ly + 3}`,
+      fill: 'none', stroke: 'rgba(74,87,104,.18)', 'stroke-width': 1.2 }));
+  }
+
+  g.appendChild(el('path', { d: outerD + ' Z', fill: 'url(#glassRim)' }));
+
+  /* 刻度：小格 4 条 + 主格 2 条带数字（真实烧杯正面刻度） */
+  const items = [
+    { at: .12 }, { at: .28, major: true, num: '80' }, { at: .44 },
+    { at: .60, major: true, num: '40' }, { at: .76 }, { at: .90 },
+  ];
+  for (const t of items){
+    const y = by - h * t.at;
+    const half = t.major ? r * 0.42 : r * 0.26;
+    g.appendChild(el('line', { x1: cx - half, y1: y, x2: cx + half, y2: y,
+      stroke: 'var(--ink-2)', 'stroke-width': t.major ? 1 : W.fine,
+      opacity: t.major ? '.66' : '.40', 'stroke-linecap': 'round' }));
+    if (t.num) g.appendChild(tickLabel(cx - half - 2.5, y, t.num));
+  }
+
+  /* 双线：外壁 + 内壁 —— 这一条是「玻璃有厚度」的全部依据 */
+  g.appendChild(el('path', { d: outerD, fill: 'none', stroke: 'var(--line)',
+    'stroke-width': W.edge, 'stroke-linejoin': 'round' }));
+  g.appendChild(el('path', {
+    d: `M ${cx - innerR} ${mouthY} L ${cx - innerR} ${by} A ${innerR} ${innerRy} 0 0 0 ${cx + innerR} ${by} L ${cx + innerR} ${mouthY}`,
+    fill: 'none', stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+
+  /* 口部：外翻的唇（比身宽一圈）+ 内沿，两个椭圆之间就是壁厚 */
+  g.appendChild(el('ellipse', { cx, cy: mouthY, rx: r + 1.8, ry: (r + 1.8) * K,
+    fill: 'none', stroke: 'var(--line)', 'stroke-width': W.edge }));
+  g.appendChild(el('ellipse', { cx, cy: mouthY, rx: innerR, ry: innerRy,
+    fill: 'none', stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+
+  /* 单侧倾倒嘴：只在一侧挑出去一小段，这是烧杯的规范形状 */
+  g.appendChild(el('path', {
+    d: `M ${cx + r - 4} ${mouthY + 2.4} Q ${cx + r + 6.5} ${mouthY + 2.8} ${cx + r + 8} ${mouthY - 4}`,
+    fill: 'none', stroke: 'var(--line)', 'stroke-width': W.edge, 'stroke-linecap': 'round',
+  }));
+
+  applyScale(g, cx, by, scale);
+  return g;
+}
+
+/* ══ 容量瓶 ══════════════════════════════════════════
+   规范特征：梨形瓶身（下圆上收）/ 长颈 / 颈上刻度线 / 平底 */
+function flask(o){
+  const { cx, by, r, neckH, level = 0, color = '#D9A81C', scale = 1 } = o;
+  const g = el('g', {});
+  const R = r;
+  const nr = R * 0.24;
+  const bulbTop = by - R * 1.62;          /* 梨形收口处 */
+  const mouthY = bulbTop - neckH;
+  const ry = nr * K;
+
+  g.appendChild(groundShadow(cx, by, R));
+
+  const left = `M ${cx - nr} ${bulbTop} C ${cx - R*0.72} ${bulbTop + R*0.10} ${cx - R} ${by - R*0.92} ${cx - R} ${by - R*0.55}`;
+  const bot  = `A ${R} ${R*0.56} 0 0 0 ${cx + R} ${by - R*0.55}`;
+  const right= `C ${cx + R} ${by - R*0.92} ${cx + R*0.72} ${bulbTop + R*0.10} ${cx + nr} ${bulbTop}`;
+  const bodyD = `${left} ${bot} ${right} L ${cx + nr} ${mouthY} L ${cx - nr} ${mouthY} Z`;
+
+  g.appendChild(el('path', { d: bodyD, fill: 'var(--glass)' }));
+
+  if (level > 0.01){
+    const ly = by - 2 * R * 0.86 * level;
+    const cp = el('clipPath', { id: `fl${Math.round(cx)}` });
+    cp.appendChild(el('path', { d: bodyD }));
+    g.appendChild(cp);
+    const liq = el('g', { 'clip-path': `url(#fl${Math.round(cx)})` });
+    liq.appendChild(el('rect', { x: cx - R, y: ly, width: R*2, height: by - ly + 4, fill: color, opacity: '.68' }));
+    g.appendChild(liq);
+    const dy = ly - (by - R*0.55);
+    const halfW = Math.abs(dy) < R ? Math.sqrt(Math.max(0, R*R - dy*dy)) : nr;
+    g.appendChild(el('ellipse', { cx, cy: ly, rx: halfW, ry: halfW*K, fill: color, opacity: '.78' }));
+    g.appendChild(el('ellipse', { cx, cy: ly, rx: halfW, ry: halfW*K, fill: 'none',
+      stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+  }
+
+  g.appendChild(el('path', { d: bodyD, fill: 'url(#glassRim)' }));
+
+  /* 双线：瓶身外壁 + 内壁 */
+  g.appendChild(el('path', {
+    d: `${left} ${bot} ${right} L ${cx + nr} ${mouthY} M ${cx - nr} ${bulbTop} L ${cx - nr} ${mouthY}`,
+    fill: 'none', stroke: 'var(--line)', 'stroke-width': W.edge, 'stroke-linejoin': 'round' }));
+  g.appendChild(el('path', {
+    d: `M ${cx - nr*0.62} ${bulbTop + 3} C ${cx - R*0.66} ${bulbTop + R*0.14} ${cx - R*0.93} ${by - R*0.9} ${cx - R*0.93} ${by - R*0.55}`,
+    fill: 'none', stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+
+  /* 瓶颈：标线 + 磨砂区（容量瓶的规范标识） */
+  const markY = mouthY + neckH * 0.34;
+  g.appendChild(el('rect', { x: cx - nr, y: markY - 5, width: nr*2, height: 10,
+    fill: 'url(#frost)', stroke: 'none' }));
+  g.appendChild(el('line', { x1: cx - nr, y1: markY, x2: cx + nr, y2: markY,
+    stroke: 'var(--ink-2)', 'stroke-width': 1, opacity: '.75' }));
+  g.appendChild(tickLabel(cx + nr + 4, markY, '100', 'start'));
+
+  /* 口部 */
+  g.appendChild(el('ellipse', { cx, cy: mouthY, rx: nr, ry, fill: 'none',
+    stroke: 'var(--line)', 'stroke-width': W.edge }));
+  g.appendChild(el('ellipse', { cx, cy: mouthY, rx: nr - 1.6, ry: (nr-1.6)*K, fill: 'none',
+    stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+
+  /* 平底 */
+  g.appendChild(el('ellipse', { cx, cy: by - R*0.04, rx: R*0.62, ry: R*0.62*K*0.5,
+    fill: 'none', stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+
+  applyScale(g, cx, by, scale);
+  return g;
+}
+
+/* ══ 量筒 ══════════════════════════════════════════
+   规范特征：均匀筒身 / 六角底座 / 顶部倾倒嘴 / 密集刻度 */
+function graduatedCylinder(o){
+  const { cx, by, r, h, level = 0, color = '#3C82C4', scale = 1 } = o;
+  const g = el('g', {});
+  const baseH = 12;
+  const bodyY = by - baseH;
+  const mouthY = bodyY - h;
+  const ry = r * K;
+  const wall = 2.2;
+  const innerR = r - wall;
+
+  g.appendChild(groundShadow(cx, by, r * 1.6));
+
+  /* 六角底座：真实量筒的底座是六边形 */
+  const bw = r * 2.05;
+  const hexFront = quad(cx, by, bw*2, bw*1.86, baseH * 1.5);
+  g.appendChild(el('path', { d: hexFront, fill: 'var(--glass)', stroke: 'var(--line)',
+    'stroke-width': W.struct, 'stroke-linejoin': 'round' }));
+  g.appendChild(el('path', { d: hexFront, fill: 'url(#glassRim)' }));
+  g.appendChild(el('path', { d: quad(cx, by, bw*2.0, bw*1.86, baseH*1.5),
+    fill: 'none', stroke: 'var(--line-soft)', 'stroke-width': W.fine,
+    transform: `translate(${cx} ${by}) scale(.80) translate(${-cx} ${-by})` }));
+
+  const outerD = `M ${cx - r} ${mouthY} L ${cx - r} ${bodyY} A ${r} ${ry} 0 0 0 ${cx + r} ${bodyY} L ${cx + r} ${mouthY}`;
+  g.appendChild(el('path', { d: outerD + ' Z', fill: 'var(--glass)' }));
+
+  if (level > 0.005){
+    const ly = bodyY - h * level;
+    const cp = el('clipPath', { id: `gc${Math.round(cx)}` });
+    cp.appendChild(el('path', { d: outerD + ' Z' }));
+    g.appendChild(cp);
+    const liq = el('g', { 'clip-path': `url(#gc${Math.round(cx)})` });
+    liq.appendChild(el('rect', { x: cx - innerR + 0.8, y: ly, width: (innerR - 0.8)*2, height: bodyY - ly + ry, fill: color, opacity: '.68' }));
+    g.appendChild(liq);
+    const lw = innerR - 0.8;
+    g.appendChild(el('ellipse', { cx, cy: ly, rx: lw, ry: lw*K, fill: color, opacity: '.80' }));
+  }
+  g.appendChild(el('path', { d: outerD + ' Z', fill: 'url(#glassRim)' }));
+
+  /* 刻度：每格一条，主刻度带数字（量筒刻度在右侧、数字在左） */
+  for (let i = 1; i <= 10; i++){
+    const y = bodyY - h * (i / 11);
+    const major = i % 2 === 0;
+    const len = major ? r * 1.15 : r * 0.62;
+    g.appendChild(el('line', { x1: cx + r - len, y1: y, x2: cx + r - 1, y2: y,
+      stroke: 'var(--ink-2)', 'stroke-width': major ? 1 : W.fine,
+      opacity: major ? '.64' : '.34' }));
+    if (major) g.appendChild(tickLabel(cx - r - 2.5, y, String(100 - i * 9)));
+  }
+
+  /* 双线 */
+  g.appendChild(el('path', { d: outerD, fill: 'none', stroke: 'var(--line)',
+    'stroke-width': W.edge, 'stroke-linejoin': 'round' }));
+  g.appendChild(el('path', {
+    d: `M ${cx - innerR} ${mouthY} L ${cx - innerR} ${bodyY} A ${innerR} ${innerR*K} 0 0 0 ${cx + innerR} ${bodyY} L ${cx + innerR} ${mouthY}`,
+    fill: 'none', stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+
+  /* 口部 + 单侧倾倒嘴 */
+  g.appendChild(el('ellipse', { cx, cy: mouthY, rx: r, ry, fill: 'none', stroke: 'var(--line)', 'stroke-width': W.edge }));
+  g.appendChild(el('ellipse', { cx, cy: mouthY, rx: innerR, ry: innerR*K, fill: 'none', stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+  g.appendChild(el('path', {
+    d: `M ${cx + r - 3} ${mouthY + 1.8} Q ${cx + r + 5} ${mouthY + 2.2} ${cx + r + 6} ${mouthY - 3}`,
+    fill: 'none', stroke: 'var(--line)', 'stroke-width': W.edge, 'stroke-linecap': 'round' }));
+
+  applyScale(g, cx, by, scale);
+  return g;
+}
+
+/* ══ 试管 ══════════════════════════════════════════
+   规范特征：圆底 / 卷边口 / 直壁 */
+function testTube(o){
+  const { cx, by, r, h, level = 0, color = '#6E9A3A', scale = 1 } = o;
+  const g = el('g', {});
+  const mouthY = by - h;
+  const ry = r * K;
+  const bowl = r * 0.95;
+  const wall = 1.8;
+  const innerR = r - wall;
+
+  g.appendChild(groundShadow(cx, by, r * 0.9));
+
+  const outerD = `M ${cx - r} ${mouthY} L ${cx - r} ${by - bowl} A ${bowl} ${bowl} 0 0 0 ${cx + r} ${by - bowl} L ${cx + r} ${mouthY}`;
+  g.appendChild(el('path', { d: outerD + ' Z', fill: 'var(--glass)' }));
+
+  if (level > 0.005){
+    const ly = mouthY + h * (1 - level);
+    const cp = el('clipPath', { id: `tt${Math.round(cx)}` });
+    cp.appendChild(el('path', { d: outerD + ' Z' }));
+    g.appendChild(cp);
+    const liq = el('g', { 'clip-path': `url(#tt${Math.round(cx)})` });
+    liq.appendChild(el('rect', { x: cx - innerR + .6, y: ly, width: (innerR-.6)*2, height: by - ly, fill: color, opacity: '.70' }));
+    g.appendChild(liq);
+    const lw = innerR - .6;
+    g.appendChild(el('ellipse', { cx, cy: ly, rx: lw, ry: lw*K, fill: color, opacity: '.80' }));
+  }
+  g.appendChild(el('path', { d: outerD + ' Z', fill: 'url(#glassRim)' }));
+
+  g.appendChild(el('path', { d: outerD, fill: 'none', stroke: 'var(--line)',
+    'stroke-width': W.edge, 'stroke-linejoin': 'round' }));
+  g.appendChild(el('path', {
+    d: `M ${cx - innerR} ${mouthY} L ${cx - innerR} ${by - bowl} A ${bowl - wall} ${bowl - wall} 0 0 0 ${cx + innerR} ${by - bowl} L ${cx + innerR} ${mouthY}`,
+    fill: 'none', stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+
+  /* 卷边口 */
+  g.appendChild(el('ellipse', { cx, cy: mouthY, rx: r + 1.3, ry: (r + 1.3)*K,
+    fill: 'none', stroke: 'var(--line)', 'stroke-width': W.edge }));
+  g.appendChild(el('ellipse', { cx, cy: mouthY, rx: innerR, ry: innerR*K,
+    fill: 'none', stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+
+  applyScale(g, cx, by, scale);
+  return g;
+}
+
+/* ══ 分析天平 ══════════════════════════════════════
+   规范特征：底座 / 三面玻璃防风罩 / 称盘 / 显示屏 / 水平泡 / 调平脚 */
+function balance(o){
+  const { cx, by, w = 182, scale = 1 } = o;
+  const g = el('g', {});
+  const d = w * 0.28;
+  const bodyH = 30;
+
+  g.appendChild(el('ellipse', { cx, cy: by + 10, rx: w * 0.60, ry: w * 0.19, fill: 'url(#shadow)' }));
+
+  /* 底座顶面 */
+  g.appendChild(el('path', { d: quad(cx, by, w, w * 0.88, d),
+    fill: 'var(--glass)', stroke: 'var(--line)', 'stroke-width': W.struct, 'stroke-linejoin': 'round' }));
+  g.appendChild(el('path', { d: quad(cx, by, w, w * 0.88, d), fill: 'url(#glassRim)' }));
+
+  /* 前面板：屏幕 / 按键 / 水平泡 */
+  g.appendChild(el('rect', { x: cx - w/2, y: by, width: w, height: bodyH, rx: 2.5,
+    fill: '#F0EFEA', stroke: 'var(--line)', 'stroke-width': W.struct }));
+  g.appendChild(el('rect', { x: cx - w*0.26, y: by + 6, width: w*0.34, height: 15, rx: 1.6,
+    fill: '#3A4655', stroke: 'none' }));
+  const ro = el('text', { x: cx - w*0.09, y: by + 17, 'text-anchor': 'middle',
+    'font-size': '9', fill: '#DCE6DE', 'font-family': 'ui-monospace, Menlo, monospace' });
+  ro.textContent = '0.0000 g';
+  g.appendChild(ro);
+  for (let i = 0; i < 3; i++){
+    g.appendChild(el('ellipse', { cx: cx + w*0.20 + i*11, cy: by + 13.5, rx: 3, ry: 2.3,
+      fill: 'none', stroke: 'var(--line)', 'stroke-width': W.fine }));
+  }
+  /* 水平泡 */
+  g.appendChild(el('ellipse', { cx: cx - w*0.38, cy: by + 13.5, rx: 6, ry: 4.2,
+    fill: 'none', stroke: 'var(--line)', 'stroke-width': W.fine }));
+  g.appendChild(el('ellipse', { cx: cx - w*0.38, cy: by + 13.5, rx: 2.2, ry: 1.5,
+    fill: 'var(--ink-2)', opacity: '.38' }));
+  /* 调平脚 */
+  for (const sx of [-1, 1]){
+    g.appendChild(el('rect', { x: cx + sx*(w/2 - 8) - 3, y: by + bodyH, width: 6, height: 5, rx: 1.5,
+      fill: '#D9D7D0', stroke: 'var(--line)', 'stroke-width': W.fine }));
+  }
+
+  /* 防风罩：后壁 + 左右壁 + 顶面，四面都能读出来 */
+  const hoodBy = by - d;
+  const hoodH = w * 0.46;
+  const hoodTy = hoodBy - hoodH;
+  const hw = w * 0.78;
+  const hd = d * 0.74;
+
+  /* 后壁（虚线淡色，表示透过前玻璃看到的后面） */
+  g.appendChild(el('path', { d: quad(cx, hoodBy, hw, hw*0.9, hd), fill: 'var(--glass)', stroke: 'none' }));
+  /* 左右侧壁 */
+  for (const sx of [-1, 1]){
+    const xOut = cx + sx * hw/2;
+    const xIn  = cx + sx * hw/2 * 0.94;
+    g.appendChild(el('path', {
+      d: `M ${xIn} ${hoodTy + (sx>0?0:0)} L ${xOut} ${hoodTy + 5} L ${xOut} ${hoodBy + 5} L ${xIn} ${hoodBy} Z`,
+      fill: 'var(--glass)', stroke: 'var(--line)', 'stroke-width': W.fine }));
+  }
+  /* 顶面 */
+  g.appendChild(el('path', { d: quad(cx, hoodTy + 5, hw, hw*0.93, hd),
+    fill: 'rgba(255,253,247,.80)', stroke: 'var(--line)', 'stroke-width': W.struct }));
+  /* 顶面前沿高光 */
+  g.appendChild(el('line', { x1: cx - hw/2, y1: hoodTy + 5, x2: cx + hw/2, y2: hoodTy + 5,
+    stroke: '#FFFFFF', 'stroke-width': 1.1, opacity: '.65' }));
+
+  /* 称盘：罩内的小圆盘 */
+  g.appendChild(el('ellipse', { cx, cy: hoodBy + 1, rx: w*0.19, ry: w*0.19*K*0.60,
+    fill: 'rgba(203,210,212,.78)', stroke: 'var(--line)', 'stroke-width': W.fine }));
+  /* 称盘下的支柱 */
+  g.appendChild(el('line', { x1: cx, y1: hoodBy + 1, x2: cx, y2: by, stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+
+  /* 前门：中缝 + 把手 */
+  g.appendChild(el('line', { x1: cx, y1: hoodTy + 5, x2: cx, y2: hoodBy,
+    stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+  g.appendChild(el('circle', { cx: cx + 8, cy: hoodBy - 7, r: 2.2,
+    fill: 'none', stroke: 'var(--line)', 'stroke-width': W.fine }));
+
+  applyScale(g, cx, by, scale);
+  return g;
+}
+
+/* ══ 试管架 ══════════════════════════════════════════
+   规范特征：金属丝架 / 四根立柱 / 上下两片孔板 / 底座框架 */
+function tubeRack(o){
+  const { cx, by, w = 150, scale = 1 } = o;
+  const g = el('g', {});
+  const d = w * 0.24;
+  const h = 108;
+  const topY = by - h;
+  const steel = { stroke: 'url(#steel)', 'stroke-width': 2.2, 'stroke-linecap': 'round' };
+
+  g.appendChild(el('ellipse', { cx, cy: by + 6, rx: w*0.58, ry: w*0.15, fill: 'url(#shadow)' }));
+
+  /* 底座框架（透视矩形，四边框） */
+  g.appendChild(el('path', { d: quad(cx, by, w, w*0.84, d),
+    fill: 'none', stroke: 'url(#steel)', 'stroke-width': 2.4, 'stroke-linejoin': 'round' }));
+
+  /* 四根立柱：前后各两根 */
+  for (const sx of [-1, 1]){
+    const xF = cx + sx * (w/2 - 3);
+    const xB = cx + sx * (w*0.42 - 3);
+    g.appendChild(el('line', { x1: xF, y1: by, x2: xF, y2: topY + 4, ...steel }));
+    g.appendChild(el('line', { x1: xB, y1: by - d, x2: xB, y2: topY + 4 - d*0.5, ...steel, opacity: '.72' }));
+  }
+
+  /* 下层隔板 */
+  g.appendChild(el('path', { d: quad(cx, by - h*0.30, w*0.90, w*0.78, d*0.44),
+    fill: 'none', stroke: 'url(#steel)', 'stroke-width': 2.0, 'stroke-linejoin': 'round' }));
+
+  /* 上层孔板：矩形 + 三个孔洞 */
+  const plateD = quad(cx, topY + 6, w, w*0.86, d*0.5);
+  g.appendChild(el('path', { d: plateD, fill: 'url(#steel)', stroke: 'var(--line)', 'stroke-width': W.fine }));
+  for (const hx of [-1, 0, 1]){
+    const hx0 = cx + hx * (w * 0.27);
+    g.appendChild(el('ellipse', { cx: hx0, cy: topY + 6 - d*0.25, rx: 8.4, ry: 6.0,
+      fill: 'rgba(252,250,244,.95)', stroke: 'var(--line)', 'stroke-width': W.fine }));
+  }
+
+  applyScale(g, cx, by, scale);
+  return g;
+}
+
+/* ══ 台面工具（用户 2026-10-23：工具也要建出来） ══
+   全部斜放（与器皿同一 45°），线描 + 淡玻璃/金属，和器材一套语言 */
+const TOOL = { line: 'var(--line)', soft: 'var(--line-soft)', fine: W.fine };
+
+/* 软毛刷：细竹柄 + 一圈刷毛 */
+function brush(cx, by){
+  const g = el('g', {});
+  g.appendChild(el('ellipse', { cx, cy: by + 2, rx: 46, ry: 8,
+    fill: 'rgba(74,87,104,.10)', filter: 'url(#softBlur)' }));
+  /* 柄：从左下斜向右上 */
+  g.appendChild(el('line', { x1: cx - 46, y1: by + 2, x2: cx + 16, y2: by - 16,
+    stroke: TOOL.line, 'stroke-width': 2.4, 'stroke-linecap': 'round' }));
+  /* 刷头：一段加粗 + 刷毛 */
+  g.appendChild(el('line', { x1: cx + 16, y1: by - 16, x2: cx + 28, y2: by - 20,
+    stroke: TOOL.line, 'stroke-width': 3.2, 'stroke-linecap': 'round' }));
+  for (let i = 0; i < 7; i++){
+    const t = i / 6;
+    const x = cx + 20 + t * 12;
+    const y = by - 18 - t * 3;
+    g.appendChild(el('line', { x1: x, y1: y, x2: x + 2.5, y2: y - 9,
+      stroke: 'var(--ink-2)', 'stroke-width': 1, opacity: '.55', 'stroke-linecap': 'round' }));
+  }
+  return g;
+}
+
+/* 洗瓶：圆柱瓶身 + 肩部 + 弯管 */
+function washBottle(cx, by){
+  const g = el('g', {});
+  const r = 22, h = 58;
+  const top = by - h;
+  g.appendChild(groundShadow(cx, by, r));
+  g.appendChild(el('path', {
+    d: `M ${cx - r} ${top + 8} Q ${cx - r} ${top} ${cx - r * 0.5} ${top - 4} L ${cx - 4} ${top - 10} L ${cx + 4} ${top - 10} L ${cx + r * 0.5} ${top - 4} Q ${cx + r} ${top} ${cx + r} ${top + 8} L ${cx + r} ${by} A ${r} ${r * K} 0 0 1 ${cx - r} ${by} Z`,
+    fill: 'var(--glass)', stroke: 'none' }));
+  /* 液体 */
+  g.appendChild(el('rect', { x: cx - r + 2, y: by - h * 0.45, width: (r - 2) * 2, height: h * 0.45,
+    fill: '#3C82C4', opacity: '.45' }));
+  g.appendChild(el('path', {
+    d: `M ${cx - r} ${top + 8} Q ${cx - r} ${top} ${cx - r * 0.5} ${top - 4} L ${cx - 4} ${top - 10} L ${cx + 4} ${top - 10} L ${cx + r * 0.5} ${top - 4} Q ${cx + r} ${top} ${cx + r} ${top + 8} L ${cx + r} ${by} A ${r} ${r * K} 0 0 1 ${cx - r} ${by}`,
+    fill: 'none', stroke: TOOL.line, 'stroke-width': W.struct, 'stroke-linejoin': 'round' }));
+  /* 弯管：从瓶口向右上挑出去 */
+  g.appendChild(el('path', {
+    d: `M ${cx + 4} ${top - 10} L ${cx + 4} ${top - 22} Q ${cx + 4} ${top - 34} ${cx + 22} ${top - 38}`,
+    fill: 'none', stroke: TOOL.line, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+  g.appendChild(el('circle', { cx: cx + 23, cy: top - 38, r: 2.6,
+    fill: 'none', stroke: TOOL.line, 'stroke-width': 1.6 }));
+  return g;
+}
+
+/* 玻璃棒：细长圆柱斜放（两端椭圆）。角度统一向右上 15°，和软毛刷、滴管同一方向 */
+function glassRod(cx, by){
+  const g = el('g', {});
+  const len = 104, ang = 0.26;
+  const x2 = cx + Math.cos(ang) * len, y2 = by - Math.sin(ang) * len;
+  g.appendChild(el('ellipse', { cx, cy: by + 6, rx: 52, ry: 7,
+    fill: 'rgba(74,87,104,.09)', filter: 'url(#softBlur)' }));
+  g.appendChild(el('line', { x1: cx, y1: by, x2, y2,
+    stroke: 'var(--line)', 'stroke-width': 4.4, 'stroke-linecap': 'round' }));
+  g.appendChild(el('line', { x1: cx, y1: by, x2, y2,
+    stroke: 'var(--glass)', 'stroke-width': 2.0, 'stroke-linecap': 'round' }));
+  g.appendChild(el('ellipse', { cx, cy: by, rx: 2.4, ry: 4.2,
+    fill: 'none', stroke: 'var(--line)', 'stroke-width': 1 }));
+  g.appendChild(el('ellipse', { cx: x2, cy: y2, rx: 2.4, ry: 4.2,
+    fill: 'none', stroke: 'var(--line)', 'stroke-width': 1 }));
+  return g;
+}
+
+/* 滴管：细管 + 胶头（胶头是深色，唯一的有色工具）。同一倾斜方向 */
+function dropper(cx, by){
+  const g = el('g', {});
+  const len = 76, ang = 0.26;
+  const x2 = cx + Math.cos(ang) * len, y2 = by - Math.sin(ang) * len;
+  g.appendChild(el('ellipse', { cx, cy: by + 5, rx: 40, ry: 6,
+    fill: 'rgba(74,87,104,.09)', filter: 'url(#softBlur)' }));
+  g.appendChild(el('line', { x1: cx, y1: by, x2, y2,
+    stroke: 'var(--line)', 'stroke-width': 3.0, 'stroke-linecap': 'round' }));
+  g.appendChild(el('line', { x1: cx + 6, y1: by - 2, x2, y2,
+    stroke: 'var(--glass)', 'stroke-width': 1.4, 'stroke-linecap': 'round' }));
+  /* 胶头 */
+  g.appendChild(el('ellipse', { cx: x2 + Math.cos(ang) * 9, cy: y2 - Math.sin(ang) * 9,
+    rx: 7, ry: 11, transform: `rotate(${-ang * 180 / Math.PI} ${x2 + Math.cos(ang) * 9} ${y2 - Math.sin(ang) * 9})`,
+    fill: '#5F6B78', stroke: 'var(--line)', 'stroke-width': 1.1, opacity: '.85' }));
+  /* 尖嘴 */
+  g.appendChild(el('circle', { cx: cx - 1, cy: by + 1, r: 1.6,
+    fill: 'none', stroke: 'var(--line)', 'stroke-width': 1 }));
+  return g;
+}
+
+/* ══ 后墙试剂架（画在场景里，不是独立面板） ══════
+   用户 2026-10-23：试剂架要融进实验台，别单独做一个面板。
+   架板 = 顶面梯形 + 前沿厚度；瓶子按 38° 斜放，口在椭圆里。 */
+function reagentBottle(cx, by, r, h, capColor, liquidColor){
+  const g = el('g', {});
+  const top = by - h;
+  const ry = r * K;
+  const bodyH = h * 0.68;
+
+  /* 瓶身：圆柱，底椭圆 */
+  g.appendChild(el('path', {
+    d: `M ${cx - r} ${top + bodyH * 0.22} L ${cx - r} ${by} A ${r} ${ry} 0 0 0 ${cx + r} ${by} L ${cx + r} ${top + bodyH * 0.22}`,
+    fill: 'var(--glass)', stroke: 'var(--line)', 'stroke-width': W.struct, 'stroke-linejoin': 'round' }));
+  /* 液体 */
+  g.appendChild(el('path', {
+    d: `M ${cx - r + 1.4} ${by - h * 0.30} L ${cx - r + 1.4} ${by} A ${r - 1.4} ${(r-1.4)*K} 0 0 0 ${cx + r - 1.4} ${by} L ${cx + r - 1.4} ${by - h * 0.30} Z`,
+    fill: liquidColor, opacity: '.55' }));
+  /* 肩部收口 */
+  g.appendChild(el('path', {
+    d: `M ${cx - r} ${top + bodyH * 0.22} Q ${cx - r} ${top + bodyH * 0.04} ${cx - r * 0.42} ${top} L ${cx + r * 0.42} ${top} Q ${cx + r} ${top + bodyH * 0.04} ${cx + r} ${top + bodyH * 0.22}`,
+    fill: 'none', stroke: 'var(--line)', 'stroke-width': W.struct }));
+  /* 标签 */
+  g.appendChild(el('rect', { x: cx - r * 0.66, y: by - h * 0.44, width: r * 1.32, height: h * 0.2,
+    rx: 1, fill: 'rgba(255,255,255,.78)', stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+  /* 瓶盖：深色，顶面椭圆（俯视才看得见盖顶） */
+  const nr = r * 0.42;
+  g.appendChild(el('rect', { x: cx - nr, y: top - h * 0.13, width: nr * 2, height: h * 0.13,
+    fill: capColor, stroke: 'var(--line)', 'stroke-width': W.fine }));
+  g.appendChild(el('ellipse', { cx, cy: top - h * 0.13, rx: nr, ry: nr * K,
+    fill: capColor, stroke: 'var(--line)', 'stroke-width': W.fine }));
+  return g;
+}
+
+function reagentShelf(x0, x1, y){
+  const g = el('g', {});
+  const d = 26;
+  /* 架板顶面 */
+  g.appendChild(el('path', {
+    d: `M ${x0} ${y - d} L ${x1} ${y - d} L ${x1 + 6} ${y} L ${x0 - 6} ${y} Z`,
+    fill: 'rgba(255,253,247,.62)', stroke: 'var(--line-soft)', 'stroke-width': W.struct }));
+  /* 架板前沿厚度 */
+  g.appendChild(el('path', {
+    d: `M ${x0 - 6} ${y} L ${x1 + 6} ${y} L ${x1 + 5} ${y + 7} L ${x0 - 5} ${y + 7} Z`,
+    fill: 'rgba(232,228,216,.75)', stroke: 'var(--line-soft)', 'stroke-width': W.fine }));
+  return g;
+}
+
+/* ══ 台面：基本平铺整个页面 ═══════════════════════
+   不再做「梯形往里收」那种纵深 —— 桌面就是铺满画面的一块板，
+   透视感由器皿的斜放提供，不由台面边缘提供。 */
+function bench(){
+  const g = el('g', {});
+  g.appendChild(el('path', { d: 'M 14 0 L 1186 0 L 1200 620 L 0 620 Z', fill: 'url(#benchTop)' }));
+  /* 磨砂纹理：铺满 */
+  for (let y = 6; y < 618; y += 7){
+    g.appendChild(el('line', { x1: 0, y1: y, x2: 1200, y2: y,
+      stroke: '#4A5768', 'stroke-width': '.6', opacity: '.026' }));
+  }
+  /* 极淡的边：只在最外侧留 1px，暗示这是一块板 */
+  g.appendChild(el('line', { x1: 0, y1: 0, x2: 1200, y2: 0, stroke: '#4A5768', 'stroke-width': '1', opacity: '.10' }));
+  return g;
+}
+svg.appendChild(bench());
+
+/* 后墙试剂架：左后方（用户 2026-10-23：试剂这类要退到后面去） */
+svg.appendChild(reagentShelf(40, 320, 200));
+const RACK = [
+  [82, '#F1F2EE', '#8C9AA8'],
+  [140, '#E6E3DA', '#8C9AA8'],
+  [198, '#D9C64A', '#7F9AAE'],
+  [256, '#C8622F', '#B4703E'],
+];
+for (const [bx, liquid, cap] of RACK){
+  svg.appendChild(reagentBottle(bx, 200, 16, 80, cap, liquid));
+}
+
+/* ══ 台面构图：器皿退后排，工具收右下角 ══
+   依据：
+   · Contiguity Principle（Clark & Mayer 2003，PhET 设计研究引用）——文字必须紧挨它描述的物体；
+   · PhET「限制工具数量并成小组排列」——工具成组，不摊成一条线；
+   · ChemCollective——每件器材都带名字标签。
+   分区：后墙试剂架（左后） / 后排器皿 x400..1150 / 右下角工具托盘。 */
+const SLOTS = [490, 678, 866, 1054];
+const ROW = 380;
+const TAG_Y = ROW + 40;
+
+function nameTag(cx, name, detail, y = TAG_Y){
+  const g = el('g', {});
+  const t = el('text', { x: cx, y, 'text-anchor': 'middle', 'font-size': '14',
+    'font-weight': '500', fill: 'var(--ink)', 'font-family': 'inherit' });
+  t.textContent = name;
+  g.appendChild(t);
+  if (detail){
+    const d = el('text', { x: cx, y: y + 16, 'text-anchor': 'middle', 'font-size': '10.5',
+      fill: 'var(--ink-2)', opacity: '.7', 'font-family': 'ui-monospace, Menlo, monospace' });
+    d.textContent = detail;
+    g.appendChild(d);
+  }
+  return g;
+}
+
+/* 槽 1 天平（面板比机身矮 30，by 抬到 ROW-30 才对得齐落地线） */
+svg.appendChild(balance({ cx: SLOTS[0], by: ROW - 30, w: 186, scale: 0.96 }));
+svg.appendChild(nameTag(SLOTS[0], '分析天平', '0.0001 g'));
+
+/* 槽 2 烧杯（250 mL 低型 φ70 × h95，比天平矮一截） */
+svg.appendChild(beaker({ cx: SLOTS[1], by: ROW, r: 44, h: 82, scale: 1.0, level: 0.46, color: '#D98324' }));
+svg.appendChild(nameTag(SLOTS[1], '烧杯', 'NaOH 溶液'));
+
+/* 槽 3 试管架 + 两支试管 */
+svg.appendChild(tubeRack({ cx: SLOTS[2], by: ROW, w: 116, scale: 0.9 }));
+svg.appendChild(testTube({ cx: SLOTS[2] - 24, by: ROW, r: 13, h: 122, scale: 0.9, level: 0.42, color: '#6E9A3A' }));
+svg.appendChild(testTube({ cx: SLOTS[2] + 22, by: ROW, r: 13, h: 122, scale: 0.9, level: 0.24, color: '#D98324' }));
+svg.appendChild(nameTag(SLOTS[2], '试管', '稀盐酸 / KSCN'));
+
+/* 槽 4 容量瓶（100 mL 细颈长身） */
+svg.appendChild(flask({ cx: SLOTS[3], by: ROW, r: 34, neckH: 84, scale: 1.0, level: 0.54, color: '#D9A81C' }));
+svg.appendChild(nameTag(SLOTS[3], '容量瓶', '100 mL'));
+
+/* 工具托盘：右下角 2×2，每件下面写名字（用户 2026-10-23 要求工具也标名） */
+const TRAY = { x: 848, y: 462, w: 302, h: 152 };
+svg.appendChild(el('rect', { x: TRAY.x, y: TRAY.y, width: TRAY.w, height: TRAY.h,
+  rx: 8, fill: 'rgba(255,253,247,.55)', stroke: 'var(--line-soft)', 'stroke-width': 1 }));
+const TOOLS = [
+  [washBottle, 924, 512, '洗瓶'],
+  [brush,      1074, 512, '软毛刷'],
+  [glassRod,   924, 588, '玻璃棒'],
+  [dropper,    1074, 588, '滴管'],
+];
+for (const [fn, x, y, name] of TOOLS){
+  const g = fn(x, y);
+  g.setAttribute('transform', `translate(${x} ${y}) scale(0.62) translate(${-x} ${-y})`);
+  svg.appendChild(g);
+  const t = el('text', { x, y: y + 20, 'text-anchor': 'middle', 'font-size': '11',
+    fill: 'var(--ink-2)', opacity: '.8' });
+  t.textContent = name;
+  svg.appendChild(t);
+}
+
+</script>
+</body>
+</html>
