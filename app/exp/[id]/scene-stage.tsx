@@ -23,11 +23,12 @@ import styles from "./workbench.module.css";
 
 /**
  * 台面器皿白名单（2026-10-21 验收口径）：
- * - exp01 称量配制：天平（bench-scene 内固定）+ 烧杯 + 容量瓶 + 两支量器位
+ * - exp01 称量配制：天平（bench-scene 内固定）+ 烧杯 + 容量瓶 + 锥形瓶 + 两支量器位
+ *   （锥形瓶 2026-10-23 加回来：第 6 步「移取 25.00 mL 放入锥形瓶」原来台上没有这个器皿）
  * - exp03 醋酸电离常数：容量瓶 + 烧杯（水浴）+ 锥形瓶 + pH 计（bench-scene 内固定）
  * 不传 = 全量器皿（exp02/04/08 保持原样，不动它们的既有验收）。
  */
-const EXP01_BENCH_VESSELS = ["beaker", "volumetric", "tube-a", "tube-b"];
+const EXP01_BENCH_VESSELS = ["beaker", "volumetric", "flask", "tube-a", "tube-b"];
 /** exp03：flask（锥形瓶）在 SVG 里 x≈120，而 viewBox 从 370 起 → 中心落在画布外被裁（红队 2026-10-22 实测 cx=119）。
  *  这两步用不到锥形瓶，直接不给它。 */
 const EXP03_BENCH_VESSELS = ["beaker", "volumetric", "tube-a", "tube-b"];

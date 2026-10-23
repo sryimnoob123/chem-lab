@@ -28,6 +28,24 @@ describe("exp01 场景资产", () => {
     }
   });
 
+  it("exp01 台面五只器皿互不重叠、不钻进右侧浮层面板区", () => {
+    const ids = ["beaker", "volumetric", "flask", "tube-a", "tube-b"];
+    const row = ids
+      .map((id) => getSceneVessel(id))
+      .filter((v): v is NonNullable<ReturnType<typeof getSceneVessel>> => Boolean(v))
+      .sort((a, b) => a.x - b.x);
+    expect(row).toHaveLength(ids.length);
+    /* 右侧「任务 / 错误演示」浮层常驻压在台面上（1440×900 实测换算后左沿 ≈1299 单位），
+       器皿落进去等于被面板吃掉一半；锥形瓶 2026-10-23 就是照这条线选的位。 */
+    const PANEL_LEFT = 1290;
+    for (const v of row) expect(v.x + v.w, `${v.id} 右沿`).toBeLessThanOrEqual(PANEL_LEFT);
+    for (let i = 1; i < row.length; i += 1) {
+      expect(row[i].x, `${row[i - 1].id} 与 ${row[i].id} 重叠`).toBeGreaterThanOrEqual(
+        row[i - 1].x + row[i - 1].w,
+      );
+    }
+  });
+
   it("exp01 三个货架条目存在，demo-id 按规则命名", () => {
     const expected = {
       "na2co3-solid": "demo-scene-reagent-na2co3-solid",
