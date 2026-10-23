@@ -32,3 +32,11 @@ tsc / eslint（`node node_modules/eslint/bin/eslint.js`，22 warning 全为历�
 A：右侧安全边（托盘宽 / rowRightWide / 最右器皿统一由面板宽推）＋ 1152 宽下试剂架压天平。
 B：第 1 步判据去掉「认领单签字」；洗涤槽缺落点提示；第 6 步「放入锥形瓶」但场景无锥形瓶。
 C：无色液体加弯月面线、器皿接地影、字号不随视口漂。
+
+## 2026-10-23 第 1 轮（自动接力）· 已收 A0–A3
+
+- **A0 右栏安全边**：`use-safe-right.ts` 量右栏左沿 → `fitTray` 收托盘、`shiftInsideRight` 器皿整行左移；`layoutDx` 同时喂 `ActionLayer` / `BenchPour`，动作锚点不偏。实测 1152 托盘 +34→-12px、1024 锥形瓶 +28→-15px，1440 完全不动。
+- **A1/A2/A3 一并打勾**：A1 已有 `e2e/drag-scale.spec.ts` 守卫；A2 有 `balance-hit.spec.ts` 3×3 采样；A3 七步截图在新构建上重跑 7/7 + 9 张。
+- 门禁：tsc 0 / eslint 0 error 22 warning / vitest 644 passed / e2e 42 passed / build ✓。
+- 再量一次就跑 `node scripts/bench-safe-right-measure.mjs`（四个视口「改前→改后」一张表）。
+- 下一轮按计划从 **B1 玻璃器皿五层** 起。

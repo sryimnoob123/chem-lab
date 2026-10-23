@@ -727,3 +727,29 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
   dev 3000 用 `localhost` 而不是 `127.0.0.1`（allowedDevOrigins 会拦 `/_next` 资源）。
 - 本轮仍与 `t_d9fc1235`（自动第 1 轮）并行在同一棵树里：工作树里 `bench-scene / bench-pour / action-layer /
   geometry / bench-layout / workbench / use-safe-right / bench-safe-right.spec` 是**他们的**未提交改动，我只提交自己的 3 个文件。
+
+## 2026-10-23 第 1 轮（自动接力）· A0 右栏安全边
+
+### 做了什么
+| 问题 | 根因 | 改法 | 证据（同一张页面上 A/B 实测） |
+|---|---|---|---|
+| 窄视口下工具托盘右端钻到任务卡底下 | 右栏是 `position:absolute` 的 HTML 卡（固定 px、右对齐），台面是等比缩放 SVG，两者无布局关系；1310 宽以下托盘 640..1290 会插进卡片 | 新增 `components/exp/scene/use-safe-right.ts`：量右栏左沿并换算成 viewBox 单位（`data-safe-right` 暴露给 e2e）；`fitTray()` 按它收托盘宽，最窄 480 单位 | 托盘越界（px，负=净空）：1280 **+2 → -13**、1152 **+34 → -12**、1024 **+58 → -11**，1440 不变 -28 |
+| 最右那台器皿（锥形瓶）被卡片压住 | 器皿坐标来自 `lib/scene/palette.ts` 常量，不随容器宽变 | `shiftInsideRight()` 把整行按需左移（只动 x、间距不动，够宽就 dx=0）；`bench-scene` 把 `layoutDx` 同时传给 `ActionLayer` / `BenchPour`，动作与倾倒的锚点跟着走，不会"水柱浇在旁边" | 最右器皿越界：1024 **+28 → -15**、1152 **0 → -17**、1280/1440 不动（-35 / -70）；`e2e/bench-safe-right.spec.ts` 1024 宽拖进洗槽后水流中线仍落在瓶身内 |
+
+### 门禁
+- `tsc --noEmit` 0 错；`eslint` **0 error / 22 warning**（历史项）
+- `vitest` 47 files / **644 passed**（新增 4 条 `shiftInsideRight` + 5 条 `fitTray`）
+- `npm run build` ✓；`scripts/restart-prod.ps1` 重启后 3001 返回 200（`.next/static` 已同步）
+- `playwright test`（`E2E_BASE_URL=http://localhost:3001`）**42 passed**（含 `bench-safe-right` 4 视口 + 锚点跟随 1 条，chromium/mobile 各一轮）
+- `scripts/exp01-seven-steps.mjs`：七步 **7/7 过** + 9 张图（新构建上重跑，A3 证据）
+- 截图：`%TEMP%\chemlab-shots\bench-latest.png`（1440×900，已覆盖）、`%TEMP%\chemlab-shots\safe-right\{1024,1152,1280,1440}.png`
+
+### 工具（下次直接用）
+- `node scripts/bench-safe-right-measure.mjs`：一次打出四个视口的「改前→改后」越界像素，`--shots=false` 可关截图。
+  改前怎么来的：不是另建旧构建，而是把**这一处改动施加的位移撤回去**（托盘回到满宽 650、器皿右沿加回 `data-layout-dx`）。
+
+### 踩到的坑
+- `taskkill /F /PID` 在 bash 里会被 MSYS 吃掉斜杠（报 `无效参数/选项 - '//F'`）→ 用 `powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 3001 ... | Stop-Process -Force"`。
+- `scripts/restart-prod.ps1` 在 bash 里跑会卡在末尾的资源探测（`Invoke-WebRequest` 拉图片），**别等它返回**：起在后台，然后 `curl` 轮询 3001。
+- 量台面坐标系别用 `document.querySelector('svg[viewBox]')`：页面里图标 svg 也带 viewBox，会取到第一个图标，换算全错 → 取 `[data-safe-right] svg`。
+- 器皿"视觉右沿"比 palette 的 `w` 宽 ~10 单位（描边/接地影往外探）→ `shiftInsideRight` 的 pad 由 6 上调到 26，否则 1152 宽收完只剩 2px，太贴。
