@@ -18,7 +18,7 @@ fs.mkdirSync(path.dirname(out), { recursive: true });
 
 const browser = await chromium.launch();
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 })).newPage();
-await page.goto(BASE + "/exp/exp01?force=1", { waitUntil: "networkidle" });
+await page.goto(BASE + "/exp/exp01?force=1", { waitUntil: "domcontentloaded" });
 // 等水合 + 场景画完（天平/器皿组已经画出来，且交卷按钮被 React 接管）
 await page.waitForFunction(
   () =>
