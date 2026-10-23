@@ -17,8 +17,22 @@ const S = {
   body: { fontSize: "var(--type-body)", lineHeight: 1.65, color: "var(--ink-2)", margin: 0 },
 };
 
-/** BOPPPS 后测（P · Post-assessment）：报告页顶部三题，提交后给分与逐题解析 */
-export function BopbpsPostLab({ expId }: { expId: string }) {
+/** BOPPPS 后测（P · Post-assessment）：交卷后的后测一屏，提交后给分与逐题解析。
+ *  - `onSubmit`：交卷后的独立后测页用它拿到分数并放出门到报告页（app/exp/[id]/postlab）；
+ *  - `readOnly`：报告页里只做「后测回顾」—— 列出答案与解析，不再提供作答按钮
+ *    （用户 2026-10-23：后测和评分不能挤在同一屏，报告页不再当考场）。 */
+export function BopbpsPostLab({
+  expId,
+  onSubmit,
+  readOnly = false,
+  postScore = null,
+}: {
+  expId: string;
+  onSubmit?: (score: number) => void;
+  readOnly?: boolean;
+  /** 回顾时显示那次后测的成绩（从后测页带过来，报告页不再重算） */
+  postScore?: number | null;
+}) {
   const c = useMemo(() => getCurriculum(expId), [expId]);
   const [manualPicked, setManualPicked] = useState<Record<string, string>>({});
   const [manualDone, setManualDone] = useState(false);
@@ -35,7 +49,7 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
     return all;
   }, [autoDemo, c]);
   const picked = autoPicked ?? manualPicked;
-  const done = autoPicked !== null || manualDone;
+  const done = readOnly || autoPicked !== null || manualDone;
 
   if (!c || !c.post.length) return null;
 
@@ -45,9 +59,9 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
   return (
     <section style={{ ...S.card, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-        <div style={S.label}>P · 后测（{c.post.length} 题）</div>
+        <div style={S.label}>{readOnly ? `P · 后测回顾（${c.post.length} 题）` : `P · 后测（${c.post.length} 题）`}</div>
         <div className="mono" style={{ fontSize: "var(--type-meta)", color: done ? (score >= 67 ? "#1a7f4b" : "#9a6a12") : "var(--ink-2)" }}>
-          {done ? `${score} / 100` : `${Object.keys(picked).length}/${c.post.length}`}
+          {readOnly ? (postScore !== null ? `${postScore} / 100` : "已作答") : done ? `${score} / 100` : `${Object.keys(picked).length}/${c.post.length}`}
         </div>
       </div>
 
@@ -119,7 +133,7 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
       })}
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 16, flexWrap: "wrap" }}>
-        {done ? (
+        {readOnly ? null : done ? (
           <>
             <span style={{ fontSize: "var(--type-meta)", color: "var(--ink-2)" }}>
               后测完成 · 得分 {score} / 100
@@ -143,7 +157,10 @@ export function BopbpsPostLab({ expId }: { expId: string }) {
               type="button"
               data-demo-id="bopbps-post-submit"
               disabled={!answered}
-              onClick={() => setManualDone(true)}
+              onClick={() => {
+                setManualDone(true);
+                onSubmit?.(score);
+              }}
               className="btn btn--primary"
               style={{ minHeight: 44, padding: "0 18px" }}
             >

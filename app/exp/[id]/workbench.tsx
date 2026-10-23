@@ -9,6 +9,7 @@ import { getSceneVessel, SCENE_VESSELS } from "@/lib/scene/palette";
 import { getSceneReagent } from "@/lib/scene/reagents";
 import type { Action, FxKey as EngineFxKey, IncidentLevel } from "@/lib/engine.types";
 import { FxByKey } from "@/components/exp/scene/fx";
+import { AiTutor, TaskBoardMini } from "./rail-mini";
 import { ScoreOdometer, StreakPill } from "@/components/exp/feedback";
 import { TrapPanel } from "@/components/exp/guide/trap-panel";
 import { ResultBar } from "@/components/exp/guide/ResultBar";
@@ -107,6 +108,8 @@ const FX_MAP: Record<EngineFxKey, SceneFxKey> = {
 
 /** 只在覆盖层上成立的事故：仪器损坏（天平/仪器本体）与重金属废液（流进洗涤槽）。 */
 const OVERLAY_FX: ReadonlySet<SceneFxKey> = new Set<SceneFxKey>(["deviceAccident", "heavyMetal"]);
+/** 事故第二拍（大号 SVG 动画）晚于器皿上的那一下多少毫秒：先看见器皿坏，再看见整屏后果。 */
+const BIG_FX_DELAY = 340;
 
 const PARAM_NAMES: Record<string, string> = {
   volume: "体积",
@@ -254,6 +257,7 @@ const TOOL_VIOLATION: Readonly<Record<string, Readonly<Record<string, string>>>>
 const ACTION_CAPTION: Readonly<Record<SceneAction["kind"], string>> = {
   rinse: "自来水冲 → 刷洗 → 倒水 → 沥干…",
   dilute: "沿瓶壁加水，接近刻度改用滴管…",
+  drain: "把水倒掉，内壁挂水珠、沥干…",
   stir: "玻璃棒搅拌，固体逐渐溶解…",
   transfer: "液体转移中…",
   drops: "逐滴加入，盯住凹液面…",
@@ -836,6 +840,28 @@ export function Workbench({
   /** E2：违规/事故都出事故条；级别由 level 决定视觉（L1 提醒 / L2 扣分 / L3 严重 / L4 终止） */
   const incidentEvent = ui.event?.level ? ui.event : null;
 
+  /**
+   * 事故两拍（用户 2026-10-23）：先在器皿上炸（actions/incident.ts 演的那段），
+   * 再放**铺满舞台的大号 SVG 动画 + 文字徽标**。原来器皿上的事故只有场景里那一下，
+   * 看着像"点了一下没出事"；这里延迟 340ms 叠第二拍，两拍分明、互不抢。
+   */
+  const [bigFx, setBigFx] = useState<{ key: string; fx: SceneFxKey; level: IncidentLevel } | null>(null);
+  const bigFxSeq = ui.event?.fxSeq ?? 0;
+  const bigFxIsIncident = Boolean(ui.event?.incident);
+  const bigFxRaw = ui.event?.fx ?? null;
+  const bigFxLevel = ui.event?.level ?? null;
+  useEffect(() => {
+    if (!bigFxIsIncident || !bigFxRaw || !bigFxLevel) return;
+    const key = FX_MAP[bigFxRaw];
+    // 仪器损坏 / 重金属污染本身就是覆盖层动画，不再叠第二遍
+    if (OVERLAY_FX.has(key)) return;
+    if (bigFxLevel !== "L2" && bigFxLevel !== "L3" && bigFxLevel !== "L4") return;
+    const timer = window.setTimeout(() => {
+      setBigFx({ key: `${bigFxSeq}-${key}`, fx: key, level: bigFxLevel });
+    }, BIG_FX_DELAY);
+    return () => window.clearTimeout(timer);
+  }, [bigFxSeq, bigFxIsIncident, bigFxRaw, bigFxLevel]);
+
   const choose = useCallback(
     (choiceId: string, inputMode?: InputMode) => {
       const resolved = inputMode ?? mode;
@@ -1068,7 +1094,10 @@ export function Workbench({
       }
       router.push(
         runId && finishedOk
-          ? `/exp/${expId}/report?runId=${runId}${mode === "auto" ? "&auto=1" : ""}`
+          ? mode === "auto"
+            ? `/exp/${expId}/report?runId=${runId}&auto=1`
+            : // 用户 2026-10-23：交卷先进后测，后测答完再进报告看评分
+              `/exp/${expId}/postlab?runId=${runId}`
           : `/exp/${expId}/report${mode === "auto" ? "?auto=1" : ""}`,
       );
     }
@@ -1503,7 +1532,7 @@ export function Workbench({
             onDropToNowhere={(vesselId) => {
               // 器皿已弹回原位；告诉学生能往哪拖，别以为操作丢了
               const label = getSceneVessel(vesselId)?.label ?? "器皿";
-              setSceneCaption(`${label}已放回原位：在台面上松手＝换位置，拖进洗涤槽＝洗`);
+              setSceneCaption(`${label}已放回原位：拖进洗涤槽才能洗`);
             }}
             onSinkUse={() => {
               // 洗槽 = 水龙头：先拿起来，再点要洗的器皿
@@ -1557,6 +1586,17 @@ export function Workbench({
             }}
           >
             {fx}
+            {/* 事故第二拍：铺满舞台的大号 SVG 动画 + 文字徽标（器皿上那一下已经演完） */}
+            {bigFx ? (
+              <FxByKey
+                key={`big-${bigFx.key}`}
+                fx={bigFx.fx}
+                level={bigFx.level}
+                active
+                scale="full"
+                onDone={() => setBigFx(null)}
+              />
+            ) : null}
           </SceneStage>
           {/* E2 事故（L3/L4）：事故条 + 三行处置，贴在舞台上沿，不遮实验台中心 */}
           {incidentEvent ? (
@@ -1590,47 +1630,7 @@ export function Workbench({
               demoId="demo-trap-incident"
             />
           ) : null}
-          {/*
-            右上角「错误演示」：只是**触发器**。
-            器皿上的事故在台面 SVG 里演（同一套器皿 / 液体 / token），说明等炸完才出；
-            不在器皿上的事故（仪器损坏 / 重金属）仍用覆盖层特效。
-          */}
-          <TrapPanel
-            traps={step.choices
-              .filter((item) => item.role === "trap")
-              .map((item) => ({ choiceId: item.choiceId, label: item.label, level: item.hazard?.level }))}
-            disabled={ui.exp.done || finishing}
-            onPick={(choiceId) => {
-              // 演示：只演画面，不 dispatch、不扣分、不重做本步
-              const choice = step.choices.find((item) => item.choiceId === choiceId);
-              const hazard = choice?.hazard;
-              if (!choice || !hazard) return;
-              ensureAudio();
-              playSound("error-system");
-              const note: IncidentNote = {
-                seq: Date.now(),
-                level: hazard.level,
-                deduction: 0, // 演示不扣分
-                title: hazard.feedback.title,
-                why: hazard.feedback.why ?? "这一步不该这么做。",
-                correct: hazard.feedback.correct ?? "按场景里亮起的目标再来一遍。",
-              };
-              const plan = planIncident({
-                choice,
-                vessels: SCENE_VESSELS,
-                cueVesselId: cueVesselRef.current ?? cueVesselId,
-                fromVesselId: lastVesselRef.current,
-              });
-              if (plan) {
-                void runIncident(plan, { note });
-                return;
-              }
-              // 没有可演的台面动画：说明照出，仪器/废液类事故补上覆盖层特效
-              const overlay = hazard.fx ? FX_MAP[hazard.fx] : null;
-              setTrapFx(overlay && OVERLAY_FX.has(overlay) ? { seq: Date.now(), level: hazard.level, fx: overlay } : null);
-              setIncidentNote(note);
-            }}
-          />
+
 
         </section>
 
@@ -1704,6 +1704,68 @@ export function Workbench({
           </div>
           ) : null}
 
+          {/* 迷你任务看板（学生用）：做到第几步 + 这一步叫什么 + 判据一句话，任务点不展开 */}
+          <TaskBoardMini
+            index={ui.exp.stepIndex}
+            total={total}
+            title={step.title}
+            criterion={step.judge?.criterion}
+          />
+
+          {/*
+            右上角「错误演示」：只是**触发器**。
+            器皿上的事故在台面 SVG 里演（同一套器皿 / 液体 / token），说明等炸完才出；
+            不在器皿上的事故（仪器损坏 / 重金属）仍用覆盖层特效。
+          */}
+          <TrapPanel
+            traps={step.choices
+              .filter((item) => item.role === "trap")
+              .map((item) => ({ choiceId: item.choiceId, label: item.label, level: item.hazard?.level }))}
+            disabled={ui.exp.done || finishing}
+            onPick={(choiceId) => {
+              // 演示：只演画面，不 dispatch、不扣分、不重做本步
+              const choice = step.choices.find((item) => item.choiceId === choiceId);
+              const hazard = choice?.hazard;
+              if (!choice || !hazard) return;
+              ensureAudio();
+              playSound("error-system");
+              const note: IncidentNote = {
+                seq: Date.now(),
+                level: hazard.level,
+                deduction: 0, // 演示不扣分
+                title: hazard.feedback.title,
+                why: hazard.feedback.why ?? "这一步不该这么做。",
+                correct: hazard.feedback.correct ?? "按场景里亮起的目标再来一遍。",
+              };
+              const plan = planIncident({
+                choice,
+                vessels: SCENE_VESSELS,
+                cueVesselId: cueVesselRef.current ?? cueVesselId,
+                fromVesselId: lastVesselRef.current,
+              });
+              if (plan) {
+                void runIncident(plan, { note });
+                // 第二拍：器皿上那一下演完，再放大号 SVG 动画 + 文字（错误演示同样适用）
+                const bigKey = hazard.fx ? FX_MAP[hazard.fx] : null;
+                if (
+                  bigKey &&
+                  !OVERLAY_FX.has(bigKey) &&
+                  (hazard.level === "L2" || hazard.level === "L3" || hazard.level === "L4")
+                ) {
+                  const seq = note.seq;
+                  window.setTimeout(() => {
+                    setBigFx({ key: `trap-${seq}`, fx: bigKey, level: hazard.level });
+                  }, BIG_FX_DELAY);
+                }
+                return;
+              }
+              // 没有可演的台面动画：说明照出，仪器/废液类事故补上覆盖层特效
+              const overlay = hazard.fx ? FX_MAP[hazard.fx] : null;
+              setTrapFx(overlay && OVERLAY_FX.has(overlay) ? { seq: Date.now(), level: hazard.level, fx: overlay } : null);
+              setIncidentNote(note);
+            }}
+          />
+
           {/*
             建议动作卡已删除（用户 2026-10-22）：
             「点这张卡即完成」等于答题，不是做实验。动作改为在场景里用工具/器皿完成，
@@ -1765,6 +1827,8 @@ export function Workbench({
             </section>
           ) : null}
 
+          {/* 右下角 AI 助教：前端 + 对话界面已就位，大模型留到扣子部署时接 */}
+          <AiTutor stepTitle={step.title} />
         </aside>
       </div>
 

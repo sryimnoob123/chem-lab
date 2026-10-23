@@ -12,11 +12,14 @@ function render(node: ReturnType<typeof createElement>): string {
 }
 
 describe("玻璃器皿 2.5D（drag-pour 画法，SSR 冒烟）", () => {
-  it("玻璃主体：淡墨轮廓恒定线宽 + 瓶口椭圆 + 接地阴影", () => {
+  it("玻璃主体：实心暖白填充 + 双层描边 + 瓶口椭圆 + 接地阴影", () => {
     const html = render(createElement(GlassVessel, { vessel: beaker, contents: [] }));
     expect(html).toContain('data-vessel-art="beaker"');
     expect(html).toContain("translate(404 205) scale(0.72)");
-    expect(html).toContain("var(--canvas-glass-line)");
+    // 2026-10-23 实心玻璃：填充走 .glassBody，描边拆成 .glassEdgeOuter(2.6) / .glassEdgeInner(1.4)
+    expect(html).toContain("glassBody");
+    expect(html).toContain("glassEdgeOuter");
+    expect(html).toContain("glassEdgeInner");
     expect(html).toContain('vector-effect="non-scaling-stroke"');
     expect(html).toContain('rx="54"');
     expect(html).toContain('ry="7"');
@@ -56,7 +59,7 @@ describe("玻璃器皿 2.5D（drag-pour 画法，SSR 冒烟）", () => {
   it("只有固体时铺一层器底粉末，不画液面", () => {
     const html = render(createElement(GlassVessel, { vessel: beaker, contents: ["na2co3"], level: 0 }));
     expect(html).not.toContain("data-liquid-rect");
-    expect(html.toUpperCase()).toContain("#E7E2D6");
+    expect(html.toUpperCase()).toContain("#EDEAE1");
   });
 
   it("白色沉淀被压成暖灰白，不会在白玻璃上消失", () => {
@@ -102,7 +105,7 @@ describe("内容物判定（纯函数）", () => {
   });
 
   it("固体取第一瓶固体的颜色；白色固体给暖灰白", () => {
-    expect(solidColorOf(["na2co3"])).toBe("#E7E2D6");
+    expect(solidColorOf(["na2co3"])).toBe("#EDEAE1");
     expect(solidColorOf(["water"])).toBeNull();
   });
 });

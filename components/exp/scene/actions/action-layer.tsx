@@ -21,12 +21,15 @@ import { buildDrops, buildStir } from "./stir";
 import { buildTransfer } from "./transfer";
 import { buildHeat, buildObserve, buildRead, buildWeigh } from "./instrument";
 import { buildIncident, type IncidentOp } from "./incident";
+import { buildDrain } from "./drain";
 import type { IncidentFx } from "./incident-art";
 import type { IncidentPlan } from "./incident-plan";
 
 export type SceneAction =
   | { kind: "rinse"; vesselId: string; tool?: string | null }
   | { kind: "dilute"; vesselId: string }
+  /** 排液：把器皿里的水倒掉/吸走（rinse 之后自动接一拍，水不许凭空消失） */
+  | { kind: "drain"; vesselId: string }
   | { kind: "stir"; vesselId: string }
   | { kind: "transfer"; from: string; to: string }
   | { kind: "drops"; vesselId: string }
@@ -111,6 +114,10 @@ export function ActionLayer({ action, offsets, baseLevelOf, onCue, onDone }: Pro
       case "dilute": {
         const a = anchorOf(action.vesselId, offsets[action.vesselId]);
         return a ? buildRinse(a, { variant: "dilute", clipId: `act-${uid}-a` }) : null;
+      }
+      case "drain": {
+        const a = anchorOf(action.vesselId, offsets[action.vesselId]);
+        return a ? buildDrain(a, { clipId: `act-${uid}-d` }) : null;
       }
       case "stir": {
         const a = anchorOf(action.vesselId, offsets[action.vesselId]);

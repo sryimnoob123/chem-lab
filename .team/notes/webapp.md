@@ -405,3 +405,161 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
 下一步
 - 真扣子豆包未连（无凭据）；拿到 `COZE_API_TOKEN`+`COZE_BOT_ID` 后按 README 的命令起一次真链路。
 - `next-env.d.ts` 在 dev/build 之间会来回改（`.next/dev/types` ↔ `.next/types`），别当业务改动提交。
+
+---
+
+# 2026-10-23 09:1x · 器皿名称固定 + 松手回原位
+
+## 用户口径
+「文字跟着器具一起走；文字应该待在原地；物品互动完之后要回到原来的位置，不能停在放下的地方。」
+
+## 改了什么
+- `components/exp/scene/bench-scene.tsx`
+  - 器皿名称 `<text>` 从「器皿 `<g>`（带 transform）内部」搬到器皿之后单独一层
+    `<g>` —— 固定坐标（`LABEL_POSITION` 不变），拖动/回位时字不动。
+    新增 `data-demo-id="demo-scene-vessel-label-<id>"` 供 e2e 定位。
+  - 抽出 `sendHome(ids?)`：把偏移按 400ms 缓动滑回 0 并清 offsets（原来只在 layoutKey 变化时整场归位）。
+  - `handleVesselDrop`：台面松手 = 回弹回原位（不再「换位置」）；洗涤槽松手仍先留在槽口播
+    rinse（`WASH_MS = 2520`，来源 `actions/rinse.tsx` 的 `ms`），播完 +300ms 单台滑回原位。
+- `app/exp/[id]/workbench.tsx`：`onDropToNowhere` 文案去掉「在台面上松手＝换位置」。
+
+## 证据（CDP 真实鼠标，localhost:3000 /exp/exp01?force=1）
+- 拖烧杯：拖动中 `transform: translate(-26px, 71.9px)`，名称位移 0.06px（视觉 0）；松手后 `translate(0px, 0px)`。
+- 容量瓶拖进洗涤槽：落点 `translate(-257.7px, 200px)` → 洗动画播完 3.4s 后回 `translate(0px, 0px)`，步骤推进到「第 02 步」，`window.__errs` 空。
+- `npx tsc --noEmit` 干净；`npx eslint` 0 error（workbench 10 条均为既有 warning）；
+  `npx vitest run components/exp/scene` 5 files / 43 tests 全过。
+
+## 注意
+- 未提交（等钱家良发话）。
+- 名称层现在画在器皿之后 = 文字压在玻璃上层；器皿拖到别处时名字留在原位置（预期行为）。
+
+---
+
+# 2026-10-23 09:4x · 实心玻璃 / 迷你任务看板 + 助教 / 事故两拍 / 流程拆分
+
+## 一、器皿改实心玻璃（用户口径）
+`components/exp/scene/vessels/glass-vessel.tsx` + `vessel.module.css`：
+- 玻璃底：`var(--canvas-glass-fill)` → `rgba(255,253,247,.16)`（暖白 16%，纸白台面上有实体感）。
+- 液体：改**实色**（`mixLiquids` 的结果，rect `fill-opacity .9`，液面椭圆 1.0），不再掺玻璃色。
+- 描边拆双层：外 `.glassEdgeOuter` 2.6px `rgba(74,87,104,.45)`，内 `.glassEdgeInner` 1.4px `rgba(74,87,104,.13)`；瓶口同色 1.6px。
+- 白色固体/沉淀统一 `#EDEAE1`（`SOLID_FALLBACK`）。
+- `render.test.ts` 跟着改（断言类名 + `#EDEAE1`）。20 tests 全过。
+- ⚠️ 量筒（cylinder）没有场景画法（只存在于拼接实验素材块与误差表），本轮无对象可改。
+
+## 二、操作台右侧：迷你任务看板 + AI 助教（新文件 `app/exp/[id]/rail-mini.tsx` + `.module.css`）
+- `TaskBoardMini`：接在「实时读数 / 允许误差」卡下面。只报 第几步/总步数 + 本步标题 + 判据一句，**不列子任务**。
+- `AiTutor`：右下角**圆形机器人图标**（无文字，aria 仍说「呼叫助教」），**可拖**（>4px 算拖、否则点击）；
+  点开是**右侧 400px 抽屉 + 遮罩**（参照用户 2026-10-20 项目的 TutorPanel）：头部图标+「助教」+在线呼吸点+状态，
+  消息流带头像气泡、Enter 发送、发送中转圈；portal 到 body（避免祖先 transform 把 fixed 拽进文档流）。
+  没有 LLM：`send()` 里 380ms 假延迟 + 固定回复「还没接上大模型…」。接扣子时只换这一段。
+- 实测：图标按钮 54×54、innerText 为空；拖 (-80,-64) 后位置精确、不打开；单击开抽屉（400×566 + 遮罩）；发消息有来回。
+
+## 三、事故两拍（先坏器皿，再放大动画 + 文字）
+`app/exp/[id]/workbench.tsx`：新增 `BIG_FX_DELAY = 340` + `bigFx`。
+- 真违规：`ui.event` 有 `incident && fx` 且不在 `OVERLAY_FX`（仪器损坏/重金属）→ 340ms 后 `<FxByKey scale="full">`。
+- 错误演示：trap 点击 `runIncident` 之后同样排第二拍。
+- `scale="full"` 就是 `/scene-preview` 那个铺满舞台的大号 SVG（实测 1002×380 = 舞台尺寸）+ 徽标文字；
+  播完 `onDone` 清掉，不常驻暗场。
+- 实测（烘箱 L2 · glass-break）：0~1.2s 器皿上那一下 → 1.0s 大动画出现 → 5.75s 说明条出现，`__errs` 空。
+
+## 四、/plan 三段流程（背景 → 设计 → 评分）
+`app/plan/designer.tsx`：`stage: brief | design | score`。选主题 → 背景卡（情境 + 硬约束 + 「开始设计方案」）；
+设计段把评分卡/点评 `hidden`；「提交方案，查看评分」→ 评分段（评分卡 + 点评 + 「返回修改方案」）。
+实测：brief 无分数；design 无评分卡；score 100/100 + 点评出现。
+
+## 五、交卷 → 后测 → 报告
+- 新路由 `app/exp/[id]/postlab/`（page + postlab-stage）：只放后测，答完出「进入报告与评分」。
+- `latestRunId` 抽到 `lib/persist/latest-run.ts`（报告页/后测页共用）。
+- 报告页 `<BopbpsPostLab readOnly postScore>` → 「P · 后测回顾」，不再当考场。
+- `finish()`：普通交卷 → `/postlab?runId=…`；`?auto=1` 一键演示仍直接进报告。
+
+## 质量门
+- `npx tsc --noEmit` 0 错；`npx eslint app components` 0 error（workbench 10 条为既有 warning）。
+- `npx vitest run` 42 files / 607 tests 全过。
+
+## 未提交
+全部改动等钱家良发话再 commit。
+
+---
+
+# 2026-10-23 10:0x · 错误演示面板搬进右栏
+
+## 改了什么
+- `app/exp/[id]/workbench.tsx`：「错误演示」(TrapPanel) 从 `.stage`（实验台右上角）搬进 `<aside rail>`，
+  排在「任务看板」下面 → 顺序 = 实时读数 / 任务看板 / 错误演示。
+- `components/exp/guide/trap-panel.module.css`：`.panel` 从 `position:absolute; top:14px; right:252px` 改成流内卡
+  （`position:static; width:100%`）；删掉 max-width:1180 的绝对定位覆盖，只留条目加高。
+
+## 证据（localhost:3000）
+- exp01：`inRail=true`，右栏顺序 `[demo-task-board-mini, demo-trap-panel]`，栏 x=1018 w=232，面板 x=1031 y=222（看板 y=79）。
+- exp09：同栏同序（读数卡 → 看板 → 错误演示）。
+- exp03：`inRail=true`，顺序同上。
+- `__errs` 空；`tsc` 0 错；`eslint` 0 error。
+
+---
+
+# 2026-10-23 10:2x · 助教：限定拖拽范围 + 小对话框
+
+- `app/exp/[id]/rail-mini.tsx`
+  - 新增 `benchRect()`：取 `[data-scene]` 里最大的那个 SVG（实验台真实绘制框，实测 200,50 810×342）；
+    拿不到才退回容器矩形。
+  - `pushOutsideBench()`：拖动时若与实验台相交，只沿**穿透最浅的一边**推出去（绕台边走），再夹进视口。
+  - 对话框从 `400px 全高抽屉 + 遮罩` 改成**小对话框**（`dialogStyle()` 现算）：宽度取实验台右侧空带
+    `clamp(216, vw-bench.right-24, 300)`，高度 ≤340，紧紧贴在台外；遮罩已删除。
+- `rail-mini.module.css`：`.mask/.drawer` → `.dialog`（圆角 14、轻投影、200ms 上浮淡入，reduced-motion 不动）。
+
+实测（1258×566）：
+- 拖到台面正中 (605,221) → 落点 (585,402) = 台底 392 + 10 净空，未进入台面。
+- 点开：对话框 (1024,127) 220×333，`overlapsBench=false`，无遮罩；发消息正常，`__errs` 空。
+
+---
+
+# 2026-10-23 10:3x · 天平右移 / 排液一拍 / 助教弹窗内边距
+
+## 天平右移（bench-layout + bench-scene）
+- `lib/scene/palette` 无关；机构位置原本在 `bench-scene.tsx` 里写死 `translate(792 214)`。
+- 改成读 `BENCH.instrumentX`（`bench-layout.ts`，996 → 986，天平 / pH 计共用）。
+- 实测单位（viewBox 370..1150）：天平 942–1048（原 786–892），与容量瓶右沿 783 的空隙 159 单位；
+  右沿 1048 < 台面右界 1150，也不压右栏（右栏起点折合约 1158）。
+
+## 水不许凭空消失（新增 drain 动作）
+- 新文件 `components/exp/scene/actions/drain.tsx` + `drain.test.ts`（3 条用例）。
+  画：器内水层往下退空（clip 在不动的外层 g，沿用 rinse 那两条坑）、器口流下一股水带、落点水花。
+  `ms 780`，三条 beat：dump / water / splash。
+- `action-layer.tsx`：`SceneAction` 加 `{kind:"drain"}` + switch 分支；
+  `workbench.tsx` 的 `ACTION_CAPTION` 补 drain 文案。
+- `bench-scene.tsx`：rinse / dilute 演完不再直接卸动画层，而是接一拍 drain；drain 的 onDone 才 `sendHome()`。
+  另外「洗涤被拒（700ms 没等到动作）」也直接回家，并**删掉**原来 `WASH_MS+300 = 2820ms` 的硬等定时器。
+
+## 工具互动后不要多余晃动（用户口径）
+- 器皿 class 不再加 `ix-snap`（成功时的 scale 弹跳），只保留 reject 的 `ix-shake`。
+- 顺序变成：洗涤动画 → 倒掉一拍 → 直接滑回原位。
+
+## 助教小对话框内边距（用户：文字顶着边框）
+- 根因：`.dialog` 只用 `grid-template-rows`，没约束列宽；头部「未接入 · 部署后开放」的 min-content
+  把整列撑到 255px，而对话框本身 223px → `overflow:hidden` 把右边切掉（实测 stream 右溢出 -32px）。
+- 修：`.dialog { grid-template-columns: minmax(0,1fr) }`，stream/row/bubble/quick/composer 全部 `min-width:0`，
+  bubble `overflow-wrap:anywhere`，headState 允许换行；宽度 `clamp(220, 台右空带, 320)`、高度上限 420。
+- 实测：1258×566 下对话框 236×420 @ (1020,208)，stream/quick/composer 右侧余 1px（在框内），
+  ✕ 完整可见，开场白不再被裁。
+
+## 门禁
+- `npx tsc --noEmit` 干净；`node node_modules/eslint/bin/eslint.js components "app/exp/[id]"` = 0 error / 11 warning（全是既有的）；
+  `npx vitest run` 43 files / 610 tests 全过；
+  `playwright test e2e/wash-return.spec.ts` 2 passed（洗涤→drain→回原位；无效洗涤也回原位）。
+- 注意：`npx eslint` 在这台机器上被 rtk 包了一层，会误报「2 errors」；以 `node node_modules/eslint/bin/eslint.js` 为准。
+- 仍未提交。
+
+## 2026-10-23 11:0x · 助教弹窗被「预习」胶囊顶住 + 回位太突兀 + 3001 旧构建
+
+- 根因（助教弹窗顶着）：`components/exp/prelab-drawer.tsx` 的「预习 ✓ x/3」是 `position:fixed; right:18; bottom:92; z-index:9000`，
+  助教弹窗 z-index 只有 71 → 绿胶囊压在弹窗输入框上，看着像"文字顶着边框"。
+  修：`.dialog` z-index 71 → **9100**（弹窗打开时盖住胶囊，两者都在右下角，不再叠字）。
+- 回位太突兀：`sendHome` 原来是 400ms `cubic-bezier(.23,1,.32,.1)`（起步极快，看着像被弹回去）。
+  改成 680ms `cubic-bezier(.4,0,.2,1)` + 前 18% 原地停住（先停一下再走），落位不弹。
+  `resettingRef` 复位时间 460 → 740ms。
+- **3001 是旧构建**：用户在自己浏览器里看到的还是旧 UI。已 `npm run build` + `scripts/restart-prod.ps1` 重启，3001 现在 z-index=9100、几何与 3000 一致。
+  注意：build 前必须先停 3001（`.next/standalone` 被占用会 EBUSY）。
+
+门禁：tsc 干净；eslint 0 error / 11 warning（既有）；vitest 43 files / 610 tests；
+`playwright e2e/wash-return.spec.ts` 在 **3000 和 3001 各 3 passed**（含新增「回位是走回去的，不是瞬移」）。

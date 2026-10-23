@@ -1,13 +1,14 @@
 "use client";
 
 /**
- * 玻璃器皿 —— 画法照 preview/drag-pour.html（2.5D，纸白场）：
+ * 玻璃器皿 —— 画法照 preview/drag-pour.html（2.5D，纸白场），2026-10-23 改成实心玻璃：
  *   1. 接地阴影：一枚极淡的径向渐变椭圆（器皿坐在台面上，不飘）；
- *   2. 玻璃：一层极淡墨玻璃面 + 一条 1.6px 淡墨外轮廓（vector-effect 恒定线宽，
- *      缩放到哪台器皿都是同一个粗细）+ 内壁一圈 3.5px 的淡墨虚光；
+ *   2. 玻璃：一层淡暖白填充（rgba 暖白 16%，不是线稿）+ **双层描边**
+ *      （外 2.6px rgba(74,87,104,.45) 定外形 / 内 1.4px rgba(74,87,104,.13) 是玻璃厚度）
+ *      + 内壁一圈 7px 的极淡虚光；
  *   3. 顶面一定是椭圆（瓶口 / 液面），这是 2.5D 唯一的信息来源；
- *   4. 液体 = 矩形 + 同色液面椭圆，两层都被 clipPath（主体轮廓）裁 —— 收腰、圆底自动成立；
- *      液位 level 只挪矩形上沿，所以液面能随倒液连续上升。
+ *   4. 液体 = **实色**矩形（mixLiquids 算出的颜色，不用玻璃色）+ 同色液面椭圆，
+ *      两层都被 clipPath（主体轮廓）裁 —— 收腰、圆底自动成立；液位 level 只挪矩形上沿。
  *
  * 只用 transform / opacity 做动效；不用图片、不用 filter。
  */
@@ -32,8 +33,8 @@ import {
 } from "./vessel-geometry";
 import styles from "./vessel.module.css";
 
-/** 白色粉末在白玻璃上会消失：压成暖灰白（与旧的沉淀配色一致）。 */
-const SOLID_FALLBACK = "#E7E2D6";
+/** 白色粉末在白玻璃上会消失：压成暖灰白（否则压在实心浅玻璃上看不见）。 */
+const SOLID_FALLBACK = "#EDEAE1";
 /** 固体粉末层的厚度（局部坐标）。 */
 const POWDER_H = 9;
 
@@ -80,7 +81,6 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
   const mix = mixLiquids(contents);
   const rawLiquid = liquidOverride ?? mix.color;
   const liquid = mix.kind === "precipitate" && rawLiquid.toUpperCase() === "#FFFFFF" ? "#EDEAE1" : rawLiquid;
-  const liquidOpacity = Math.min(0.82, Math.max(0.46, mix.opacity));
   const showLiquid = kind !== "burette" && resolved > 0.004;
   const top = levelTopY(box, resolved);
   const surfaceRx = surfaceRxAt(kind, top);
@@ -104,8 +104,8 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
       {/* 接地阴影（drag-pour 的 .shadow 椭圆） */}
       <ellipse cx={cx} cy={box.bottom + 2} rx={surfaceRx * 1.06} ry={7} fill={`url(#${shadowId})`} />
 
-      {/* 液面之前先铺一层玻璃面：液体是「装在玻璃里」的，不是贴在纸上 */}
-      <path d={body} fill="var(--canvas-glass-fill)" />
+      {/* 玻璃面：淡暖白填充（实心玻璃，不是线稿） */}
+      <path d={body} className={styles.glassBody} />
 
       {/* 固体粉末：沉在器底的一层（不是液体，不参与液面动画） */}
       {solid ? (
@@ -130,9 +130,9 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
             width={box.w}
             height={Math.max(0, box.bottom - top)}
             fill={liquid}
-            fillOpacity={liquidOpacity}
+            fillOpacity={0.9}
           />
-          {/* 液面：同色椭圆压在矩形上沿，露出上半 = 有厚度的液面 */}
+          {/* 液面：同色椭圆压在矩形上沿，露出上半 = 有厚度的液面（实色，不掺玻璃色） */}
           <ellipse
             data-liquid-surface
             cx={box.cx}
@@ -140,7 +140,7 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
             rx={surfaceRx}
             ry={SURFACE_RY}
             fill={liquid}
-            fillOpacity={Math.min(0.95, liquidOpacity + 0.12)}
+            fillOpacity={1}
           />
           <ellipse
             cx={box.cx}
@@ -154,15 +154,10 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
         </g>
       ) : null}
 
-      {/* 玻璃外轮廓（drag-pour 的 .glass）：恒定 1.6px，缩放到哪台都一样粗 */}
-      <path
-        d={body}
-        fill="none"
-        stroke="var(--canvas-glass-line)"
-        strokeWidth={1.6}
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
+      {/* 玻璃双层描边：外层 2.6px 半透明墨定住外形，内层 1.4px 极淡墨 = 玻璃的厚度
+          （2026-10-23 实心玻璃口径；vectorEffect 让缩放到哪台器皿都是同一个粗细） */}
+      <path d={body} className={styles.glassEdgeOuter} vectorEffect="non-scaling-stroke" />
+      <path d={body} className={styles.glassEdgeInner} vectorEffect="non-scaling-stroke" />
       {/* 内壁那圈淡淡的厚度（宽描边被轮廓裁在内侧） */}
       <path
         d={body}
@@ -178,9 +173,7 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
         cy={mouth.y}
         rx={mouth.rx}
         ry={mouth.ry}
-        fill="none"
-        stroke="var(--canvas-glass-line)"
-        strokeWidth={1.6}
+        className={styles.mouthLine}
         vectorEffect="non-scaling-stroke"
       />
       {/* 左壁一条淡墨高光（纸白底不用白高光） */}

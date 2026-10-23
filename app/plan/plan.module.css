@@ -981,3 +981,31 @@
   line-height: 1.6;
   color: var(--exp-accent);
 }
+
+/* ── 第一段：背景与要求（选完主题、还没动手时） ───────────────────── */
+/* 这时页面上没有分数、没有红叉：先让人读懂情境，再自己决定怎么做。 */
+.briefScene {
+  max-width: 74ch;
+  margin: 0;
+  font-size: var(--type-body);
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+
+.briefRules {
+  display: grid;
+  gap: var(--sp-1, 6px);
+  max-width: 74ch;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.briefRule {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  font-size: var(--type-meta);
+  line-height: 1.6;
+  color: var(--ink-2);
+}

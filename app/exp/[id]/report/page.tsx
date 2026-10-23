@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, desc, eq } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { runs } from "@/db/schema";
 import { getDefinition } from "@/lib/engine";
-import { getStudent } from "@/lib/session";
+import { latestRunId } from "@/lib/persist/latest-run";
 import { loadRunBundle, type RunBundle } from "@/lib/persist/report";
 import { buildRunSummary, minutesBetween } from "@/lib/report/summary";
 import { getSceneReagent } from "@/lib/scene/reagents";
@@ -17,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ runId?: string | string[]; demo?: string | string[]; auto?: string | string[] }>;
+  searchParams: Promise<{ runId?: string | string[]; demo?: string | string[]; auto?: string | string[]; post?: string | string[] }>;
 };
 
 const VESSEL_LABELS: Record<string, string> = {
@@ -85,40 +82,6 @@ function pad2(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-async function latestRunId(expId: string): Promise<string | null> {
-  try {
-    const student = await getStudent().catch(() => null);
-    const finished = [eq(runs.experimentId, expId), eq(runs.status, "finished")];
-    const scoped = student ? [...finished, eq(runs.studentNo, student.studentNo)] : finished;
-    let rows = await db
-      .select({ id: runs.id })
-      .from(runs)
-      .where(and(...scoped))
-      .orderBy(desc(runs.finishedAt), desc(runs.startedAt))
-      .limit(1);
-    if (!rows[0] && student) {
-      rows = await db
-        .select({ id: runs.id })
-        .from(runs)
-        .where(and(...finished))
-        .orderBy(desc(runs.finishedAt), desc(runs.startedAt))
-        .limit(1);
-    }
-    if (!rows[0]) {
-      const anyRun = await db
-        .select({ id: runs.id })
-        .from(runs)
-        .where(eq(runs.experimentId, expId))
-        .orderBy(desc(runs.startedAt))
-        .limit(1);
-      return anyRun[0]?.id ?? null;
-    }
-    return rows[0].id;
-  } catch {
-    return null;
-  }
-}
-
 export default async function ReportPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const definition = getDefinition(id);
@@ -128,6 +91,9 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   const requestedRunId =
     typeof query.runId === "string" && query.runId.trim() ? query.runId.trim() : "";
   const demoNotice = query.demo === "1" || query.demo === "true";
+  /** 后测页带过来的那次成绩：只在「后测回顾」里显示，不参与总分（总分仍按库里的三段分算） */
+  const postRaw = typeof query.post === "string" ? Number.parseInt(query.post, 10) : Number.NaN;
+  const postScore = Number.isFinite(postRaw) ? Math.min(100, Math.max(0, postRaw)) : null;
   const runId = requestedRunId || (await latestRunId(id));
   let bundle: RunBundle | null = null;
   if (runId) {
@@ -238,7 +204,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           </div>
         ) : null}
         <Reveal as="div" index={2}>
-          <BopbpsPostLab expId={definition.id} />
+          <BopbpsPostLab expId={definition.id} readOnly postScore={postScore} />
         </Reveal>
 
         <Reveal as="section" className={styles.parts} aria-label="三段分" index={3}>

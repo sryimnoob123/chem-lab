@@ -46,6 +46,11 @@ const PRETTY_PARAM: { key: string; label: string; kind: "number" | "bool" }[] = 
 export function PlanDesigner({ studentNo }: { studentNo: string }) {
   /** 先选主题（P0）：null = 还没选，显示主题卡；选了才进画布 */
   const [topic, setTopic] = useState<PlanTopic | null>(null);
+  /**
+   * 三段流程（用户 2026-10-23 口径）：背景 → 自己设计方案 → 提交后才进评分。
+   * 进来就给 0 分和 11 条红叉，等于还没动手先被宣判，学生不知道该干什么。
+   */
+  const [stage, setStage] = useState<"brief" | "design" | "score">("brief");
   const [pieces, setPieces] = useState<string[]>([]);
   const [params, setParams] = useState<Record<string, string | number | boolean>>(DEFAULT_PARAMS);
   const [kind, setKind] = useState<PieceKind | null>(null);
@@ -187,6 +192,7 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
             onClick={() => {
               setTopic(null);
               setPieces([]);
+              setStage("brief");
             }}
           >
             换主题
@@ -197,13 +203,38 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
           onPick={(picked) => {
             setTopic(picked);
             setPieces([]);
+            setStage("brief");
           }}
         />
       )}
 
-      {!topic ? null : (
+      {/* 第一段：先把情境和要求说清楚，学生自己决定怎么做（这时没有分数、没有红叉） */}
+      {topic && stage === "brief" ? (
+        <section className={s.panel} data-demo-id="demo-plan-brief" aria-label="实验背景与要求">
+          <p className={s.briefScene}>{topic.scene}</p>
+          <ul className={s.briefRules}>
+            {topic.constraints.map((constraint) => (
+              <li key={constraint.ruleCode} className={s.briefRule}>
+                {constraint.text}
+              </li>
+            ))}
+          </ul>
+          <div className={s.actions}>
+            <button
+              type="button"
+              className="btn btn--primary"
+              data-demo-id="demo-plan-start"
+              onClick={() => setStage("design")}
+            >
+              开始设计方案
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {topic && stage !== "brief" ? (
         <>
-      <ScorePanel report={report} pieceCount={pieces.length} />
+      {stage === "score" ? <ScorePanel report={report} pieceCount={pieces.length} /> : null}
 
       <div className={s.cols}>
         <PieceLibrary
@@ -292,12 +323,33 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
               <button
                 type="button"
                 data-demo-id="demo-design-save"
-                className="btn btn--primary"
+                className="btn btn--secondary"
                 onClick={save}
                 disabled={saved === "saving" || !pieces.length}
               >
                 {saved === "saving" ? "保存中…" : "保存方案"}
               </button>
+              {/* 第二段 → 第三段：方案拼完、提交之后才出分数和点评（用户 2026-10-23） */}
+              {stage === "design" ? (
+                <button
+                  type="button"
+                  data-demo-id="demo-plan-submit"
+                  className="btn btn--primary"
+                  onClick={() => setStage("score")}
+                  disabled={!pieces.length}
+                >
+                  提交方案，查看评分
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  data-demo-id="demo-plan-back"
+                  className="btn btn--secondary"
+                  onClick={() => setStage("design")}
+                >
+                  返回修改方案
+                </button>
+              )}
               {saveMsg ? (
                 <span className={s.saveMsg} data-state={saved} data-demo-id="demo-design-save-msg">
                   {saveMsg}
@@ -336,7 +388,7 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
             </div>
           </section>
 
-          <section className={s.panel} aria-label="方案点评" aria-busy={busy}>
+          <section className={s.panel} aria-label="方案点评" aria-busy={busy} hidden={stage !== "score"}>
             <div className={s.panelHead}>
               <h2 className={s.panelTitle}>方案点评</h2>
               <span className={s.mono} data-demo-id="demo-remark-provider">
@@ -384,7 +436,7 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
         </div>
       </div>
         </>
-      )}
+      ) : null}
     </main>
   );
 }

@@ -34,8 +34,8 @@ export const BENCH = {
   rowRight: 980,
   /** 这一屏没有仪器时，器皿可以一直排到右边界 */
   rowRightWide: 1126,
-  /** 仪器（天平 / pH 计）左上角 */
-  instrumentX: 996,
+  /** 仪器（天平 / pH 计）左上角；2026-10-23 往右挪，和容量瓶彻底分开 */
+  instrumentX: 986,
   /** 标签：名称 / 内容（台面前沿上的两行字） */
   labelY: 356,
   contentY: 374,

@@ -33,7 +33,6 @@ const FX_MS: Record<SceneFx, number> = {
   smoke: 2000,
 };
 
-const noop = () => undefined;
 
 export type BenchReaction = { vesselId: string; outcome: SceneOutcome; key: number };
 
@@ -220,36 +219,80 @@ export function BenchScene({
   }, []);
 
   /**
-   * 器皿归位（用户 2026-10-22："松手之后还是要让它能回去，不然很容易出问题"）。
-   * 步骤推进 / 重置 / 拖错 → 用 380ms 缓动滑回基准位置，不是瞬移。
+   * 器皿归位：滑回基准位置（400ms 缓动），不是瞬移。
+   * - 步骤推进 / 重置（layoutKey 变）→ 全部归位；
+   * - 在台面上松手 / 洗涤动作播完 → 单台归位
+   *   （用户 2026-10-23：互动完之后器皿要回原来的位置，不能停在放下的地方）。
    */
-  useEffect(() => {
-    if (layoutKey === undefined) return;
+  const sendHome = useCallback((ids?: readonly string[]) => {
     const current = offsetsRef.current;
-    if (!Object.keys(current).length) return;
+    const targets = Object.keys(current).filter((id) => (ids ? ids.includes(id) : true));
+    if (!targets.length) return;
     resettingRef.current = true;
-    for (const [id, offset] of Object.entries(current)) {
-      if (!offset.dx && !offset.dy) continue;
+    for (const id of targets) {
+      const offset = current[id];
       const node = vesselRefs.current[id];
-      if (!node) continue;
+      if (!offset || (!offset.dx && !offset.dy) || !node) continue;
       const anim = node.animate(
         [
-          { transform: `translate(${offset.dx}px, ${offset.dy}px)` },
-          { transform: "translate(0px, 0px)" },
+          // 先停一小下再走：直接从槽里"弹"回原位太突兀（用户 2026-10-23 反馈），
+          // 现在读起来是「放回去」——停 120ms、再用柔和曲线走 560ms，落位不弹。
+          { transform: `translate(${offset.dx}px, ${offset.dy}px)`, offset: 0 },
+          { transform: `translate(${offset.dx}px, ${offset.dy}px)`, offset: 0.18 },
+          { transform: "translate(0px, 0px)", offset: 1 },
         ],
-        { duration: 400, easing: "cubic-bezier(.23, 1, .32, .1)" },
+        { duration: 680, easing: "cubic-bezier(.4, 0, .2, 1)" },
       );
       // 动画结束后把 inline transform 落成 0：否则后续任何一次 offsets 同步都会把它写回原位
       anim.onfinish = () => {
         node.style.transform = "translate(0px, 0px)";
       };
     }
-    setOffsets({});
-    const timer = window.setTimeout(() => {
+    setOffsets((prev) => {
+      if (!ids) return {};
+      const next = { ...prev };
+      for (const id of targets) delete next[id];
+      return next;
+    });
+    window.setTimeout(() => {
       resettingRef.current = false;
-    }, 460);
-    return () => window.clearTimeout(timer);
-  }, [layoutKey]);
+    }, 740);
+  }, []);
+
+  useEffect(() => {
+    if (layoutKey === undefined) return;
+    sendHome();
+  }, [layoutKey, sendHome]);
+
+  /**
+   * 动作演完（action: null）→ 槽里的器皿立刻回家。
+   * 为什么还要这一条：洗涤动画长度是写在 rinse.tsx 里的常量，靠 2520ms 硬等会
+   * 「动画停了器皿还卡在槽里」（用户 2026-10-23 实测）。动作生命周期是准的，用它兜底。
+   */
+  const hadActionRef = useRef(false);
+  /** 当前有没有动作在演（洗涤被拒时没有动作 → 器皿要立刻回家） */
+  const actionRef = useRef<SceneAction | null>(action);
+  /** 刚演完的那条动作（决定要不要补一拍"倒掉"） */
+  const endedRef = useRef<{ kind: SceneAction["kind"]; vesselId?: string } | null>(null);
+  /**
+   * 洗涤/稀释演完 → 先接一条 drain（把水倒掉），倒完再回家。
+   * 用户 2026-10-23：水不能凭空消失，要么倒掉要么吸走，流程上要有这一拍。
+   */
+  const [drain, setDrain] = useState<SceneAction | null>(null);
+  useEffect(() => {
+    actionRef.current = action;
+    if (action && "vesselId" in action) endedRef.current = { kind: action.kind, vesselId: action.vesselId };
+    else if (action) endedRef.current = { kind: action.kind };
+    const had = hadActionRef.current;
+    hadActionRef.current = Boolean(action);
+    if (!had || action) return;
+    const ended = endedRef.current;
+    if ((ended?.kind === "rinse" || ended?.kind === "dilute") && ended.vesselId) {
+      setDrain({ kind: "drain", vesselId: ended.vesselId });
+      return;
+    }
+    sendHome();
+  }, [action, sendHome]);
   /**
    * 命中框 = 实测的器皿绘制框（2026-10-22 用户反馈"框有点偏移，没在正中间"）。
    * 原来的 hitX = vessel.x + glassLeft*scale - 8 是经验偏移，实测烧杯中心偏 (+11, -16.5)。
@@ -322,7 +365,7 @@ export function BenchScene({
   const justDragged = useCallback(() => Date.now() - dragEndedAtRef.current < 320, []);
 
   /**
-   * 松手：落到洗涤槽＝洗（洗完归位）；落在台面上＝换位置，位置留在那；
+   * 松手：落在洗涤槽＝洗（洗完滑回原位）；落在台面上＝拿起看了看，滑回原位；
    * 落在别的器皿上或台面外＝回弹 + 一句话（不静默）。
    */
   const handleVesselDrop = useCallback(
@@ -332,20 +375,22 @@ export function BenchScene({
         onDropToSink?.(id);
         /**
          * 放在槽里洗，别立刻弹回原地（用户 2026-10-22：动作要在落点上发生）。
-         * 位置留在槽里 → 冲洗/刷洗/倒水整段动画都在槽口播放；
-         * 这一步做完 stepIndex 变 → layoutKey 变化把器皿滑回基准位（400ms 缓动）。
+         * 冲洗/刷洗/倒水播完（wash 时间线 2520ms）再滑回原位
+         * （用户 2026-10-23：互动完之后器皿要回原位，不能停在放下的地方）。
          */
         setOffsets((prev) => ({ ...prev, [id]: offset }));
+        // 洗涤被拒（"这一步不用洗"）不会有动作：700ms 没等到动作就直接回家
+        window.setTimeout(() => {
+          if (!actionRef.current) sendHome([id]);
+        }, 700);
         return offset;
       }
-      if (target.kind === "bench") {
-        setOffsets((prev) => ({ ...prev, [id]: offset }));
-        return offset;
-      }
+      // 台面上松手 = 只是把器皿拿起来看了看：回弹回原位，不停在放下的地方
+      if (target.kind === "bench") return undefined;
       onDropToNowhere?.(id);
       return undefined;
     },
-    [onDropToNowhere, onDropToSink],
+    [onDropToNowhere, onDropToSink, sendHome],
   );
 
   const drag = useBenchDrag({
@@ -553,7 +598,7 @@ export function BenchScene({
         {instrument === "balance" ? (
         <g
           data-demo-id="demo-scene-instrument-balance"
-          transform="translate(792 214)"
+          transform={`translate(${BENCH.instrumentX} 214)`}
           role="button"
           tabIndex={0}
           aria-label="分析天平：点一下使用建议动作"
@@ -603,7 +648,7 @@ export function BenchScene({
 
         {/* pH 计（exp03 醋酸电离常数）：主机 + 电极杆，画法沿用天平（底座/屏/标签） */}
         {instrument === "ph" ? (
-        <g data-demo-id="demo-scene-instrument-ph" aria-hidden="true" transform="translate(792 196)">
+        <g data-demo-id="demo-scene-instrument-ph" aria-hidden="true" transform={`translate(${BENCH.instrumentX} 196)`}>
           {/* 电极杆 + 球泡 */}
           <line x1="34" y1="70" x2="34" y2="4" stroke="var(--canvas-glass-line)" strokeWidth={2.2} />
           <circle cx="34" cy="4" r="4.5" fill="var(--canvas-glass-fill)" stroke="var(--canvas-glass-line)" strokeWidth={1.4} />
@@ -687,7 +732,7 @@ export function BenchScene({
               data-drop-kind="vessel"
               data-vessel-id={vessel.id}
               className={`ix ${styles.vessel} ${droppable ? styles.droppable : styles.static} ${
-                fb === "success" ? "ix-snap" : fb === "reject" ? "ix-shake" : ""
+                fb === "reject" ? "ix-shake" : ""
               }`}
               role="button"
               tabIndex={0}
@@ -772,19 +817,8 @@ export function BenchScene({
                   />
                 </g>
               </g>
-              {/* 名称/内容跟着器皿走：拖到哪，标签跟到哪（原来标签是固定坐标，器皿一动就对不上） */}
-              <g aria-hidden="true" pointerEvents="none">
-                <text
-                  x={vessel.x + vessel.w / 2}
-                  y={(LABEL_POSITION[vessel.id] ?? { y: 356, contentY: 368 }).y}
-                  textAnchor="middle"
-                  className={styles.vesselName}
-                >
-                  {vessel.label}
-                </text>
-                {/* 器皿下面只留名字：空 / 配方这类状态用液面、颜色、粉末层表达，不再写一行小字
-                    （AGENTS §9.1 / §9.9）。读屏仍然从 aria-label 拿到「内含…」。 */}
-              </g>
+              {/* 名称 / 内容不跟着器皿走：名字是台面上的固定标签，器皿拖动时字要待在原地
+                  （用户 2026-10-23）。标签统一在器皿之后单独一层渲染，见下面 labels 层。 */}
               {/* 成功光环 / 拒收红环（一次性，动画结束由 onAnimationEnd 清掉） */}
               {fb === "success" ? (
                 <rect className={styles.pulseRing} x={ringX} y={ringY} width={ringW} height={ringH} rx={10} />
@@ -891,6 +925,24 @@ export function BenchScene({
           );
         })}
 
+        {/* 器皿名称：固定坐标、独立一层 —— 拖动/回位时字待在原地，不跟着玻璃跑
+            （用户 2026-10-23）。状态（空/配方）仍用液面、颜色、粉末层表达，不写第二行小字；
+            读屏从器皿的 aria-label 拿到「内含…」。 */}
+        <g aria-hidden="true" pointerEvents="none">
+          {vessels.map((vessel) => (
+            <text
+              key={`label-${vessel.id}`}
+              data-demo-id={`demo-scene-vessel-label-${vessel.id}`}
+              x={vessel.x + vessel.w / 2}
+              y={(LABEL_POSITION[vessel.id] ?? { y: 356, contentY: 368 }).y}
+              textAnchor="middle"
+              className={styles.vesselName}
+            >
+              {vessel.label}
+            </text>
+          ))}
+        </g>
+
         {/* 倾倒：瓶子 / 液柱 / 涟漪全部画在这个 SVG 里，坐标就是器皿几何算出来的 */}
         <BenchPour
           pour={pour}
@@ -903,11 +955,19 @@ export function BenchScene({
 
         {/* 动作层：洗涤 / 搅拌 / 转移 / 称量等动作统一在这里播（可复用底层） */}
         <ActionLayer
-          action={action}
+          action={drain ?? action}
           offsets={offsets}
           baseLevelOf={baseLevelOf}
           onCue={onActionCue}
-          onDone={onActionDone ?? noop}
+          onDone={() => {
+            if (drain) {
+              // 倒完了：撤掉补拍、回原位（父组件的 onActionDone 不重复触发）
+              setDrain(null);
+              sendHome();
+              return;
+            }
+            onActionDone?.();
+          }}
         />
       </svg>
 
