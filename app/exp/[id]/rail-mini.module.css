@@ -248,6 +248,22 @@
   padding: 14px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* 细滚动条：默认宽条会吃掉右侧留白，看着像气泡贴到边框 */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ink) 22%, transparent) transparent;
+}
+
+.stream::-webkit-scrollbar {
+  width: 8px;
+}
+
+.stream::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ink) 20%, transparent);
+}
+
+.stream::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .row {

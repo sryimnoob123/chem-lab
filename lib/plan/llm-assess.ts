@@ -37,6 +37,20 @@ export { mockAssess } from "./assess-mock";
 export const TIMEOUT_MS = 12_000;
 const COZE_POLL_MS = Math.max(100, Number(process.env.COZE_POLL_MS ?? 300) || 300);
 
+/**
+ * 读环境变量：按顺序取第一个非空值。
+ * 为什么要别名：扣子平台的自定义变量**不能用 `COZE_` 前缀**（系统保留），
+ * 那边接模型只能写成 `LLM_API_KEY` / `BOT_TOKEN` 这类名字，所以这里两套都认。
+ */
+function env(...names: readonly string[]): string {
+  for (const name of names) {
+    const value = (process.env[name] ?? "").trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+
 class HttpError extends Error {
   status: number;
   constructor(status: number, message?: string) {
@@ -268,10 +282,10 @@ type CozeEnvelope<T> = { code?: number; msg?: string; data?: T };
 
 /** 扣子 v3 chat：发起 → 轮询 retrieve 到 completed → 取 message/list 里的 answer */
 async function callCoze(prompt: string, deadline: number): Promise<string> {
-  const token = (process.env.COZE_API_TOKEN ?? "").trim();
-  const botId = (process.env.COZE_BOT_ID ?? "").trim();
+  const token = env("COZE_API_TOKEN", "BOT_TOKEN", "BOT_PAT");
+  const botId = env("COZE_BOT_ID", "BOT_ID");
   if (!token || !botId) throw new EmptyAnswerError("no-coze-credentials");
-  const base = (process.env.COZE_API_BASE ?? "https://api.coze.cn").replace(/\/+$/, "");
+  const base = (env("COZE_API_BASE", "COZE_API_URL") || "https://api.coze.cn").replace(/\/+$/, "");
   const headers = { "content-type": "application/json", authorization: `Bearer ${token}` };
 
   const startRes = await fetch(`${base}/v3/chat`, {
@@ -323,19 +337,13 @@ type OpenAiTarget = { url: string; apiKey: string; model: string };
 
 /** OpenAI 兼容端点：COZE_LLM_URL 优先，其次方舟 / DeepSeek */
 function resolveOpenAiTarget(): OpenAiTarget | undefined {
-  const explicitUrl = (process.env.COZE_LLM_URL ?? "").trim();
+  const explicitUrl = env("COZE_LLM_URL", "LLM_BASE_URL", "LLM_CHAT_URL", "OPENAI_BASE_URL");
   if (explicitUrl) {
-    const key = (
-      process.env.COZE_LLM_KEY ??
-      process.env.COZE_LLM_API_KEY ??
-      process.env.DEEPSEEK_API_KEY ??
-      process.env.ARK_API_KEY ??
-      ""
-    ).trim();
+    const key = env("COZE_LLM_KEY", "COZE_LLM_API_KEY", "LLM_API_KEY", "OPENAI_API_KEY", "DEEPSEEK_API_KEY", "ARK_API_KEY");
     if (!key) return undefined;
-    return { url: explicitUrl, apiKey: key, model: (process.env.COZE_LLM_MODEL ?? "doubao-seed-1-6-flash").trim() };
+    return { url: explicitUrl, apiKey: key, model: env("COZE_LLM_MODEL", "LLM_MODEL", "OPENAI_MODEL") || "doubao-seed-1-6-flash" };
   }
-  const arkKey = (process.env.ARK_API_KEY ?? "").trim();
+  const arkKey = env("ARK_API_KEY", "LLM_API_KEY");
   if (arkKey) {
     return {
       url: (process.env.ARK_BASE_URL ?? "https://ark.cn-beijing.volces.com/api/v3/chat/completions").trim(),
@@ -343,7 +351,7 @@ function resolveOpenAiTarget(): OpenAiTarget | undefined {
       model: (process.env.ARK_MODEL ?? "doubao-seed-1-6-flash").trim(),
     };
   }
-  const deepseekKey = (process.env.DEEPSEEK_API_KEY ?? "").trim();
+  const deepseekKey = env("DEEPSEEK_API_KEY");
   if (deepseekKey) {
     const base = (process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com").trim().replace(/\/+$/, "");
     return {
@@ -384,7 +392,7 @@ async function callOpenAi(prompt: string, deadline: number): Promise<string> {
 export function providerOf(): AssessProvider {
   const chosen = (process.env.PLAN_ASSESS_PROVIDER ?? "auto").trim().toLowerCase();
   if (chosen === "mock" || chosen === "coze" || chosen === "ark") return chosen;
-  if ((process.env.COZE_API_TOKEN ?? "").trim() && (process.env.COZE_BOT_ID ?? "").trim()) return "coze";
+  if (env("COZE_API_TOKEN", "BOT_TOKEN", "BOT_PAT") && env("COZE_BOT_ID", "BOT_ID")) return "coze";
   if (resolveOpenAiTarget()) return "ark";
   return "mock";
 }

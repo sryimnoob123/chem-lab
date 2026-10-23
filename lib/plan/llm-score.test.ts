@@ -177,3 +177,27 @@ describe2("assessPlan：模型给分", () => {
     expect2(result.fallback).toBeUndefined();
   });
 });
+
+/* ── 无 COZE_ 前缀的变量名（扣子平台自定义变量禁 COZE_ 前缀）── */
+
+describe2("环境变量别名", () => {
+  it2("LLM_BASE_URL + LLM_API_KEY 也认（走 OpenAI 兼容通道）", async () => {
+    process.env.PLAN_ASSESS_PROVIDER = "auto";
+    delete process.env.COZE_LLM_URL;
+    delete process.env.COZE_API_TOKEN;
+    process.env.LLM_BASE_URL = "https://example.com/v1/chat/completions";
+    process.env.LLM_API_KEY = "k";
+    const { providerOf } = await import("./llm-assess");
+    expect2(providerOf()).toBe("ark");
+  });
+
+  it2("BOT_TOKEN + BOT_ID 也认（走扣子 BOT 通道）", async () => {
+    process.env.PLAN_ASSESS_PROVIDER = "auto";
+    delete process.env.LLM_BASE_URL;
+    delete process.env.COZE_LLM_URL;
+    process.env.BOT_TOKEN = "pat_x";
+    process.env.BOT_ID = "7";
+    const { providerOf } = await import("./llm-assess");
+    expect2(providerOf()).toBe("coze");
+  });
+});
