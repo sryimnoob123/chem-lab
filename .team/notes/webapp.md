@@ -769,7 +769,7 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
 - **A/B 反证**：把热区改回 132×126 后，新断言 chromium+mobile **2/2 失败**，旧 3×3 采样仍全过 —— 证明这条断言正好补上这个漏检。
 
 **门禁**：tsc 0 错；eslint 0 error / 22 warning；vitest 47 files / **647 passed**；`npm run build` ✓ + 3001 重启 200；
-playwright（`E2E_BASE_URL=http://localhost:3001`）**44 passed**。截图 `%TEMP%\chemlab-shotsench-latest.png`（1440×900，已覆盖）。
+playwright（`E2E_BASE_URL=http://localhost:3001`）**44 passed**。截图 `%TEMP%\chemlab-shots\bench-latest.png`（1440×900，已覆盖）。
 
 **踩到的坑**
 - e2e 里「先量包围盒、再另一次 evaluate 采样」会被入场动画/并行负载打断（量到的框和采样点错开 → 顶部假 MISS）。
