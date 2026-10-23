@@ -1,0 +1,55 @@
+{
+  "results": [
+    {
+      "name": "exp01 演示：气泡出现",
+      "pass": true,
+      "detail": "把容量瓶 100 mL拖进洗涤槽按住器皿，拖进槽里松手"
+    },
+    {
+      "name": "exp01 演示：拖尾光带出现",
+      "pass": true,
+      "detail": "true"
+    },
+    {
+      "name": "exp01 演示：虚拟手指出现",
+      "pass": true,
+      "detail": "matrix(1, 0, 0, 1, 368.845, 479.888)"
+    },
+    {
+      "name": "exp01 演示：有暂停/重播控制",
+      "pass": true,
+      "detail": "true"
+    },
+    {
+      "name": "exp01 演示：指尖真的在动（transform 变了）",
+      "pass": true,
+      "detail": "matrix(1, 0, 0, 1, 368.845, 479. → matrix(1, 0, 0, 1, 327.179, 531."
+    },
+    {
+      "name": "exp01 演示：暂停后指尖停住",
+      "pass": true,
+      "detail": "matrix(1, 0, 0, 1, 327.179, 531.169)"
+    },
+    {
+      "name": "教师端：有「课堂演示」入口",
+      "pass": true,
+      "detail": "入口 1 个"
+    },
+    {
+      "name": "教师端：落到 exp01 且引导自动开",
+      "pass": true,
+      "detail": "/exp/exp01?teach=1 · 把容量瓶 100 mL拖进洗涤槽按住器皿，拖进槽里松手"
+    },
+    {
+      "name": "教师端：光带 + 手指都在",
+      "pass": true,
+      "detail": "ribbon=true finger=true"
+    },
+    {
+      "name": "引导链路：console/pageerror 零 error",
+      "pass": true,
+      "detail": ""
+    }
+  ],
+  "errors": []
+}

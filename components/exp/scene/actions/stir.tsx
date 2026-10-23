@@ -60,7 +60,7 @@ export function buildStir(a: VesselAnchor, opts: { clipId: string; levelStart?: 
       {/* 旋转的液面弧线：液面在跟着棒转 */}
       <path
         data-a="swirl"
-        d={`M${a.mouthX - a.rx} ${swirlY} a${a.rx} 6 0 1 ${a.rx * 2} 0`}
+        d={`M${a.mouthX - a.rx} ${swirlY} a${a.rx} 6 0 1 0 ${a.rx * 2} 0`}
         fill="none"
         stroke={EDGE}
         strokeWidth={1.6}
