@@ -18,6 +18,7 @@
  *   { provider, text, points:[{kind, pieceId?, ruleId?, text}], questions, fallback?, pointsFrom? }
  */
 
+import { cozeAccessToken, jwtConfig } from "./coze-jwt";
 import { PIECES_BY_ID, type PlanInput } from "./pieces";
 import { RULES_BY_CODE, type PlanReport } from "./rules";
 import type { PlanTopic } from "./topics";
@@ -282,8 +283,13 @@ type CozeEnvelope<T> = { code?: number; msg?: string; data?: T };
 
 /** 扣子 v3 chat：发起 → 轮询 retrieve 到 completed → 取 message/list 里的 answer */
 async function callCoze(prompt: string, deadline: number): Promise<string> {
-  const token = env("COZE_API_TOKEN", "BOT_TOKEN", "BOT_PAT");
   const botId = env("COZE_BOT_ID", "BOT_ID");
+  /**
+   * 两种鉴权：静态 PAT（本地/个人），或企业 OAuth 服务应用（BOT_APP_ID + BOT_KID + BOT_PRIVATE_KEY）
+   * —— 企业账号推荐后者：组织级、自动续期、与个人账号无关（见 lib/plan/coze-jwt.ts）。
+   */
+  const staticToken = env("COZE_API_TOKEN", "BOT_TOKEN", "BOT_PAT");
+  const token = staticToken || (jwtConfig() ? await cozeAccessToken(signalUntil(deadline)) : "");
   if (!token || !botId) throw new EmptyAnswerError("no-coze-credentials");
   const base = (env("COZE_API_BASE", "COZE_API_URL") || "https://api.coze.cn").replace(/\/+$/, "");
   const headers = { "content-type": "application/json", authorization: `Bearer ${token}` };
@@ -392,7 +398,8 @@ async function callOpenAi(prompt: string, deadline: number): Promise<string> {
 export function providerOf(): AssessProvider {
   const chosen = (process.env.PLAN_ASSESS_PROVIDER ?? "auto").trim().toLowerCase();
   if (chosen === "mock" || chosen === "coze" || chosen === "ark") return chosen;
-  if (env("COZE_API_TOKEN", "BOT_TOKEN", "BOT_PAT") && env("COZE_BOT_ID", "BOT_ID")) return "coze";
+  const hasBot = Boolean(env("COZE_BOT_ID", "BOT_ID"));
+  if (hasBot && (env("COZE_API_TOKEN", "BOT_TOKEN", "BOT_PAT") || jwtConfig())) return "coze";
   if (resolveOpenAiTarget()) return "ark";
   return "mock";
 }
