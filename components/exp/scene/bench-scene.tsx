@@ -497,7 +497,37 @@ export function BenchScene({
   /* 2026-10-23：横向从固定的 794 放宽到 1560（x 20..1580，中心 800 = 台面中心）。
      原来 794 宽配 container 1264px，等比缩放后左右各空 235px —— 台面缩在中间一小块。
      放宽后 viewBox 宽高比 ≈ 3.07，接近容器 3.16，画面基本铺满。 */
-  const benchViewBox = `${BENCH.viewLeft} ${stageTop} ${BENCH.viewRight - BENCH.viewLeft} ${BENCH.bottom - stageTop}`;
+  /**
+   * 舞台铺满容器（2026-10-23）：1440×900 这种高视口下，viewBox 宽高比（≈3.0）比容器（≈2.0）扁，
+   * preserveAspectRatio=meet 会把画面按宽度缩放、下面留一大条白 —— 用户看到的就是「台面悬空」。
+   * 做法：量容器实际宽高，把 viewBox 往上补高（补出来的部分全是墙，内容不动），
+   * 让宽高比跟容器一致。只在需要时补，绝不裁掉已有内容。
+   */
+  const [wallExtra, setWallExtra] = useState(0);
+  const [floorExtra, setFloorExtra] = useState(0);
+  useLayoutEffect(() => {
+    const host = svgRef.current?.parentElement;
+    if (!host || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      const box = host.getBoundingClientRect();
+      if (box.width < 40 || box.height < 40) return;
+      const vbW = BENCH.viewRight - BENCH.viewLeft;
+      const vbH = BENCH.bottom - stageTop;
+      const needH = (vbW * box.height) / box.width;
+      const extra = Math.max(0, Math.round(needH - vbH));
+      /* 多出来的高度一半给墙、一半给台面前方：全给墙会变成一大片空墙（1440×900 实测）。 */
+      setWallExtra(Math.round(extra * 0.55));
+      setFloorExtra(extra - Math.round(extra * 0.55));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(host);
+    return () => ro.disconnect();
+  }, [stageTop]);
+
+  const benchViewBox = `${BENCH.viewLeft} ${stageTop - wallExtra} ${
+    BENCH.viewRight - BENCH.viewLeft
+  } ${BENCH.bottom + floorExtra - stageTop + wallExtra}`;
 
   useEffect(() => {
     if (!reaction) return;
@@ -567,7 +597,8 @@ export function BenchScene({
           </linearGradient>
         </defs>
         {/* 实验室背景：墙 / 窗 / 试剂架 / 通风柜（纯矢量，零图片） */}
-        <LabBackdrop top={backdropTop} />
+        {/* 墙要盖到补出来的那一截（wallExtra），否则高视口下台面上方会露白 */}
+        <LabBackdrop top={backdropTop - wallExtra} />
 
         {/* 台面（铁架台已删除：exp01/exp03 都不用滴定台，空夹子会被当成"这是什么"） */}
         <g aria-hidden="true">
@@ -576,12 +607,20 @@ export function BenchScene({
             之前那条「墙与台面的接缝」画在器皿高度中间，横线从玻璃里穿过去，像贴了条胶带 ——
             去掉。纵深靠「前沿 + 上浅下深的台面渐变」表达。
           */}
-          <rect x={BENCH.left} y={benchTopY} width={BENCH.right - BENCH.left} height={BENCH.bottom - benchTopY} fill="var(--bench-top)" />
+          {/* 台面一直铺到舞台下沿（bottom + floorExtra）：高视口下多出来的那截留给台面前方，
+              不留给墙 —— 否则 1440×900 上会是一大片空墙。 */}
           <rect
             x={BENCH.left}
             y={benchTopY}
             width={BENCH.right - BENCH.left}
-            height={BENCH.bottom - benchTopY}
+            height={BENCH.bottom + floorExtra - benchTopY}
+            fill="var(--bench-top)"
+          />
+          <rect
+            x={BENCH.left}
+            y={benchTopY}
+            width={BENCH.right - BENCH.left}
+            height={BENCH.bottom + floorExtra - benchTopY}
             fill="url(#benchDepth)"
           />
           {/* 极淡网格：26 单位一格，只当纸感，不当装饰 */}
@@ -589,7 +628,7 @@ export function BenchScene({
             x={BENCH.left}
             y={benchTopY}
             width={BENCH.right - BENCH.left}
-            height={BENCH.bottom - benchTopY}
+            height={BENCH.bottom + floorExtra - benchTopY}
             fill="url(#benchGrid)"
             opacity="0.45"
           />
