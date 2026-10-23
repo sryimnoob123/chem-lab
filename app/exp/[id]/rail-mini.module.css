@@ -76,8 +76,10 @@
 /* 圆形机器人按钮：只有图标，没有文字；可拖（位置由 JS 写 left/top） */
 .fab {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
+  /* 躲开两个右下角占位：扣子平台的官方徽标（贴最角落）和「预习 ✓」胶囊（bottom 92）。
+     18/18 会让徽标正好盖在机器人身上，线上点不动（2026-10-23 实测）。 */
+  right: 88px;
+  bottom: 26px;
   z-index: 60;
   width: 54px;
   height: 54px;
