@@ -49,9 +49,16 @@
 
 ## 2. 部署前
 
-1. 扣子仓库里 `git fetch origin main && git reset --hard origin/main`，确认 `git log --oneline -1` 是最新提交。
-2. 首次部署：勾「同步数据」把开发库的数据带过去；**之后每次部署只同步 schema、不动数据**，回滚也不回滚数据库。
-3. 线上容器文件系统只读 → 必须走真 PG（见上表），否则会回落 PGlite 报 EROFS。
+1. 扣子仓库里 `git fetch origin main && git reset --hard origin/main`，确认 `git log --oneline -1` 是最新提交（当前 `fe02343`）。
+2. **建表（最容易漏的一步）**：代码运行时不自动建表，生产库首次部署是「按开发库 schema 建」——
+   所以**开发库必须先有表**，否则线上 `relation ... does not exist`。在扣子容器（开发环境）里执行一次：
+   ```bash
+   node db/init.mjs        # 幂等：DDL 来自 db/migrations/0001_init.sql，同时播种 10 个实验元数据
+   node db/seed-demo.mjs   # 可选：40 名学生 + 演示 run（演示要用就带上）
+   ```
+   前提是开发环境已注入 `DATABASE_URL`（发布管理里配的那套开发变量）。
+3. 首次部署：勾「同步数据」把开发库的数据带过去；**之后每次部署只同步 schema、不动数据**，回滚也不回滚数据库。
+4. 线上容器文件系统只读 → 必须走真 PG（见上表），否则会回落 PGlite 报 EROFS。
 
 ## 3. 部署后自检（按顺序打，任一不过就停下）
 
