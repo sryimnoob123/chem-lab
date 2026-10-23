@@ -4,7 +4,24 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { levelTopY, liquidBox, mouthOf, surfaceRxAt, defaultLevel, MOUTH_Y, CENTER_X } from "./vessel-geometry";
+/**
+ * 玻璃五层（2026-10-23 B1）：Tint / Specular rim / Sheen 用到的参考几何。
+ * 这几条数值一旦偏离真实轮廓，亮边就会画到器皿外面去（fly 到墙上）——所以要有守卫。
+ */
+
+import {
+  BASE_Y,
+  BODY_BOX,
+  bodyBox,
+  levelTopY,
+  liquidBox,
+  mouthOf,
+  mouthRimArc,
+  surfaceRxAt,
+  defaultLevel,
+  MOUTH_Y,
+  CENTER_X,
+} from "./vessel-geometry";
 
 const beaker = liquidBox("beaker");
 const flask = liquidBox("flask");
@@ -70,3 +87,59 @@ describe("defaultLevel", () => {
     expect(defaultLevel(false)).toBe(0);
   });
 });
+
+describe("玻璃五层几何（B1：Tint / Specular rim / Sheen）", () => {
+  const KINDS = ["flask", "beaker", "volumetric", "tube", "dish", "burette"] as const;
+
+  it("BODY_BOX 从瓶口盖到器底（偏了亮边就画到器皿外面去）", () => {
+    for (const kind of KINDS) {
+      const box = bodyBox(kind);
+      expect(BODY_BOX[kind]).toEqual(box);
+      expect(box.w).toBeGreaterThan(0);
+      expect(box.h).toBeGreaterThan(0);
+      // 顶部要盖住瓶口（否则 rim 渐变的「最亮」落不到口沿上）
+      expect(box.y).toBeLessThanOrEqual(MOUTH_Y[kind] + 1);
+      // 底部要盖到器底（否则器底那段没有被裁，渐变会提前淡出成一片灰）
+      expect(box.y + box.h).toBeGreaterThanOrEqual(BASE_Y[kind]);
+      // 中轴在框内
+      expect(CENTER_X[kind]).toBeGreaterThanOrEqual(box.x);
+      expect(CENTER_X[kind]).toBeLessThanOrEqual(box.x + box.w);
+    }
+  });
+
+  it("BODY_BOX 落在器皿自己的画布里（Sheen 矩形按它铺，越界会在瓶外留一条光带）", () => {
+    const CANVAS: Record<(typeof KINDS)[number], number> = {
+      flask: 160,
+      beaker: 160,
+      volumetric: 160,
+      tube: 40,
+      dish: 160,
+      burette: 120,
+    };
+    for (const kind of KINDS) {
+      const box = bodyBox(kind);
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.w).toBeLessThanOrEqual(CANVAS[kind]);
+    }
+  });
+
+  it("瓶口高光弧：只画上半圈、半径比口沿小一圈、两端落在口沿上", () => {
+    for (const kind of KINDS) {
+      const mouth = mouthOf(kind);
+      const arc = mouthRimArc(kind);
+      expect(arc.startsWith("M ")).toBe(true);
+      // A rx ry 0 0 1 x y —— sweep=1 = 从左上绕到右上（上半圈）
+      expect(arc).toContain(" 0 0 1 ");
+      const numbers = arc.replace(/[MA]/g, " ").trim().split(/\s+/).map(Number);
+      const [x0, y0, rx, ry, , , , x1, y1] = numbers;
+      expect(rx).toBeLessThan(mouth.rx);
+      expect(ry).toBeLessThan(mouth.ry);
+      expect(rx / ry).toBeCloseTo(mouth.rx / mouth.ry, 1); // 与口沿同一压缩比
+      expect(x0).toBeCloseTo(mouth.cx - rx, 1);
+      expect(x1).toBeCloseTo(mouth.cx + rx, 1);
+      expect(y0).toBeCloseTo(mouth.y, 2);
+      expect(y1).toBeCloseTo(mouth.y, 2);
+    }
+  });
+});
+

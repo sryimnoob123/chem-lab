@@ -142,6 +142,16 @@
   --canvas-graduation: rgba(74, 87, 104, 0.55);
   --canvas-bottle-lid: rgba(74, 87, 104, 0.45);
 
+  /* 液态玻璃五层（2026-10-23 B1）：Tint / Specular rim / Sheen。
+     纸白场（#F6F7F5）上「亮边」只能相对**器身自己被压暗的 tint** 才成立 ——
+     所以先让 tint 把器身压到略低于纸白（上暖下冷、器底再沉一档），rim 才有对比可读。
+     三层都由主体轮廓裁住，颜色只在这里改。 */
+  --canvas-glass-tint-top: rgba(255, 253, 247, 0.55); /* 上段：暖白洗底（略高于纸白 = 受光） */
+  --canvas-glass-tint-mid: rgba(206, 222, 232, 0.62); /* 中段：冷白 = 玻璃厚度（略低于纸白才读得出） */
+  --canvas-glass-tint-deep: rgba(74, 87, 104, 0.15); /* 器底：积色（玻璃体量） */
+  --canvas-glass-rim: #ffffff; /* Specular rim：白，靠 stop-opacity 分段淡出 */
+  --canvas-glass-sheen: rgba(255, 255, 255, 1); /* Sheen：45° 柔光（screen 混合） */
+
   /* 动作层（洗涤 / 倾倒 / 转移 / 加热）用色。
      水色偏青灰、低饱和，避免纸白底上显得像荧光；描边走同一档墨色。
      对比度实测见 docs/design：水柱边缘 vs 纸白 3.1:1（图形元素 ≥3:1，WCAG 1.4.11）。 */

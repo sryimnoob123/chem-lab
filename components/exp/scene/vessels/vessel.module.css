@@ -4,10 +4,33 @@
   pointer-events: none;
 }
 
-/* 玻璃面：暖白填充 55%（30% 在暖纸白台面上等于没有）；配合双层描边与接地影，器皿才立得住 */
+/* 玻璃面 · Tint：填充走 JSX 里的 `fill="url(#gTint…)"`（竖向渐变，`--canvas-glass-tint-*`）。
+   这里**不能**再写 fill —— CSS 的 fill 会盖掉 fill 属性，渐变就没了。
+   2026-10-23 B1：原来平涂 rgba(255,253,247,.55) 在纸白台上等于没有，后面的亮边无从对比。 */
 .glassBody {
-  fill: rgba(255, 253, 247, 0.55);
   stroke: none;
+}
+
+/* 玻璃面 · Sheen：45° 斜向柔光，screen 混合才能「加光」而不是「盖一层白」。
+   peak 停 0.26（见 glass-vessel 的 gSheen 渐变），压在液体上也只提亮不糊色。 */
+.glassSheen {
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* 玻璃面 · Specular rim：白描边被主体轮廓裁在内侧，露出 ~1.3px 内沿细线。
+   描边颜色是渐变（瓶口最亮），这里只管端点形状。 */
+.glassRim {
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+/* 瓶口高光：口沿远侧那半圈，全台最亮。
+   颜色是 JSX 里的横向渐变（两端收掉），css 不能写 stroke，否则会盖掉渐变。 */
+.mouthRim {
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  pointer-events: none;
 }
 
 /* 双层描边 · 外层：2.6px 半透明墨，定住器皿外形

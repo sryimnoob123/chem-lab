@@ -32,6 +32,38 @@ describe("玻璃器皿 2.5D（drag-pour 画法，SSR 冒烟）", () => {
     expect(html).toContain("radialGradient");
   });
 
+  it("玻璃五层（B1）：Tint / Sheen / Specular rim / 瓶口高光都在，且颜色走渐变不写死", () => {
+    const html = render(createElement(GlassVessel, { vessel: beaker, contents: [] }));
+    for (const layer of ["tint", "sheen", "rim", "mouth-rim"]) {
+      expect(html).toContain(`data-glass-layer="${layer}"`);
+    }
+    // 三层各自一个渐变：平涂在纸白场上等于没有（旧 .glassBody 的死因）
+    expect(html).toMatch(/fill="url\(#gTint-/);
+    expect(html).toMatch(/fill="url\(#gSheen-/);
+    expect(html).toMatch(/stroke="url\(#gRim-/);
+    expect(html).toMatch(/stroke="url\(#gMouth-/);
+    // 颜色只走 token，不许在组件里写字面色
+    expect(html).toContain("var(--canvas-glass-tint-mid)");
+    expect(html).toContain("var(--canvas-glass-rim)");
+    // Sheen 必须 screen 混合（普通混合的白会糊住液体）
+    expect(html).toContain("glassSheen");
+  });
+
+  it("玻璃五层：每个器皿的渐变 id 带 uid（多台器皿不串色）", () => {
+    const html = render(
+      createElement("svg", null, [
+        createElement(GlassVessel, { key: "a", vessel: beaker, contents: [] }),
+        createElement(GlassVessel, {
+          key: "b",
+          vessel: { ...beaker, id: "beaker-2", x: 200 },
+          contents: [],
+        }),
+      ]),
+    );
+    const tintIds = [...html.matchAll(/id="(gTint-[^"]+)"/g)].map((m) => m[1]);
+    expect(new Set(tintIds).size).toBe(2);
+  });
+
   it("液体 = 矩形 + 液面椭圆，两层都被器皿轮廓裁（clipPath）", () => {
     const html = render(createElement(GlassVessel, { vessel: beaker, contents: ["water"], level: 0.4 }));
     expect(html).toContain('data-vessel-liquid="beaker"');

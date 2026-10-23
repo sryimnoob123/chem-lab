@@ -22,10 +22,12 @@ import {
   CENTER_X,
   MOUTH_Y,
   VESSEL_SCALE,
+  bodyBox,
   bodyPath,
   levelTopY,
   liquidBox,
   mouthOf,
+  mouthRimArc,
   reflectArc,
   sheenPath,
   surfaceRxAt,
@@ -74,8 +76,14 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
   const volumeId = `vol-${uid}`;
   const liquidTopId = `liqTop-${uid}`;
   const liquidDeepId = `liqDeep-${uid}`;
+  /* 玻璃五层（B1）：Tint / Specular rim / Sheen —— 三个渐变各一份，id 带 uid 防多器皿串色 */
+  const tintId = `gTint-${uid}`;
+  const rimId = `gRim-${uid}`;
+  const sheenId = `gSheen-${uid}`;
+  const mouthRimId = `gMouth-${uid}`;
   const scale = VESSEL_SCALE[kind];
   const body = bodyPath(kind);
+  const bodyBounds = bodyBox(kind);
   const mouth = mouthOf(kind);
   const box = liquidBox(kind);
   const cx = CENTER_X[kind];
@@ -125,13 +133,51 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
           <stop offset="74%" stopColor="rgba(74, 87, 104, 1)" stopOpacity="0.05" />
           <stop offset="100%" stopColor="rgba(74, 87, 104, 1)" stopOpacity="0.17" />
         </linearGradient>
+        {/* ---- 液态玻璃五层（B1）----
+            ① Tint：竖向洗底。上段暖白（受光面）、中段冷白（玻璃厚度）、器底压深（玻璃体量）。
+               纸白台上平涂 0.55 的白等于没有，必须让器身比纸白**略低**一档，
+               后面的 rim/sheen 才有对比可读。 */}
+        <linearGradient id={tintId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--canvas-glass-tint-top)" />
+          <stop offset="38%" stopColor="var(--canvas-glass-tint-mid)" />
+          <stop offset="78%" stopColor="var(--canvas-glass-tint-mid)" stopOpacity="0.62" />
+          <stop offset="100%" stopColor="var(--canvas-glass-tint-deep)" />
+        </linearGradient>
+        {/* ② Specular rim：沿器皿曲线的亮边。渐变按**左上→右下**斜着走（光源统一左上），
+               所以瓶口最亮、左壁次之、右壁与器底淡出；可见宽度靠「描 5.2px + 被主体轮廓裁掉外半」
+               得到 ~1.3px 紧贴外描边的内沿细线。 */}
+        <linearGradient id={rimId} x1="0" y1="0" x2="0.55" y2="1">
+          <stop offset="0%" stopColor="var(--canvas-glass-rim)" stopOpacity="0.95" />
+          <stop offset="24%" stopColor="var(--canvas-glass-rim)" stopOpacity="0.74" />
+          <stop offset="56%" stopColor="var(--canvas-glass-rim)" stopOpacity="0.40" />
+          <stop offset="86%" stopColor="var(--canvas-glass-rim)" stopOpacity="0.14" />
+          <stop offset="100%" stopColor="var(--canvas-glass-rim)" stopOpacity="0.06" />
+        </linearGradient>
+        {/* ③ Sheen：45° 斜向柔光（矩形按主体包围盒铺，再用轮廓裁）。
+               用 screen 混合，遇到已压暗的 tint 才亮得出来；峰值 0.34，避免糊在液体上。 */}
+        <linearGradient id={sheenId} x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stopColor="var(--canvas-glass-sheen)" stopOpacity="0" />
+          <stop offset="26%" stopColor="var(--canvas-glass-sheen)" stopOpacity="0" />
+          <stop offset="38%" stopColor="var(--canvas-glass-sheen)" stopOpacity="0.30" />
+          <stop offset="46%" stopColor="var(--canvas-glass-sheen)" stopOpacity="0.52" />
+          <stop offset="56%" stopColor="var(--canvas-glass-sheen)" stopOpacity="0.16" />
+          <stop offset="66%" stopColor="var(--canvas-glass-sheen)" stopOpacity="0" />
+          <stop offset="100%" stopColor="var(--canvas-glass-sheen)" stopOpacity="0" />
+        </linearGradient>
+        {/* ④ 瓶口高光：沿口沿横向淡入淡出 —— 两端收掉，才不会读成「口里画了一圈白线」 */}
+        <linearGradient id={mouthRimId} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="var(--canvas-glass-rim)" stopOpacity="0.10" />
+          <stop offset="22%" stopColor="var(--canvas-glass-rim)" stopOpacity="0.88" />
+          <stop offset="70%" stopColor="var(--canvas-glass-rim)" stopOpacity="0.80" />
+          <stop offset="100%" stopColor="var(--canvas-glass-rim)" stopOpacity="0.08" />
+        </linearGradient>
       </defs>
 
       {/* 接地阴影（drag-pour 的 .shadow 椭圆） */}
       <ellipse cx={cx} cy={box.bottom + 2} rx={surfaceRx * 1.06} ry={7} fill={`url(#${shadowId})`} />
 
-      {/* 玻璃面：淡暖白填充（实心玻璃，不是线稿） */}
-      <path d={body} className={styles.glassBody} />
+      {/* 玻璃面（① Tint）：淡暖白洗底 + 竖向渐变，比纸白略低一档 —— rim/sheen 才读得出来 */}
+      <path d={body} className={styles.glassBody} data-glass-layer="tint" fill={`url(#${tintId})`} />
 
       {/* 固体粉末：沉在器底的一层（不是液体，不参与液面动画） */}
       {solid ? (
@@ -199,6 +245,48 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
       {/* 体积明暗：压在液体之上、描边之下，液体也跟着有左亮右暗 */}
       <path d={body} fill={`url(#${volumeId})`} aria-hidden="true" />
 
+      {/* 内壁那圈淡淡的厚度（宽描边被轮廓裁在内侧） */}
+      <path
+        d={body}
+        fill="none"
+        className={styles.innerEdge}
+        strokeWidth={7}
+        strokeLinejoin="round"
+        clipPath={`url(#${clipId})`}
+      />
+
+      {/* ③ Sheen：45° 斜向柔光，screen 混合压在玻璃（含液体）上 —— 玻璃表面的一层反光。
+          必须画在「内壁厚度」之后：那圈 7px 淡墨会把柔光压掉一半。 */}
+      <rect
+        data-glass-layer="sheen"
+        x={bodyBounds.x}
+        y={bodyBounds.y}
+        width={bodyBounds.w}
+        height={bodyBounds.h}
+        fill={`url(#${sheenId})`}
+        className={styles.glassSheen}
+        clipPath={`url(#${clipId})`}
+        aria-hidden="true"
+      />
+
+      {/* ② Specular rim：沿器皿曲线的亮边（瓶口最亮、器底淡出）。
+          层次是「深墨外描边 → 白亮边 → 内壁淡墨 → 器身」，所以它必须画在
+          内壁厚度之后、**外描边之前**：外描边会盖掉它靠外的一半，留下的 ~1.3px 才是玻璃壁受光的那一条。
+          2026-10-24 实测：画在外描边之后 → 把 2.6px 外描边吃掉一半（outline L 109→120）；
+          画在内壁厚度之前 → 被 7px 淡墨压没（rim-body ≈ -1）。两个坑都踩过一次。 */}
+      <path
+        data-glass-layer="rim"
+        d={body}
+        fill="none"
+        stroke={`url(#${rimId})`}
+        strokeWidth={5.2}
+        strokeLinejoin="round"
+        className={styles.glassRim}
+        clipPath={`url(#${clipId})`}
+        vectorEffect="non-scaling-stroke"
+        aria-hidden="true"
+      />
+
       {/* 器底：只画**下半圈**弧（不是整椭圆）。
           整椭圆放在器底会读成「杯子里垫了个盘子」——上半圈横切杯身内部，
           下半圈露出器身之外。真实 2.5D 的圆底就只有贴着器底的一条弧。 */}
@@ -214,15 +302,6 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
           （2026-10-23 实心玻璃口径；vectorEffect 让缩放到哪台器皿都是同一个粗细） */}
       <path d={body} className={styles.glassEdgeOuter} vectorEffect="non-scaling-stroke" />
       <path d={body} className={styles.glassEdgeInner} vectorEffect="non-scaling-stroke" />
-      {/* 内壁那圈淡淡的厚度（宽描边被轮廓裁在内侧） */}
-      <path
-        d={body}
-        fill="none"
-        className={styles.innerEdge}
-        strokeWidth={7}
-        strokeLinejoin="round"
-        clipPath={`url(#${clipId})`}
-      />
       {/* 瓶口：一定是椭圆（2.5D 看见口里面） */}
       <ellipse
         cx={mouth.cx}
@@ -231,6 +310,17 @@ export function GlassVessel({ vessel, contents, liquidOverride, level }: GlassVe
         ry={mouth.ry}
         className={styles.mouthLine}
         vectorEffect="non-scaling-stroke"
+      />
+      {/* 瓶口高光：口沿「远侧」（上半圈）正对光，是全台器皿最亮的一笔。
+          只画半圈：整圈都描亮会读成「瓶口贴了一圈白胶带」。 */}
+      <path
+        data-glass-layer="mouth-rim"
+        d={mouthRimArc(kind)}
+        fill="none"
+        stroke={`url(#${mouthRimId})`}
+        className={styles.mouthRim}
+        vectorEffect="non-scaling-stroke"
+        aria-hidden="true"
       />
       {/* 左壁一条淡墨高光（纸白底不用白高光） */}
       <path d={sheenPath(kind)} className={styles.sheen} />

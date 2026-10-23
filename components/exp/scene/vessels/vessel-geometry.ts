@@ -208,7 +208,49 @@ export function liquidSurfaceRx(kind: SceneVesselKind): number {
   return surfaceRxAt(kind, liquidSurfaceY(kind));
 }
 
+/* ---------------- 玻璃五层：Tint / Specular rim / Sheen ----------------
+   2026-10-23（B1）：玻璃从「一层平涂 + 一条淡墨线」改成按液态玻璃分层画。
+   三层都用**同一个主体轮廓**（`bodyPath`）裁住，所以收腰、圆底、锥形瓶的斜壁自动成立；
+   颜色全走 token（`--canvas-glass-*`），不在组件里写字面量。 */
+
+/**
+ * 器皿主体的局部包围盒（160×200 / 40×200 / 120×360 那套局部坐标）。
+ *
+ * 用途：Tint 的竖向渐变、Sheen 的 45° 斜向渐变都要一个「从瓶口到器底」的参考框。
+ * 不从 palette 取：palette 是**舞台坐标**（x=1040 这种），这里是器皿自己的局部坐标。
+ * 数值 = 主体 path 的极值（见各 `*_BODY` 常量），改动轮廓时一起改，有单测守着。
+ */
+export const BODY_BOX: Readonly<
+  Record<SceneVesselKind, { x: number; y: number; w: number; h: number }>
+> = {
+  flask: { x: 32, y: 16, w: 96, h: 168 }, // 32..128 / 16..184
+  beaker: { x: 26, y: 41, w: 108, h: 147 }, // 26..134 / 41..188
+  volumetric: { x: 24, y: 18, w: 112, h: 170 }, // 24..136 / 18..188
+  tube: { x: 7, y: 10, w: 26, h: 186 }, // 7..33 / 10..196
+  dish: { x: 12, y: 150, w: 80, h: 32 }, // 12..92 / 150..182
+  burette: { x: 45, y: 14, w: 30, h: 330 }, // 45..75 / 14..344
+};
+
+export function bodyBox(kind: SceneVesselKind): { x: number; y: number; w: number; h: number } {
+  return BODY_BOX[kind];
+}
+
+/**
+ * 瓶口内沿的高光弧 —— 只画**上半圈**。
+ *
+ * 为什么是上半圈：2.5D 俯视下口沿的「远侧」（画面上方那条）正对光，是整台器皿最亮的地方；
+ * 近侧那半圈背光。整圈都描亮会读成「瓶口贴了一圈白胶带」。
+ * 半径取口沿的 86%：高光在玻璃壁内侧，不是压在描边上（压上去会被外描边的深墨吃掉）。
+ */
+export function mouthRimArc(kind: SceneVesselKind): string {
+  const m = mouthOf(kind);
+  const rx = Number((m.rx * 0.86).toFixed(2));
+  const ry = Number((m.ry * 0.86).toFixed(2));
+  return `M ${Number((m.cx - rx).toFixed(2))} ${m.y} A ${rx} ${ry} 0 0 1 ${Number((m.cx + rx).toFixed(2))} ${m.y}`;
+}
+
 /* ---------------- 装饰细节 ---------------- */
+
 
 /**
  * 底部弧形反光：贴着器底的一条弧线，让玻璃「坐」在台面上。
