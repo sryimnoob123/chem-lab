@@ -688,6 +688,10 @@ export function SceneStage({
         const target = event.target as Element;
         if (target.closest("button")) return;
         if (target.closest('[data-demo-id^="demo-scene-vessel"]')) return;
+        // 天平 / pH 计：仪器自己的 click 已经把这一步做完了（选中的是上一帧的建议，
+        // 步骤刚推进）。这里再冒泡成「点空白」提示，底部会留下一句上一步的旧话
+        // —— 彩排实测：第 3 步点完天平进第 4 步，底部还写着「这一步要「点天平」」。
+        if (target.closest('[data-demo-id^="demo-scene-instrument"]')) return;
         if (selectedId || flow.draggingId) {
           // 手里还拿着试剂时点空白 = 放弃这次操作，不唠叨
           setSelectedId(null);
