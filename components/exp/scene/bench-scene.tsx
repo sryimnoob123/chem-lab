@@ -668,6 +668,11 @@ export function BenchScene({
             }
           }}
         >
+          {/* 命中区：天平画的是「线框 + 文字」，中间大片是空的 —— 只有描边能吃到点击，
+              bbox 左右两侧（底座圆角外、防风罩框内）点下去直接漏到台面上，
+              坐标点测（CDP）落在图形左边界就等于点空了（2026-10-23 实测）。
+              补一块和图形同尺寸的透明热区，垫在所有绘制内容之下，只负责吃点击。 */}
+          <rect data-balance-hit className={styles.hit} x={0} y={0} width={132} height={126} />
           {/* 底座 + 立柱 */}
           <rect x="0" y="108" width="132" height="18" rx="3" fill="var(--canvas-glass-fill)" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
           <rect x="56" y="44" width="20" height="64" fill="var(--canvas-glass-fill)" stroke="var(--canvas-glass-line)" strokeWidth={1.6} />
