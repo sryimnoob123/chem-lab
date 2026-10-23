@@ -777,3 +777,35 @@ playwright（`E2E_BASE_URL=http://localhost:3001`）**44 passed**。截图 `%TEM
 - 命中区要跟「描边」比，不是跟 `getBBox()`/`getBoundingClientRect()` 比：后两者都不含描边，比出来的差恒为 0，看着「已经对齐」。
 - 顺手记一条新计划项 **D5**：390 宽下整台天平命中区只有 39.6×37.8px（< 44px 硬线），这是场景整体缩放的问题，不是给天平单独加 pad 能解决的
   （天平左边紧挨洗涤槽，横向再加 pad 会抢槽的点击）。
+
+## 2026-10-23 第 4 轮（自动接力）· B1 玻璃器皿五层
+
+### 做了什么
+| 层 | 改法 | 为什么这么改 |
+|---|---|---|
+| ① Tint | 玻璃面从平涂 `rgba(255,253,247,.55)` 换成竖向渐变（上暖白 → 中段冷白 → 器底积色），token `--canvas-glass-tint-{top,mid,deep}` | 纸白场上平涂 0.55 的白等于没有：器身比纸白还亮（L 248 vs 242），亮边根本无从对比 |
+| ② Specular rim | 主体轮廓再描一条 5.2px 白渐变描边，被 clipPath 裁掉外半 → ~1.3px 内沿细线；渐变左上→右下淡出（光源统一左上，和 B4 口径一致） | 玻璃受光的是**壁内侧**那条线；整条外描边压白会变成"描了白边" |
+| ③ 瓶口高光 | `mouthRimArc(kind)` 只画口沿上半圈（远侧正对光），横向渐变两端淡出 | 整圈都描亮读成"口里画了一圈白胶带"；两端收掉才像反光 |
+| ④ Sheen | 按主体包围盒铺一张 45° 斜向柔光矩形，`mix-blend-mode: screen`，再被轮廓裁 | screen 才是"加光"，普通混合的白会把液体糊成灰白 |
+| ⑤ Refraction | **不做** feDisplacementMap，理由写进 commit：纸白台面近乎均匀，位移图看不出来，却要每台器皿一个 filter（静态栅格化 + Safari 一致性风险）；壁厚折射交给 `.innerEdge` 那条 7px 内壁虚光 | 省掉 4~6 个 filter，动画期间不用重算 |
+
+### 证据
+- `scripts/glass-layers-measure.mjs`（本轮新增，像素级 A/B；同一页、1440×900/DPR2、干壁 30% 行 + 湿润行各一条扫描线）：
+  器身 **L 248 → 236~241**；描边内侧最亮 **241~242（=纸白）→ 左壁 246~252 / 右壁 210~235**；扫描线起伏 **0~3.9 → 4.7~12.4**。
+  复跑：`BASE_URL=http://localhost:3001 OUT=<json> node scripts/glass-layers-measure.mjs`（3001 上跑的是旧构建就是"改前"）。
+- `e2e/glass-layers.spec.ts`（2 条 × 2 项目）：四台器皿都有 tint/sheen/rim/mouth-rim；sheen 必须 `mix-blend-mode: screen` 且带 clip-path；
+  渐变 stop-color 必须解析成 `rgb(...)` —— `var(--canvas-glass-*)` 拼错时浏览器给 `rgb(0,0,0)`，纸白场上就是一块脏灰，肉眼第一眼看不出来。
+- 单测 8 条（`vessel-geometry.test.ts` 3 + `render.test.ts` 2 + 原有）：BODY_BOX 从瓶口盖到器底且在画布内、瓶口高光弧只画上半圈/半径比口沿小、多器皿渐变 id 不串。
+
+### 门禁
+- `tsc --noEmit` 0；`eslint` 0 error / 22 warning（历史项）;`vitest run` 47 files / **652 passed**
+- `npm run build` ✓ → standalone 3001（`.next/static` + `public` + `.env.local` 手动同步，见 restart-prod.ps1 的做法）→ `playwright test` **48 passed**
+- 对比度审计 `/exp/exp01?force=1`：**严重 0 / 偏低 0**
+- 截图：`%TEMP%\chemlab-shots\bench-latest.png`（已覆盖）、`b1-iter6-beaker.png`、`before-beaker.png`（对照）、`b1-iter5-volumetric.png`
+
+### 坑 / 提醒下一轮
+- **CSS 的 `fill`/`stroke` 会盖掉 JSX 的同名属性**：渐变写 `fill="url(#…)"` 时，CSS 里再留一句 `.glassBody { fill: … }` 渐变直接失效；
+  `.mouthRim` 的 `stroke` 就是这么被吃掉的（第一版瓶口高光是纯白常量）。
+- 亮边的可见宽度靠"描 5.2px + 轮廓裁掉外半"，不是靠调 opacity；描 2.6px 会被外层 2.6px 深墨描边整条盖住（等于没画）。
+- 本轮与另一路并发 worker 同树工作（它先提交了 A2 命中区 9b9aa59，并调过 tint 数值）：提交前用 `md5sum` 快照确认
+  「构建测的那一版 == 提交的那一版」很必要，否则会测 A 提交 B。
