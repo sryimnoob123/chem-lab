@@ -561,7 +561,7 @@
   align-items: center;
   justify-content: center;
   transform-origin: 50% 78%;
-  /* 用户 2026-10-22：整场一起动 = 错。投放吸附由 use-drop-flow 给这一层播 scale(1.06)，
+  /* 用户 2026-10-22：整场一起动 = 错。投放吸附由 use-drop-flow 给这一层播 scale(1.03)，
      WAAPI 的优先级低于 !important，这里直接锁住整块台面，位移只发生在被操作的那个器皿上。 */
   transform: none !important;
 }

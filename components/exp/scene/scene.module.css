@@ -963,7 +963,9 @@
 }
 
 .vessel[data-lifted="true"] .vesselLift {
-  transform: scale(1.04);
+  /* 1.04 → 1.03（用户 2026-10-23：拖到洗槽上方时器皿看着偏大）。
+     实测拖拽时这一层是真的在放大（外层 .vessel 的 transform 被 JS 按帧写位移，不含缩放）。 */
+  transform: scale(1.03);
 }
 
 .liftShadow {

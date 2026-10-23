@@ -4,7 +4,7 @@
  * use-drop-flow —— 拖拽三段式的时序层（用户点名要的那条链路）。
  *
  * 段 1 拖动中：跟手 + 目标热区高亮（draggingId / overFlask 交给 scene-stage 渲染）。
- * 段 2 松手吸附：器皿 160ms scale(1.06→1) 弹回 + 瓶身倾转 + 一声轻水声。
+ * 段 2 松手吸附：整块台面 160ms scale(1.03→1) 弹回 + 瓶身倾转 + 一声轻水声。
  * 段 3a 成功：倒入动画（pour.tsx，700ms）**播完才回调 onAccept**，工作台随后才 dispatch；
  *        所以 stepIndex 前进时画面已经演完，不会再"拖进去直接下一步"。
  * 段 3b 失败：试剂瓶从落点回弹原处 240ms + 目标抖动 + `fail-reject`，回调 onReject 给一句为什么；
@@ -129,7 +129,10 @@ export function useDropFlow({ stageRef, resolve, onPour, onAccept, onReject }: D
           animate(
             wrap,
             [
-              { transform: "scale(1.06)" },
+              /* 1.06 → 1.03：同一口径（用户 2026-10-23「拖拽时放大偏大」）。
+                 注意这层缩放目前被 apparatusWrap 的 transform:none !important 压住，
+                 真正在画面上放大的是 .vesselLift 的 1.03 —— 两边保持一致，将来解开也不会突然变大。 */
+              { transform: "scale(1.03)" },
               { transform: "scale(0.995)", offset: 0.6 },
               { transform: "scale(1)" },
             ],
