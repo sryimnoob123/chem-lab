@@ -563,3 +563,32 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
 
 门禁：tsc 干净；eslint 0 error / 11 warning（既有）；vitest 43 files / 610 tests；
 `playwright e2e/wash-return.spec.ts` 在 **3000 和 3001 各 3 passed**（含新增「回位是走回去的，不是瞬移」）。
+
+## 2026-10-23 下午：AI 接入落地 + 评分口径改回「规则算分、模型写评语」
+
+**做了什么**
+1. 参考项目「实验合并」源码拆解（`.team/notes/参考项目-源码要点.md`）：他们的评分是**确定性脚本算 7 维分，
+   模型只写评语**（prompt 里明写「禁止改动任何分数」）。我们之前是模型给分，分不稳且慢。
+2. 改成同一口径：`PLAN_SCORE_SOURCE` 默认 `rule`（分数=规则引擎，模型只写点评）；设 `llm` 回旧行为。
+   超时按模式给：rule 12s / llm 26s。
+3. 新增 `lib/ai/sdk-llm.ts`：扣子运行时走 `coze-coding-dev-sdk`（`new Config()` + 转发请求头，零配置），
+   本地走 HTTP；`LLM_CHANNEL=auto|sdk|http`。`next.config.ts` 把 SDK 加进 `serverExternalPackages`。
+4. 加载态：`components/ui/thinking-bottle.tsx` —— 静止试剂瓶 + 气泡上升（用户选的方案；不做倾倒，
+   因为倾倒语义是「正在执行操作」）。纯 CSS，只动 transform/opacity，带 reduced-motion 降级。
+5. `package.json` 的 `start` 去掉 `-p 3000`（平台用 `--port ${PORT}` 注入，写死会冲突）。
+6. 新增 `docs/扣子开发与部署规范.md`，AGENTS.md 增 §0.2.1 指向它。
+
+**实测数据（本地 dev + 真扣子 BOT）**
+- SDK 用 PAT 调 `integration.coze.cn`：**不可用**（`token contains an invalid number of segments`，网关要三段式 JWT）
+- `auto_save_history:false` + `stream:false` → 扣子回 `code 4000 stream field is required`；
+  必须 `auto_save_history: true`（单测假服务器测不出来，已加断言防回归）
+- 直调同 prompt：doubao-2.0-pro 7.1s / doubao-1.6-flash 4.2s
+- 走我们 `/api/plan/assess`：flash 5.5s（评语笼统）/ pro 8.6~10.9s（评语具体，点名缺哪块、先补哪块）
+- 结论：用户 15s 预算内 → **用 pro**，质量优先
+
+**prompt 收敛（质量修复）**
+- issues 按 block 优先排序，最多给 6 条（原先把 19 条全塞进去，模型抓不住重点、点评变空话）
+- 已通过最多 8 条
+- 硬约束全过时要求「说清为什么站得住 + 1 条可选改进，不许编造缺陷」
+
+**门禁**：tsc 0 错；eslint 0 error / 14 warning；vitest 46 files / 631 passed；build 待复核
