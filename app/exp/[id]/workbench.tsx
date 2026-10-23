@@ -1417,6 +1417,12 @@ export function Workbench({
             forceBench={isExp09 && ui.exp.stepIndex < 2}
             // 第 1 步称 NaOH 要天平；第 2 步配盐酸不需要，别让台面凭空摆一台
             benchInstrument={isExp09 ? (ui.exp.stepIndex === 0 ? "balance" : "none") : undefined}
+            // 天平示数跟着实体走（第 2 步空载 0.0000 / 第 3 步差减 1.0599）
+            balanceReading={
+              typeof ui.exp.entities["balance-1"]?.reading === "number"
+                ? ui.exp.entities["balance-1"].reading
+                : 0
+            }
             // 第 7 步是数据处理：场景换成数据台（读数表 / 极差 / 浓度比），不再挂着滴定管
             computeMode={isExp09 && ui.exp.stepIndex === 6}
             observations={ui.exp.observations.map((item) => item.text)}
@@ -1462,10 +1468,19 @@ export function Workbench({
                * 试剂落到器皿上 → 执行这一步。
                * 但只对「真的是加试剂」的步骤生效：称量/调平/读数这类步骤，倒一瓶 Na₂CO₃ 过去
                * 就把天平校准做完了，等于跳过操作（2026-10-22 实测：第 2 步被一瓶试剂顶过去）。
+               *
+               * 2026-10-23：再加一道「哪瓶」的判定。原来这里只看本步动作类型，不看倒的是哪瓶 ——
+               * 第 4 步把浓硫酸倒进烧杯也算「做完了」（实测），等于教错。现在走
+               * resolveDrop（与本步 correct 的文案/化学式/params.reagent 比对），不匹配就拒收并说明。
                */
               if (suggested && REAGENT_TYPES.has(suggested.type)) {
-                choose(suggested.choiceId);
-                setSceneCaption(`${reagentName}加入${vesselLabel}：这一步做完了`);
+                const verdict = resolveCurrentDrop(reagentId);
+                if (verdict.kind === "accept") {
+                  choose(verdict.choiceId);
+                  setSceneCaption(`${reagentName}加入${vesselLabel}：这一步做完了`);
+                  return;
+                }
+                handleDropRejected(verdict);
                 return;
               }
               if (suggested) {

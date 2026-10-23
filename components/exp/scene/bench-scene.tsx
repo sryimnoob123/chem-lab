@@ -37,15 +37,12 @@ const FX_MS: Record<SceneFx, number> = {
 
 export type BenchReaction = { vesselId: string; outcome: SceneOutcome; key: number };
 
-const LABEL_POSITION: Readonly<Record<string, { y: number; contentY: number }>> = {
-  /* 名称 16px + 内容 14px。svg 改成填满容器后纵向被拉伸，原来 358/384 会让"空"
-     贴到瓶底上；整体上移到 350/378 留出视觉间隙。 */
-  burette: { y: 350, contentY: 378 },
-  flask: { y: 350, contentY: 378 },
-  beaker: { y: 350, contentY: 378 },
-  "tube-a": { y: 350, contentY: 378 },
-  "tube-b": { y: 350, contentY: 378 },
-};
+/**
+ * 器皿名的基线（所有器皿共用一条）。
+ * 2026-10-23：原来每台各写一份、容量瓶还漏了键走 fallback，四只并排时名字高低差 5.6px；
+ * 而且 350 紧贴台面线（340），烧杯/容量瓶的底描边正好扫过字头 —— 整体下移到 358。
+ */
+const LABEL_Y = 358;
 
 /** 一次投放的即时手感：成功弹一下（+ 光环）/ 拒收抖一下。 */
 export type SceneFeedback = { vesselId: string; kind: "success" | "reject"; key: number };
@@ -63,6 +60,12 @@ type BenchSceneProps = {
    * 都不用时传 "none"，避免摆一台当前实验根本用不上的仪器。
    */
   instrument?: "balance" | "ph" | "none";
+  /**
+   * 天平示数（g）。来自实验状态里的 `balance-1.reading`：
+   * 第 2 步内校完是 0.0000（空载），第 3 步差减称量完是 1.0599 ——
+   * 原来这里写死 "0.0000 g"，学生做完第 3 步看到的还是 0，以为没称（2026-10-23 实测）。
+   */
+  balanceReading?: number;
   reaction: BenchReaction | null;
   selectedReagentId: string | null;
   draggingReagentId: string | null;
@@ -118,6 +121,7 @@ export function BenchScene({
   contents,
   vesselIds,
   instrument = "balance",
+  balanceReading = 0,
   reaction,
   selectedReagentId,
   draggingReagentId,
@@ -632,10 +636,32 @@ export function BenchScene({
             fill="url(#benchGrid)"
             opacity="0.45"
           />
-          {/* 前沿（台面厚度） */}
-          <rect x={BENCH.left} y="532" width={BENCH.right - BENCH.left} height="28" fill="var(--bench-edge)" />
-          <line x1={BENCH.left} y1="532" x2={BENCH.right} y2="532" stroke="var(--bench-line)" strokeWidth="1" opacity="0.8" />
-          <rect x={BENCH.left} y="524" width={BENCH.right - BENCH.left} height="8" fill="url(#benchSeam)" />
+          {/* 前沿（台面厚度）：贴台面下沿，不能写死 y ——
+              台面高度是 BENCH.bottom + floorExtra（高视口会补一截），前沿要是还钉在 532，
+              就会悬在半空，底下再多出一块台面（2026-10-23 实测 1440×900 前沿下方还有 105px 台面）。 */}
+          <rect
+            x={BENCH.left}
+            y={BENCH.bottom + floorExtra - 28}
+            width={BENCH.right - BENCH.left}
+            height="28"
+            fill="var(--bench-edge)"
+          />
+          <line
+            x1={BENCH.left}
+            y1={BENCH.bottom + floorExtra - 28}
+            x2={BENCH.right}
+            y2={BENCH.bottom + floorExtra - 28}
+            stroke="var(--bench-line)"
+            strokeWidth="1"
+            opacity="0.8"
+          />
+          <rect
+            x={BENCH.left}
+            y={BENCH.bottom + floorExtra - 36}
+            width={BENCH.right - BENCH.left}
+            height="8"
+            fill="url(#benchSeam)"
+          />
         </g>
 
         {/* 台面落点：落在台面任何位置 = 换了位置就留在那（用户 2026-10-22：放开拖拽范围）。
@@ -700,7 +726,7 @@ export function BenchScene({
             fontSize="20"
             fontFamily="ui-monospace, monospace"
           >
-            0.0000 g
+            {(balanceReading ?? 0).toFixed(4)} g
           </text>
           <text x="66" y="100" textAnchor="middle" fill="var(--ink-2)" fontSize="12">
             分析天平 · 0.1 mg
@@ -1007,7 +1033,7 @@ export function BenchScene({
               key={`label-${vessel.id}`}
               data-demo-id={`demo-scene-vessel-label-${vessel.id}`}
               x={vessel.x + vessel.w / 2}
-              y={(LABEL_POSITION[vessel.id] ?? { y: 356, contentY: 368 }).y}
+              y={LABEL_Y}
               textAnchor="middle"
               className={styles.vesselName}
             >

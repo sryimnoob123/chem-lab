@@ -204,6 +204,7 @@ export function SceneStage({
   onDropToSink,
   forceBench,
   benchInstrument,
+  balanceReading,
   computeMode,
   observations,
   step,
@@ -260,6 +261,8 @@ export function SceneStage({
   forceBench?: boolean;
   /** 台面场景摆哪台仪器：balance / ph / none（不传按 expId 走默认）。 */
   benchInstrument?: "balance" | "ph" | "none";
+  /** 天平示数（g）：直接取实验状态的 `balance-1.reading`，让第 2 步（空载 0）和第 3 步（1.0599）看得出差别。 */
+  balanceReading?: number;
   /** 数据处理步（exp09 第 7 步）：场景换成数据台，不再显示滴定管/锥形瓶。 */
   computeMode?: boolean;
   /** 本步已完成的观察文本，数据台据此点亮读数表 / 极差 / 浓度比。 */
@@ -940,6 +943,7 @@ export function SceneStage({
                         : undefined
                 }
                 instrument={benchInstrument ?? (expId === "exp03" ? "ph" : "balance")}
+                balanceReading={balanceReading}
                 contents={
                   expId === "exp03"
                     ? EXP03_BENCH_CONTENTS

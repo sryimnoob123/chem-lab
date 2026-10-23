@@ -436,7 +436,11 @@ const step3: StepDefinition = {
         completesStep: true,
         ...P({ mass: 1.0599 }),
         observation: { text: "m = 13.4055 − 12.3456 = 1.0599 g；c(Na₂CO₃)=0.1000 mol/L", value: 1.0599 },
-        entityPatch: { "beaker-100": { note: "已称入 1.0599 g Na₂CO₃" } },
+        // 差减称量做完，天平示数要跟着变（原来永远是 0.0000 g，学生看不出第 2 步和第 3 步的差别）
+        entityPatch: {
+          "balance-1": { reading: 1.0599, note: "m₁ 13.4055 g − m₂ 12.3456 g" },
+          "beaker-100": { note: "已称入 1.0599 g Na₂CO₃" },
+        },
         feedback: fb(
           "info",
           "差减质量 1.0599 g",
@@ -519,6 +523,9 @@ const step4: StepDefinition = {
       "S2",
       {
         completesStep: true,
+        // 本步要倒的是洗瓶里的蒸馏水（文案只说"加水"，靠文案匹配不出来 → 明写 reagent，
+        // 否则拖任何一瓶试剂过来都会被当成"加对了"，2026-10-23 实测：浓硫酸倒进烧杯也算过）
+        ...P({ reagent: "water" }),
         observation: { text: "烧杯内壁与玻璃棒洗 3 次，洗液全部并入容量瓶" },
         entityPatch: {
           "volumetric-100": { note: "已转入 Na₂CO₃ 溶液，待定容" },
@@ -607,7 +614,8 @@ const step5: StepDefinition = {
       "S2",
       {
         completesStep: true,
-        ...P({ volume: 100 }),
+        // 定容用洗瓶的蒸馏水（同 step4：文案不点试剂名，明写 reagent 才好判"倒错"）
+        ...P({ volume: 100, reagent: "water" }),
         observation: { text: "溶液摇匀，无气泡、无挂壁；V = 100.0 mL" },
         entityPatch: {
           "volumetric-100": { liquid: { substance: "Na₂CO₃(aq)", level: 100, color: "#dce9f2", opacity: 0.25 } },
