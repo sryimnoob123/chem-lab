@@ -93,7 +93,8 @@
   --bench-top: #f4eee1;
   --bench-edge: #e5dcc9;
   --bench-seam: rgba(58, 72, 90, 0.16);
-  --bench-grid: rgba(74, 87, 104, 0.05);
+  /* 台面纸格：.05 在暖纸白上等于看不见，抬到 .085 才有「一张实验台记录纸」的底纹 */
+  --bench-grid: rgba(74, 87, 104, 0.085);
   /* 实验室背景（2.5D 舞台的远景层）：比台面更冷、更淡，退到后面不抢器皿 */
   --lab-wall: #eaeeec;
   --lab-wall-foot: #dfe4e3;

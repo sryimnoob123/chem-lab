@@ -560,9 +560,10 @@ export function BenchScene({
           </pattern>
           {/* 台面纵深：上浅下深一点，像顶灯照在台面上 */}
           <linearGradient id="benchDepth" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.55" />
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.5" />
             <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0" />
-            <stop offset="100%" stopColor="#39485A" stopOpacity="0.035" />
+            <stop offset="88%" stopColor="#39485A" stopOpacity="0.03" />
+            <stop offset="100%" stopColor="#39485A" stopOpacity="0.075" />
           </linearGradient>
         </defs>
         {/* 实验室背景：墙 / 窗 / 试剂架 / 通风柜（纯矢量，零图片） */}
