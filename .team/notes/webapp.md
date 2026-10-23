@@ -753,3 +753,27 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
 - `scripts/restart-prod.ps1` 在 bash 里跑会卡在末尾的资源探测（`Invoke-WebRequest` 拉图片），**别等它返回**：起在后台，然后 `curl` 轮询 3001。
 - 量台面坐标系别用 `document.querySelector('svg[viewBox]')`：页面里图标 svg 也带 viewBox，会取到第一个图标，换算全错 → 取 `[data-safe-right] svg`。
 - 器皿"视觉右沿"比 palette 的 `w` 宽 ~10 单位（描边/接地影往外探）→ `shiftInsideRight` 的 pad 由 6 上调到 26，否则 1152 宽收完只剩 2px，太贴。
+
+
+## 2026-10-23 第 3 轮（自动接力）· A2 天平命中区「比图形小一圈」
+
+**做了什么**（commit `9b9aa59`）：热区尺寸不再手写，改由 `balanceHitBox()` = `BALANCE_ART` + 描边半宽 + 1 单位余量推导（x=-1 y=-1 w=134 h=128）。
+
+- 根因（第 2 层）：热区原来写死 132×126，正好等于**几何**外沿；但底座/防风罩描边宽 1.6（半宽 0.8）是往外画的，
+  图形最外那一圈描边落在热区外。`getBoundingClientRect` **不含描边**，所以「hit == art 包围盒」的旧 3×3 采样（内缩 3%）
+  永远看不出来 —— 这正是「命中区比图形小一圈」能被漏检的原因。
+- 量现状（1440×900，dev :3000，`elementFromPoint`）：图形边缘外 0.5px 采样 **左/右/上 = MISS**、下 0.5px 侥幸 HIT。
+- 改后（同一页面同一口径）：hit 148.33×141.69px vs 图形 146.12×137.27px（左/右/下 +1.11px、上 +3.32px）；
+  边缘外 0.5px 四点 **全 HIT**；离图形 3px 仍 MISS（没乱扩）。1280×720：hit 155.05..286.95 / 224.13..350.13，四点全 HIT。
+- 断言：单测 3 条（`bench-layout.test.ts`）+ e2e 1 条（`balance-hit.spec.ts`：逐边比包围盒 + 边缘外 0.5px 亚像素采样 + 每边 ≤4 单位不许乱扩）。
+- **A/B 反证**：把热区改回 132×126 后，新断言 chromium+mobile **2/2 失败**，旧 3×3 采样仍全过 —— 证明这条断言正好补上这个漏检。
+
+**门禁**：tsc 0 错；eslint 0 error / 22 warning；vitest 47 files / **647 passed**；`npm run build` ✓ + 3001 重启 200；
+playwright（`E2E_BASE_URL=http://localhost:3001`）**44 passed**。截图 `%TEMP%\chemlab-shotsench-latest.png`（1440×900，已覆盖）。
+
+**踩到的坑**
+- e2e 里「先量包围盒、再另一次 evaluate 采样」会被入场动画/并行负载打断（量到的框和采样点错开 → 顶部假 MISS）。
+  改成**同一个 evaluate 里量+采样**，前面加「包围盒连续两帧不变」的 settle 等待，重跑 3 次全绿。
+- 命中区要跟「描边」比，不是跟 `getBBox()`/`getBoundingClientRect()` 比：后两者都不含描边，比出来的差恒为 0，看着「已经对齐」。
+- 顺手记一条新计划项 **D5**：390 宽下整台天平命中区只有 39.6×37.8px（< 44px 硬线），这是场景整体缩放的问题，不是给天平单独加 pad 能解决的
+  （天平左边紧挨洗涤槽，横向再加 pad 会抢槽的点击）。
