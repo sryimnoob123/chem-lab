@@ -1,24 +1,34 @@
-# 交接 · webapp（2026-10-23 晚 · 实验台 2.5D 版式与质感）
+# 交接 · webapp（2026-10-23 晚 · 实验台收尾 + 对抗报告首轮返修）
 
 ## 一句话
-54 个散改已分批提交成 9 条 commit（本地，未 push）；exp01 台面版式与质感按用户口径落定，四绿全过。
+三个尾巴收了（拖拽 1.03 / 天平热区 / 七步截图），三份对抗报告的 P0 已修（倒错试剂、天平读数、倾倒提前亮、前沿悬空、器皿名基线），四绿全过并已 push 到 main（HEAD 1bc2779）。
 
 ## 现在能看的
-- dev：http://localhost:3000/exp/exp01?force=1 （生产口 3001 同版，重启见下）
-- 整屏截图（每次排版改动覆盖这一张）：`%TEMP%\chemlab-shots\bench-latest.png`
+- 生产口：http://localhost:3001/exp/exp01?force=1 （已是最新构建；改完必须 build + `scripts/restart-prod.ps1`）
+- 整屏进展图：`%TEMP%\chemlab-shots\bench-latest.png`（`node scripts/bench-latest.mjs` 覆盖生成）
+- 七步逐步截图：`%TEMP%\chemlab-shots\exp01-steps\01-step-1.png … 09-postlab.png`（`node scripts/exp01-seven-steps.mjs`）
+- 倾倒逐帧：`%TEMP%\chemlab-shots\pour-film\`（`node scripts/pour-film.mjs`）
 
-## 版式（1280 宽实测，谁挪谁知道）
-左 18..112 试剂三层小板 / 198..314 天平 / 346..812 器皿行 / 左下洗槽 / 右下工具托盘 / 右侧任务卡。
-器皿与天平底边同压 viewBox y=340（`BENCH.top`）。
+## 版式（1440 宽实测，谁挪谁知道）
+左 18..112 试剂三层小板 / 210.. 天平 / 器皿行 / 左下洗槽 / 右下工具托盘 / 右侧任务卡。
+器皿与天平底边同压 viewBox y=340（`BENCH.top`）；台面下沿 = `BENCH.bottom + floorExtra`，前沿厚度贴这条下沿。
 
 ## 硬坑（下次别再踩）
 1. `BENCH.surface`(286) ≠ `BENCH.top`(340)：surface 是墙台接缝，器皿基线是 top。放仪器用 top。
-2. e2e 要 `PLAYWRIGHT_BROWSERS_PATH=.../AppData/Local/ms-playwright`，默认路径缺 1248 版浏览器。
-3. build 前先杀 3001：`MSYS2_ARG_CONV_EXCL="*" taskkill /F /PID <pid>`，否则 `.next/standalone` EBUSY。
-4. 高视口台面悬空已修：bench-scene 用 ResizeObserver 把 viewBox 补到容器比例（wallExtra/floorExtra）。
+2. 拖拽放大的真正来源是 `.vesselLift`（原 1.04），不是 use-drop-flow 的 1.06（被 `transform:none !important` 压着不生效）。
+3. 天平是线框+文字，SVG 只在「画了填充/描边」处命中 → 必须补 `fill:transparent` 热区（`fill:none` 不参与命中）。
+4. WAAPI `fill:"both"` + delay 会把 0% 帧提前铺满整个 delay（涟漪/液柱因此刚松手就出现）→ 改 `forwards` + 基础态 `opacity:0`。
+5. 第 7 步做完不推进步号、直接结算 → 只认步号的脚本会误判「卡住」。
+6. 脚本/测试里别写「外层双引号里塞单引号」的选择器字符串（会被写成 `x"]'` 直接语法错），用 `[data-demo-id=x]`。
+7. e2e 要 `PLAYWRIGHT_BROWSERS_PATH=.../AppData/Local/ms-playwright`；build 前先杀 3001，否则 `.next/standalone` EBUSY。
 
-## 下一步（按价值排）
-1. 「倾倒可信」：拖试剂到器皿后逐帧看（举瓶→倾斜→液柱→液面涨），不够就调 bench-pour 时序。
-2. 天平命中区比图形小（CDP 坐标点在图形左边界点不到，DOM click 正常），补 hitBox 断言 + 放大热区。
-3. `scripts/exp01-chain.mjs` 过时（卡前测门禁），修脚本或删掉换 e2e。
-4. 拖拽中器皿放大 1.06 → 1.03，在洗槽上方看着偏大。
+## 门禁（本机口径）
+tsc / eslint（`node node_modules/eslint/bin/eslint.js`，22 warning 全为历史）/ vitest 46 files 633 / e2e 26 passed（`E2E_BASE_URL=http://localhost:3001`）；对比度审计 0 严重 0 偏低。
+
+## 等用户拍板（`.team/notes/webapp.md` 第四节有代价对比）
+① 做完最后一步自动跳后测 vs 停在结算卡；② 交卷要不要二次确认；③ 第 7 步「水入酸」要不要能真的犯；④ 窄屏字号是否按屏幕像素反算。
+
+## 下一轮 P1
+A：右侧安全边（托盘宽 / rowRightWide / 最右器皿统一由面板宽推）＋ 1152 宽下试剂架压天平。
+B：第 1 步判据去掉「认领单签字」；洗涤槽缺落点提示；第 6 步「放入锥形瓶」但场景无锥形瓶。
+C：无色液体加弯月面线、器皿接地影、字号不随视口漂。
