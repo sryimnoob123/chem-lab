@@ -700,3 +700,30 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
 ## 下一轮（未做）
 - 第 1 步 ①「按认领清单核对并签字」仍没有实体：要么补一个 observe 动作 + 认领单卡（会让每步多一次点击，演示节奏要重排），要么就此作罢。
 - notes 五节剩的：洗涤槽落点提示、A 的右侧安全边三处、无色液体弯月面线。
+
+## 2026-10-23 23:1x · 自动接力第 2 轮（A1 拖拽放大 1.03）
+
+**做了什么**：A1 的代码改动其实在 `a4b9b19`（1.04→1.03）就已经落地，本轮补的是「实测 + 防回归」：
+
+1. 量现状（真浏览器 1440×900，dev 3000，CDP 真鼠标拖拽烧杯到洗槽中心）：
+   - `vesselLift` 计算样式 `matrix(1.03, 0, 0, 1.03, 0, 0)`，渲染宽度 104.13 → **107.25px = ×1.0300**；
+   - 外层 `.vessel` 计算样式 `matrix(1, 0, 0, 1, -326, 219.3)`（只有 translate，没有 scale）——
+     说明拖动中 JS 每帧写的 inline transform 确实盖住了 CSS 里那条 `[data-drop-hover=valid]{scale(1.03)}`，
+     两层**没有**相乘成 1.06（1.03×1.03=1.0609 才是用户说的"偏大"）。
+2. 新增 `e2e/drag-scale.spec.ts`（2 条 × chromium/mobile 两个 project = 4 条断言组）：
+   - 拖到洗槽上方：内层 1.03（±0.005）、外层必须 ≈1、inline 里不许出现 `scale`、实拍宽度涨幅 ≤1.035；
+   - 拖到锥形瓶上方（第 1 步判"不行"）：拖起来那台仍 ≤1.03，被压的那台不缩放且拒绝标签松手前已可见。
+
+**证据**
+- `PLAYWRIGHT_BROWSERS_PATH=…/ms-playwright E2E_BASE_URL=http://localhost:3000 npx playwright test` → **42 passed**（含本轮 4 条）
+- `npm run typecheck` 0 error；`npm run lint` **0 error / 22 warning**（与上轮同基线，新文件无警告）；`vitest` 47 文件 / **640 passed**
+  （注：第一次跑 vitest 出现过一次 `Errors 1 error` 无详情，重跑全绿，判断是 worker teardown 抖动）
+- 截图：`%TEMP%\chemlab-shots\bench-latest.png`（整屏，已覆盖）、`drag-lift-103.png`（拖到洗槽上方那一帧）、`drag-rest.png`（静止对照）
+
+**坑（写进 makefile 级别的记忆）**
+- e2e 必须先 `PLAYWRIGHT_BROWSERS_PATH=C:/Users/<user>/AppData/Local/ms-playwright`：本 shell 默认指向 hermes tools，
+  那里缺 `chromium_headless_shell-1248`，否则直接 `browserType.launch` 失败（不是用例挂）。
+- 3001 生产态会被并发的另一轮 `taskkill` 掉（build 要独占 `.next/standalone`），跑 e2e 前先确认 3000/3001 哪个活着；
+  dev 3000 用 `localhost` 而不是 `127.0.0.1`（allowedDevOrigins 会拦 `/_next` 资源）。
+- 本轮仍与 `t_d9fc1235`（自动第 1 轮）并行在同一棵树里：工作树里 `bench-scene / bench-pour / action-layer /
+  geometry / bench-layout / workbench / use-safe-right / bench-safe-right.spec` 是**他们的**未提交改动，我只提交自己的 3 个文件。
