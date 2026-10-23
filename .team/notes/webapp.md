@@ -592,3 +592,42 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
 - 硬约束全过时要求「说清为什么站得住 + 1 条可选改进，不许编造缺陷」
 
 **门禁**：tsc 0 错；eslint 0 error / 14 warning；vitest 46 files / 631 passed；build 待复核
+
+## 2026-10-23 晚：54 个改动分批提交 + 实验台版式/质感打磨
+
+**提交（7 条，本地未 push，等用户点头）**
+1. `168e17a` feat(scene) 2.5D 斜俯视 38° + 器皿 ×1.7 + 台面放宽 + lab-backdrop
+2. `65fe76f` feat(plan) rubric（5 维评分标准）+ piece-motion（回放动作映射）两个纯模块
+3. `74c77e8` feat(ai) 扣子 SDK 通道 + AI 给分/规则封顶 + thinking-bottle 加载态
+4. `00b1655` feat(plan) 提交 → 回放 → 评分；e2e 适配回放段与「评测中」文案
+5. `e8d834f` docs(notes) 会话记录（含 e2e 浏览器路径、dev 编译超时两条环境事实）
+6. `0833809` feat(scene) 版式分层：试剂瓶站台面后沿、天平同基线、工具右下、暖纸白台面
+7. `c2c8803` feat(scene) 试剂三层小板、天平放大 1.2、液体分层、接地更实
+8. `9588577` style(scene) 台面纸格 + 前沿压暗
+9. `85e7cf9` fix(scene) 高视口（1440×900）台面悬空
+
+**版式落定（1280 宽下量的实坐标）**
+- 左 18..112：试剂三层小搁板（碳酸钠/蒸馏水/硫酸），无面板边框底色
+- 198..314：分析天平，底边与器皿同在 340 台面线
+- 346..812：烧杯 430 / 试管 A 690 / 试管 B 786 / 容量瓶 880（viewBox 单位）
+- 左下 119..245：洗涤槽；右下 572..1172px：工具托盘（8 件，含标签）
+- 右侧 1018..1250：任务/错误卡（浮在台面上，故托盘右边界收到 1290 单位）
+
+**颜色/质感**
+- 台面 `--bench-top` #fbfbf8 → #f4eee1（暖纸白），`--bench-grid` .05 → .085
+- 玻璃填充 .30 → .55，接地影 .10 → .17，托盘描边 .18 → .26
+- 液体：液面附近白反光 + 底部沉色两层渐变（不再是纯色一块）
+- 器皿名 14 → 17px/600，洗槽标签 12 → 14px，工具标签 12 → 14px
+
+**门禁口径（本机）**
+- e2e 必须 `PLAYWRIGHT_BROWSERS_PATH=C:/Users/14681/AppData/Local/ms-playwright`，
+  默认指 hermes/tools 时缺 1248 版浏览器，22 条全报 executable doesn't exist。
+- 打生产口前要先杀 3001（`.next/standalone` 被占用会 EBUSY）：`MSYS2_ARG_CONV_EXCL="*" taskkill /F /PID <pid>`。
+
+**当前整屏截图**：`%TEMP%\chemlab-shots\bench-latest.png`（1440×900，用户要看排版时覆盖更新这一张）
+
+**没做完 / 下一轮**
+- 拖拽中器皿按 1.06 放大，在洗槽上方看着偏大，可以再压到 1.03。
+- 第 2 步「点天平校准」用 CDP 坐标点会打在图形左边界上（DOM click 正常），
+  说明天平的命中区比图形小一圈，值得补一条 hitBox 断言。
+- exp01 七步没有逐步截图证据（`scripts/exp01-chain.mjs` 已过时：卡在前测门禁）。
