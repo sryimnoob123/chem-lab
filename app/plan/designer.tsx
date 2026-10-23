@@ -87,20 +87,34 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
         body: JSON.stringify({ pieces, params, topicId: topic?.id }),
       })
         .then((res) => (res.ok ? res.json() : null))
-        .then((data: (LlmAssessResult & { ok?: boolean }) | null) => {
-          if (cancelled || !data?.ok) return;
-          setRemote({
-            key: requestKey,
-            result: {
-              provider: data.provider,
-              text: data.text,
-              points: data.points ?? [],
-              questions: data.questions ?? [],
-              fallback: data.fallback,
-              pointsFrom: data.pointsFrom,
-            },
-          });
-        })
+        .then(
+          (
+            data:
+              | (LlmAssessResult & {
+                  ok?: boolean;
+                  scoreSource?: "llm" | "rule";
+                  dimensions?: { name: string; score: number; note?: string }[];
+                })
+              | null,
+          ) => {
+            if (cancelled || !data?.ok) return;
+            setRemote({
+              key: requestKey,
+              result: {
+                provider: data.provider,
+                text: data.text,
+                points: data.points ?? [],
+                questions: data.questions ?? [],
+                fallback: data.fallback,
+                pointsFrom: data.pointsFrom,
+                // 分数：模型给了就是模型的（服务端已按规则封顶），没给就回落规则分
+                score: typeof data.score === "number" ? data.score : undefined,
+                scoreFrom: data.scoreSource === "llm" ? "model" : "rule",
+                dimensions: Array.isArray(data.dimensions) ? data.dimensions : [],
+              },
+            });
+          },
+        )
         .catch(() => undefined)
         .finally(() => {
           if (!cancelled) setRemarkLoading(false);
@@ -114,6 +128,12 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
 
   /** 当前方案的点评：云端同 key 才用云端，否则本地 */
   const shown = remote && remote.key === requestKey ? remote.result : local;
+  /**
+   * 最终分：AI 给了分就用 AI 的（服务端已按规则封顶），否则用规则分。
+   * 用户 2026-10-23 定：拼接方案由接入大模型的助教评分，规则只当保底与校验。
+   */
+  const aiScore = shown.scoreFrom === "model" ? shown.score : undefined;
+  const scored = aiScore !== undefined ? { ...report, score: aiScore } : report;
   const busy = remarkLoading && pieces.length > 0;
   const orderedPoints = useMemo(() => {
     const rank: Record<string, number> = { good: 0, risk: 1, todo: 2 };
@@ -144,7 +164,7 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
           experimentId: "exp10",
           params: { pieces },
           feasible: report.feasible,
-          score: report.score,
+          score: scored.score,
           issues: report.issues.map((i) => ({ ruleId: i.ruleId, level: i.level, text: i.text })),
           assessment: shown.text,
           assessmentOffline: shown.provider === "mock",
@@ -234,7 +254,15 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
 
       {topic && stage !== "brief" ? (
         <>
-      {stage === "score" ? <ScorePanel report={report} pieceCount={pieces.length} /> : null}
+      {stage === "score" ? (
+        <ScorePanel
+          report={scored}
+          pieceCount={pieces.length}
+          scoreSource={aiScore !== undefined ? "llm" : "rule"}
+          dimensions={shown.dimensions ?? []}
+          scoring={busy && aiScore === undefined}
+        />
+      ) : null}
 
       <div className={s.cols}>
         <PieceLibrary

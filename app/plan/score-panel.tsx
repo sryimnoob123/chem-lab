@@ -29,7 +29,22 @@ function IssueItem({ issue }: { issue: PlanIssue }) {
   );
 }
 
-export function ScorePanel({ report, pieceCount }: { report: PlanReport; pieceCount: number }) {
+export function ScorePanel({
+  report,
+  pieceCount,
+  scoreSource = "rule",
+  dimensions = [],
+  scoring = false,
+}: {
+  report: PlanReport;
+  pieceCount: number;
+  /** 分数来自 AI 评测还是规则校验（用户 2026-10-23：拼接方案由 AI 评分） */
+  scoreSource?: "llm" | "rule";
+  /** AI 给的分项得分 */
+  dimensions?: { name: string; score: number; note?: string }[];
+  /** AI 正在评测：分数先按规则显示，标"评测中" */
+  scoring?: boolean;
+}) {
   const verdict = verdictOf(report, pieceCount);
 
   return (
@@ -42,6 +57,9 @@ export function ScorePanel({ report, pieceCount }: { report: PlanReport; pieceCo
         <div className={s.verdictBox}>
           <p className={s.verdict}>{verdict.headline}</p>
           <p className={s.counts}>
+            <span className={s.countPass} data-demo-id="demo-design-score-source">
+              {scoring ? "AI 评测中" : scoreSource === "llm" ? "AI 评测" : "规则校验"}
+            </span>
             <span className={s.countPass}>✓ 通过 {report.passed.length}</span>
             {report.blockCount > 0 ? (
               <span className={s.countBlock}>✕ 硬约束 {report.blockCount}</span>
@@ -52,6 +70,19 @@ export function ScorePanel({ report, pieceCount }: { report: PlanReport; pieceCo
           </p>
         </div>
       </div>
+
+      {dimensions.length > 0 ? (
+        <ul className={s.dims} data-demo-id="demo-design-dims">
+          {dimensions.map((dim) => (
+            <li key={dim.name} className={s.dim}>
+              <span className={s.dimName}>{dim.name}</span>
+              <span className={s.dimScore} data-tone={dim.score >= 85 ? "ok" : dim.score >= 60 ? "warn" : "bad"}>
+                {dim.score}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       <div className={s.split}>
         <div>

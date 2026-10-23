@@ -40,7 +40,19 @@ export type LlmAssessResult = {
   fallback?: AssessFallback;
   /** points 是模型给的还是本地规则给的（模型坏 JSON 时用本地兜底） */
   pointsFrom?: "model" | "local";
+  /**
+   * 模型给的分（0~100）。用户 2026-10-23 定：拼接方案**由 AI 评分**，规则不再当最终分。
+   * 没有（离线 / 模型没给 / 坏 JSON）就留空，前端回落规则分并标注来源。
+   */
+  score?: number;
+  /** 分项得分（模型给，最多 4 条）；没有就不显示分项 */
+  dimensions?: AssessDimension[];
+  /** 分数来自模型还是规则 */
+  scoreFrom?: "model" | "rule";
 };
+
+/** 分项得分：一项 = 一个维度（顺序 / 完整 / 参数 / 安全） */
+export type AssessDimension = { name: string; score: number; note?: string };
 
 /** 片段小知识库：good 要点用它说明"为什么这块留得住" */
 const PIECE_NOTES: Readonly<Record<string, string>> = {

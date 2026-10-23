@@ -23,13 +23,14 @@ import { RULES_BY_CODE, type PlanReport } from "./rules";
 import type { PlanTopic } from "./topics";
 import {
   mockAssess,
+  type AssessDimension,
   type AssessFallback,
   type AssessPoint,
   type AssessProvider,
   type LlmAssessResult,
 } from "./assess-mock";
 
-export type { AssessFallback, AssessPoint, AssessPointKind, AssessProvider, LlmAssessResult } from "./assess-mock";
+export type { AssessDimension, AssessFallback, AssessPoint, AssessPointKind, AssessProvider, LlmAssessResult } from "./assess-mock";
 export { mockAssess } from "./assess-mock";
 
 /** 12 s 上限：比原来的 8 s 宽一点给豆包轮询，但演示绝不能卡更久 */
@@ -139,8 +140,14 @@ export function buildPrompt(plan: PlanInput, report: PlanReport, topic?: PlanTop
   lines.push("3. points 必须点名具体素材块（pieceId）或规则（ruleId）；pieceId / ruleId 只能取上面出现过的值。");
   lines.push("4. questions 最多 2 条，必须能推动学生改方案（问变量、问依据、问怎么排除）。");
   lines.push("5. 中文，text 不超过 120 字，不要 Markdown。");
+  lines.push("【评分要求】（你给的分就是学生的最终分，规则分只是你的参考下限）");
+  lines.push("- score：0~100 整数。可进操作台 + 硬约束全过 + 顺序对 + 参数合理 → 85~100；");
+  lines.push("  能进但有扣分项（顺序可优化、参数偏松、缺少润洗一类） → 60~84；");
+  lines.push("  不可执行（缺关键步骤、顺序错、硬约束被违反） → 60 以下。");
+  lines.push("- 规则引擎判为不可执行或违反硬约束时，你的分不许高于 59；这条优先于你自己对化学的判断。");
+  lines.push("- dimensions：最多 4 项，name 从「完整性 / 顺序 / 参数 / 安全规范」里选，score 同 0~100。");
   lines.push(
-    '【输出】只输出 JSON：{"text":"…","points":[{"kind":"good|risk|todo","pieceId":"piece-…","ruleId":"…","text":"…"}],"questions":["…"]}',
+    '【输出】只输出 JSON：{"score":88,"dimensions":[{"name":"顺序","score":90,"note":"…"}],"text":"…","points":[{"kind":"good|risk|todo","pieceId":"piece-…","ruleId":"…","text":"…"}],"questions":["…"]}',
   );
   return lines.join("\n");
 }
@@ -185,6 +192,43 @@ function sanitizeQuestions(value: unknown): string[] {
     .slice(0, 2);
 }
 
+/** 模型给的分：只收 0~100 的整数，其它一律当"没给"（不能让学生拿到 NaN 分）。 */
+export function sanitizeScore(value: unknown): number | undefined {
+  const num = typeof value === "string" ? Number(value.trim()) : typeof value === "number" ? value : NaN;
+  if (!Number.isFinite(num)) return undefined;
+  const rounded = Math.round(num);
+  if (rounded < 0 || rounded > 100) return undefined;
+  return rounded;
+}
+
+/** 分项：name 必须非空（≤8 字），score 同 0~100，最多 4 条。 */
+export function sanitizeDimensions(value: unknown): AssessDimension[] {
+  if (!Array.isArray(value)) return [];
+  const out: AssessDimension[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const raw = item as Record<string, unknown>;
+    const name = typeof raw.name === "string" ? plainText(raw.name).slice(0, 8) : "";
+    const score = sanitizeScore(raw.score);
+    if (!name || score === undefined) continue;
+    const note = typeof raw.note === "string" ? plainText(raw.note).slice(0, 60) : undefined;
+    out.push({ name, score, note });
+    if (out.length === 4) break;
+  }
+  return out;
+}
+
+/**
+ * 模型给的分要不要压：规则引擎已经判死（不可执行 / 违反硬约束）时，模型不许给高分。
+ * 用户 2026-10-23 的口径是"AI 评分"，但化学上说不通的方案不能因为模型客气就拿 90。
+ */
+export function capScoreByReport(score: number, report: PlanReport): number {
+  if (!report.feasible) return Math.min(score, 59);
+  if (report.blockCount > 0) return Math.min(score, 59);
+  if (report.warnCount > 0) return Math.min(score, 84);
+  return score;
+}
+
 /**
  * 模型可能不听话：先按 JSON 解析；不是 JSON 就把整段当点评文本（points 交给本地兜底）。
  * 导出给单测，坏 JSON 的行为必须可验证。
@@ -192,7 +236,7 @@ function sanitizeQuestions(value: unknown): string[] {
 export function parseModelAnswer(
   raw: string,
   topic?: PlanTopic,
-): { text: string; points: AssessPoint[]; questions: string[] } {
+): { text: string; points: AssessPoint[]; questions: string[]; score?: number; dimensions?: AssessDimension[] } {
   const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
@@ -200,11 +244,15 @@ export function parseModelAnswer(
     try {
       const parsed = JSON.parse(cleaned.slice(start, end + 1)) as Record<string, unknown>;
       const text = typeof parsed.text === "string" ? plainText(parsed.text) : "";
+      const score = sanitizeScore(parsed.score);
+      const dimensions = sanitizeDimensions(parsed.dimensions);
       if (text) {
         return {
           text: text.slice(0, 600),
           points: sanitizePoints(parsed.points, topic),
           questions: sanitizeQuestions(parsed.questions),
+          score,
+          dimensions,
         };
       }
     } catch {
@@ -347,6 +395,27 @@ export function llmEnabled(): boolean {
 }
 
 /**
+ * 通用补一次模型（助教对话用）。**永不 throw**：没凭据/超时/报错一律返回 null，
+ * 调用方拿 null 就回落到本地话术 —— 同一个 provider 池，配置一次两处都通。
+ */
+export async function complete(prompt: string): Promise<string | null> {
+  const provider = providerOf();
+  if (provider === "mock") return null;
+  const deadline = Date.now() + TIMEOUT_MS;
+  try {
+    const raw = provider === "coze" ? await callCoze(prompt, deadline) : await callOpenAi(prompt, deadline);
+    const text = raw
+      .replace(/```(?:json)?\s*/gi, "")
+      .replace(/```/g, "")
+      .replace(/\*\*/g, "")
+      .trim();
+    return text.length > 0 ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * 点评入口。**永不 throw**：
  * 云端 provider 失败/超时/没配 key → 回落到 mock（结构不变，前端照常渲染）。
  */
@@ -364,10 +433,20 @@ export async function assessPlan(
     const prompt = buildPrompt(plan, report, topic);
     const raw = provider === "coze" ? await callCoze(prompt, deadline) : await callOpenAi(prompt, deadline);
     const parsed = parseModelAnswer(raw, topic);
+    /** 模型给的分才是学生的分；给了就按规则兜底压一压（不可执行不许高分） */
+    const score = parsed.score === undefined ? undefined : capScoreByReport(parsed.score, report);
     if (!parsed.text) return { ...local, fallback: "empty" };
     if (parsed.points.length === 0) {
       // 模型只给了文字（或 JSON 坏）：文字用模型的，指到块的要点仍用本地
-      return { ...local, provider, text: parsed.text, pointsFrom: "local" };
+      return {
+        ...local,
+        provider,
+        text: parsed.text,
+        pointsFrom: "local",
+        score,
+        dimensions: parsed.dimensions,
+        scoreFrom: score === undefined ? undefined : "model",
+      };
     }
     return {
       provider,
@@ -375,6 +454,9 @@ export async function assessPlan(
       points: parsed.points,
       questions: parsed.questions.length > 0 ? parsed.questions : local.questions,
       pointsFrom: "model",
+      score,
+      dimensions: parsed.dimensions,
+      scoreFrom: score === undefined ? undefined : "model",
     };
   } catch (error) {
     return { ...local, fallback: reasonOf(error) };

@@ -1009,3 +1009,44 @@
   line-height: 1.6;
   color: var(--ink-2);
 }
+
+/* ── AI 评测分项（2026-10-23：拼接方案由 AI 评分，分项跟着总分走） ── */
+.dims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dim {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--type-meta);
+  color: var(--ink-2);
+}
+
+.dimName {
+  letter-spacing: 0.04em;
+}
+
+.dimScore {
+  font-family: var(--font-mono);
+  font-size: var(--type-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.dimScore[data-tone="ok"] {
+  color: var(--jade-700, #2f7d5b);
+}
+
+.dimScore[data-tone="warn"] {
+  color: var(--amber-700, #9a6b16);
+}
+
+.dimScore[data-tone="bad"] {
+  color: var(--brick-700, #a13f3f);
+}

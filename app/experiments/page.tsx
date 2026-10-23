@@ -111,10 +111,10 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
 
         <Reveal as="section" className="cat-featured" index={1} aria-labelledby="cat-featured-head">
           <div className="cat-featured__head">
-            <h2 id="cat-featured-head">重点实验</h2>
+            <h2 id="cat-featured-head">必做实验</h2>
           </div>
           <ul className="cat-featured__list">
-            {featured.map((item) => (
+            {featured.map((item, index) => (
               <li key={item.id}>
                 <Link
                   className="cat-card ix-lift"
@@ -122,10 +122,10 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                   data-demo-id={`demo-catalog-${item.id}`}
                 >
                   <span className="cat-card__thumb" aria-hidden="true">
-                    <span className="cat-card__thumbNo mono">{item.no}</span>
+                    <span className="cat-card__thumbNo mono">{index + 1}</span>
                   </span>
                   <span className="cat-card__top">
-                    <span className="cat-card__no mono">{item.no}</span>
+                    <span className="cat-card__no mono">{index + 1}</span>
                     <span className="cat-card__hours mono">{item.hours} 学时</span>
                   </span>
                   <span className="cat-card__title">{item.title}</span>
@@ -174,11 +174,11 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
             </span>
           </summary>
           <ol className="cat-list cat-list--more" data-locked="true">
-            {rest.map((item) => {
+            {rest.map((item, index) => {
               const open = item.playable && (debugAll || PLAYABLE_IN_MORE.has(item.id));
               const body = (
                 <>
-                  <span className="cat-row__no mono">{item.no}</span>
+                  <span className="cat-row__no mono">{featured.length + index + 1}</span>
                   <span className="cat-row__icon" aria-hidden="true">
                     <svg width="20" height="20" viewBox="0 0 24 24">
                       <path d="M4 18h16M6 18V9m4 9V6m4 12v-7m4 7v-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />

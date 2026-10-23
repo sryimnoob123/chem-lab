@@ -1,7 +1,7 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { isTeacher } from "@/lib/session";
 import { TeacherTabs } from "@/components/teacher/tabs";
+import { TeacherBack } from "@/components/teacher/back-link";
 import { TeacherUnlock } from "@/components/teacher/unlock";
 import styles from "./layout.module.css";
 
@@ -14,18 +14,16 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
       <header className="tch-top">
         <div className={`page-shell tch-top__inner ${styles.bar}`}>
           {/*
-            返回学生主界面（/experiments）。
-            为什么加：教师端此前没有任何回主界面的入口 —— 顶栏 Tab 只有「学情总览 / 名单管理」，
-            页边刻度的 03 只是回课程首页（/），教师演示完想切回学生视角只能手动改地址。
+            返回：教师端子页 → 回教师端首页（不再直接跳学生端，用户 2026-10-23 报的 bug）；
+            已经在教师端首页 → 这一项才变成「学生端」。
             位置固定在顶栏最左、品牌之前：右侧 Tab 与用户区靠 margin-left:auto 定位，
             加这一项不会重排既有导航。
           */}
-          <Link className={styles.backLink} href="/experiments" aria-label="返回主界面">
-            <span className={styles.backLink__arrow} aria-hidden="true">
-              ←
-            </span>
-            <span className={styles.backLink__label}>返回主界面</span>
-          </Link>
+          <TeacherBack
+            className={styles.backLink}
+            arrowClass={styles.backLink__arrow}
+            labelClass={styles.backLink__label}
+          />
 
           <div className="tch-brand">
             <span className="tch-brand__mark">

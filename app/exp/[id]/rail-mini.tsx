@@ -161,11 +161,27 @@ export function AiTutor({ stepTitle }: { stepTitle: string }) {
     setMessages((prev) => [...prev, { id: seqRef.current++, from: "me", text: clean }]);
     setDraft("");
     setBusy(true);
-    // 假延迟 380ms：接真接口时把这里换成 fetch / 流式读取，界面不动。
-    window.setTimeout(() => {
-      setMessages((prev) => [...prev, { id: seqRef.current++, from: "ai", text: OFFLINE(stepTitle) }]);
-      setBusy(false);
-    }, 380);
+    /**
+     * 后台：`POST /api/tutor/chat`（部署到扣子后在那里接大模型，见该路由文件头）。
+     * 接口没配模型 / 断网 / 报错一律回落到本地那句实话 —— 界面不空、不报红。
+     * 最短 320ms 再出结果：太快"闪一下"像是没反应。
+     */
+    void fetch("/api/tutor/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ question: clean, step: stepTitle }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { reply?: unknown } | null) => (typeof data?.reply === "string" && data.reply ? data.reply : ""))
+      .catch(() => "")
+      .then((reply) => {
+        const text = reply || OFFLINE(stepTitle);
+        // 固定 320ms 再落答案：接口很快时也会先"想一下"，不会闪一下就没
+        window.setTimeout(() => {
+          setMessages((prev) => [...prev, { id: seqRef.current++, from: "ai", text }]);
+          setBusy(false);
+        }, 320);
+      });
   };
 
   /**

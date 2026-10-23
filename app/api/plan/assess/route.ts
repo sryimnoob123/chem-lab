@@ -47,7 +47,12 @@ export async function POST(request: Request): Promise<Response> {
       points: assessment.points,
       questions: assessment.questions,
       fallback: assessment.fallback,
-      score: report.score,
+      /** 最终分：模型给了就用模型的（已按规则封顶），否则回落规则分 */
+      score: assessment.score ?? report.score,
+      scoreSource: assessment.score === undefined ? "rule" : "llm",
+      dimensions: assessment.dimensions ?? [],
+      /** 规则分留着做参照（前端不显示，排查用） */
+      ruleScore: report.score,
       feasible: report.feasible,
     });
   } catch (error) {
