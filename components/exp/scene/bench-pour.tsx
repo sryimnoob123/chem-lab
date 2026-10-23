@@ -176,7 +176,9 @@ export function BenchPour({ pour, fromLevel, toLevel, svgRef, offsets, onLanded 
               duration: total,
               delay: STREAM_START + index * 70,
               easing: "cubic-bezier(.3,.02,.66,1)",
-              fill: "both",
+              // forwards：delay（400+70i）里别把 0% 帧的 0.85 不透明度先亮出来 ——
+              // 不然刚松手，瓶口就挂着一小截水滴（2026-10-23 逐帧抓到）。基础态 opacity 0 在 JSX 里给。
+              fill: "forwards",
             },
           ),
         );
@@ -196,7 +198,7 @@ export function BenchPour({ pour, fromLevel, toLevel, svgRef, offsets, onLanded 
             { transform: "scale(0.35)", opacity: 0.8 },
             { transform: "scale(1)", opacity: 0 },
           ],
-          { duration: RIPPLE_MS, delay: RIPPLE_START, easing: "cubic-bezier(.22,1,.36,1)", fill: "both" },
+          { duration: RIPPLE_MS, delay: RIPPLE_START, easing: "cubic-bezier(.22,1,.36,1)", fill: "forwards" },
         ),
       );
     }
@@ -286,16 +288,18 @@ export function BenchPour({ pour, fromLevel, toLevel, svgRef, offsets, onLanded 
           key={index}
           data-pour-stream
           fill={`url(#pourStream-${pour.key})`}
-          style={{ transformBox: "fill-box", transformOrigin: "50% 0" }}
+          style={{ transformBox: "fill-box", transformOrigin: "50% 0", opacity: 0 }}
         />
       ))}
-      {/* 落点涟漪 */}
+      {/* 落点涟漪：初始 opacity 0 —— 涟漪在 delay（470ms）里不能先亮着，
+          否则瓶子还在飞、水面还没出水花，杯里先挂着一圈小椭圆（2026-10-23 逐帧抓到的）。
+          fill 用 forwards 而不是 both：both 会把 0% 关键帧的 opacity .8 提前铺满整个 delay。 */}
       <ellipse
         data-pour-ripple
         fill="none"
         stroke="var(--canvas-glass-line)"
         strokeWidth={1.4}
-        style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }}
+        style={{ transformBox: "fill-box", transformOrigin: "50% 50%", opacity: 0 }}
       />
       {/* 瓶子：绕**瓶口**旋转，所以口永远压在算出来的落点上 */}
       <g data-pour-bottle style={{ transformBox: "view-box", transformOrigin: "0 0" }}>
