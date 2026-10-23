@@ -1,0 +1,148 @@
+/**
+ * 三种结果对照（2026-10-24）
+ *
+ * 取色只用 token（--paper / --ink / --line / --card / --river-700 / --jade-600 / --danger / --warn），
+ * 深浅差用 color-mix 兑 --ink，不写字面量。
+ * 结构：标题一行 → 三个按钮（44px 高，移动端也不缩）→ 播放器 → 结论。
+ */
+
+.theater {
+  margin-top: 18px;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--card, #fff);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.hint {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--type-meta, 12px);
+  opacity: 0.75;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.tab {
+  flex: 0 0 auto;
+  min-width: 88px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--paper, #f6f7f5);
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms cubic-bezier(0.23, 1, 0.32, 1), background-color 140ms, color 140ms, transform 90ms;
+}
+
+.tab:active {
+  transform: scale(0.97);
+}
+
+/* 三种结果的颜色就是它们各自的语义：绿=可行、黄=故障、红=危险。
+   不做渐变、不加阴影 —— 这里要的是「一眼分类」，不是装饰。 */
+.tab[data-tone="ok"][data-active="true"] {
+  border-color: var(--jade-600);
+  color: var(--jade-600);
+  background: color-mix(in srgb, var(--jade-600) 7%, var(--card, #fff));
+}
+
+.tab[data-tone="warn"][data-active="true"] {
+  border-color: color-mix(in srgb, var(--warn) 60%, var(--ink));
+  color: color-mix(in srgb, var(--warn) 60%, var(--ink));
+  background: color-mix(in srgb, var(--warn) 9%, var(--card, #fff));
+}
+
+.tab[data-tone="danger"][data-active="true"] {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 7%, var(--card, #fff));
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stage[data-tone="ok"] {
+  --theater-tone: var(--jade-600);
+}
+
+.stage[data-tone="warn"] {
+  --theater-tone: color-mix(in srgb, var(--warn) 60%, var(--ink));
+}
+
+.stage[data-tone="danger"] {
+  --theater-tone: var(--danger);
+}
+
+.running {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--theater-tone, var(--line));
+  background: color-mix(in srgb, var(--theater-tone, var(--ink)) 6%, var(--card, #fff));
+}
+
+.verdict strong {
+  color: var(--theater-tone, var(--ink));
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.verdict span {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.empty {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 560px) {
+  .tabs {
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    flex: 1 1 30%;
+    min-width: 0;
+  }
+}

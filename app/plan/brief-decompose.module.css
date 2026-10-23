@@ -1,0 +1,115 @@
+/**
+ * 主题拆解块（2026-10-24）
+ *
+ * 记录本风格：编号 + 标题 + 一句要点 + 「n 块」，点开才看清单。
+ * 44px 行高（触控）；颜色全走 token，不写字面量。
+ */
+
+.wrap {
+  margin: 14px 0 4px;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 2%, var(--card, #fff));
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.kicker {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.source {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--type-meta, 12px);
+  opacity: 0.7;
+}
+
+.loading,
+.wrap .loading {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  border-top: 1px dashed color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.item:first-child {
+  border-top: 0;
+}
+
+.row {
+  width: 100%;
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 2px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.no {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.text strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.note {
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.count {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.pieces {
+  margin: 0 0 10px 36px;
+  padding: 0;
+  list-style: disc;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.7;
+}

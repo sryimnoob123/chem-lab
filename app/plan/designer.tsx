@@ -20,6 +20,8 @@ import type { LlmAssessResult } from "@/lib/plan/llm-assess";
 import { PieceLibrary } from "./piece-library";
 import { ScorePanel } from "./score-panel";
 import { PlanReplay } from "./plan-replay";
+import { ResultTheater } from "./result-theater";
+import { BriefDecompose } from "./brief-decompose";
 import { TopicPicker } from "./topic-picker";
 import s from "./plan.module.css";
 
@@ -242,6 +244,9 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
               </li>
             ))}
           </ul>
+          {/* AI 拆解（2026-10-24）：选完主题先看「这件事拆成哪几段、每段挑哪些块」，
+              拆粗不拆细 —— 细到每一步等于替学生做作业（用户口径）。 */}
+          <BriefDecompose topicId={topic.id} />
           <div className={s.actions}>
             <button
               type="button"
@@ -472,6 +477,10 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
           </section>
         </div>
       </div>
+
+      {/* 三种结果对照（2026-10-24）：设计阶段给一个「先看别人怎么错」的入口，
+          演完再回到自己的方案 —— 学生知道「能做完」「做得完但错」「根本不能做」差在哪。 */}
+      {stage === "design" ? <ResultTheater /> : null}
         </>
       ) : null}
     </main>
