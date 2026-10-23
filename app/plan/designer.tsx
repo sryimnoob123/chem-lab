@@ -19,6 +19,7 @@ import { applyTopic, type PlanTopic } from "@/lib/plan/topics";
 import type { LlmAssessResult } from "@/lib/plan/llm-assess";
 import { PieceLibrary } from "./piece-library";
 import { ScorePanel } from "./score-panel";
+import { PlanReplay } from "./plan-replay";
 import { TopicPicker } from "./topic-picker";
 import s from "./plan.module.css";
 
@@ -50,7 +51,7 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
    * 三段流程（用户 2026-10-23 口径）：背景 → 自己设计方案 → 提交后才进评分。
    * 进来就给 0 分和 11 条红叉，等于还没动手先被宣判，学生不知道该干什么。
    */
-  const [stage, setStage] = useState<"brief" | "design" | "score">("brief");
+  const [stage, setStage] = useState<"brief" | "design" | "replay" | "score">("brief");
   const [pieces, setPieces] = useState<string[]>([]);
   const [params, setParams] = useState<Record<string, string | number | boolean>>(DEFAULT_PARAMS);
   const [kind, setKind] = useState<PieceKind | null>(null);
@@ -93,6 +94,7 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
               | (LlmAssessResult & {
                   ok?: boolean;
                   scoreSource?: "llm" | "rule";
+                  summary?: string;
                   dimensions?: { name: string; score: number; note?: string }[];
                 })
               | null,
@@ -111,6 +113,7 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
                 score: typeof data.score === "number" ? data.score : undefined,
                 scoreFrom: data.scoreSource === "llm" ? "model" : "rule",
                 dimensions: Array.isArray(data.dimensions) ? data.dimensions : [],
+                summary: typeof data.summary === "string" ? data.summary : "",
               },
             });
           },
@@ -254,17 +257,23 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
 
       {topic && stage !== "brief" ? (
         <>
+      {/* 第三段：先按学生排的顺序把流程演一遍，再给分（用户 2026-10-23） */}
+      {stage === "replay" ? (
+        <PlanReplay pieces={pieces} onDone={() => setStage("score")} />
+      ) : null}
+
       {stage === "score" ? (
         <ScorePanel
           report={scored}
           pieceCount={pieces.length}
           scoreSource={aiScore !== undefined ? "llm" : "rule"}
           dimensions={shown.dimensions ?? []}
+          summary={shown.summary}
           scoring={busy && aiScore === undefined}
         />
       ) : null}
 
-      <div className={s.cols}>
+      <div className={s.cols} hidden={stage === "replay"}>
         <PieceLibrary
           selected={pieces}
           kind={kind}
@@ -363,10 +372,10 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
                   type="button"
                   data-demo-id="demo-plan-submit"
                   className="btn btn--primary"
-                  onClick={() => setStage("score")}
+                  onClick={() => setStage("replay")}
                   disabled={!pieces.length}
                 >
-                  提交方案，查看评分
+                  提交，回放我的流程
                 </button>
               ) : (
                 <button

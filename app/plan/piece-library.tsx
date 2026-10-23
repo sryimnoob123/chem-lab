@@ -190,7 +190,54 @@ export function PieceLibrary({
       </div>
 
       <div className={s.groups}>
-        {groups.map(({ group, pieces, selected: sel, total }) => (
+        {groups.map(({ group, pieces, selected: sel, total }) => {
+          /**
+           * 减少选项（用户 2026-10-23）：主题推荐的块和已选的块直接露出，
+           * 其余收进「更多 N 项」。选项从 8~9 个降到 3~5 个，学生不用在一堆名字里找。
+           */
+          const list = ordered(pieces);
+          const primary = list.filter((p) => pinnedOrder.has(p.id) || picked.has(p.id));
+          const extra = list.filter((p) => !pinnedOrder.has(p.id) && !picked.has(p.id));
+
+          const renderPiece = (p: PlanPiece) => {
+            const on = picked.has(p.id);
+            return (
+              <button
+                key={p.id}
+                type="button"
+                className={s.piece}
+                data-demo-id={p.demoId}
+                data-featured={pinnedOrder.has(p.id) ? "true" : undefined}
+                aria-pressed={on}
+                draggable={false}
+                onDragStart={(event) => event.preventDefault()}
+                onPointerDown={(event) => begin(event, p)}
+                onPointerMove={move}
+                onPointerUp={finish}
+                onPointerCancel={endDrag}
+                onClick={() => {
+                  // 拖动刚落下的那个 click：吞掉
+                  if (draggedRef.current) {
+                    draggedRef.current = false;
+                    return;
+                  }
+                  onToggle(p.id);
+                }}
+              >
+                <span className={s.pieceTitle}>
+                  {p.title}
+                  {on ? (
+                    <span className={s.tick} aria-hidden="true">
+                      ✓
+                    </span>
+                  ) : null}
+                </span>
+                <span className={s.pieceSub}>{p.sub}</span>
+              </button>
+            );
+          };
+
+          return (
           <section key={group.id} className={s.group} data-demo-id={`demo-design-group-${group.id}`}>
             <header className={s.groupHead}>
               <h3 className={s.groupTitle}>{group.title}</h3>
@@ -199,46 +246,17 @@ export function PieceLibrary({
               </span>
             </header>
             <div className={s.pieceList}>
-              {ordered(pieces).map((p) => {
-                const on = picked.has(p.id);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={s.piece}
-                    data-demo-id={p.demoId}
-                    data-featured={pinnedOrder.has(p.id) ? "true" : undefined}
-                    aria-pressed={on}
-                    draggable={false}
-                    onDragStart={(event) => event.preventDefault()}
-                    onPointerDown={(event) => begin(event, p)}
-                    onPointerMove={move}
-                    onPointerUp={finish}
-                    onPointerCancel={endDrag}
-                    onClick={() => {
-                      // 拖动刚落下的那个 click：吞掉
-                      if (draggedRef.current) {
-                        draggedRef.current = false;
-                        return;
-                      }
-                      onToggle(p.id);
-                    }}
-                  >
-                    <span className={s.pieceTitle}>
-                      {p.title}
-                      {on ? (
-                        <span className={s.tick} aria-hidden="true">
-                          ✓
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className={s.pieceSub}>{p.sub}</span>
-                  </button>
-                );
-              })}
+              {primary.map(renderPiece)}
+              {extra.length > 0 ? (
+                <details className={s.extra}>
+                  <summary className={s.extraSum}>更多 {extra.length} 项</summary>
+                  <div className={s.extraList}>{extra.map(renderPiece)}</div>
+                </details>
+              ) : null}
             </div>
           </section>
-        ))}
+          );
+        })}
       </div>
 
       {/* 拖动影子：常驻渲染、默认 display:none；出现只切 data-on，位置由 rAF 写 transform */}
