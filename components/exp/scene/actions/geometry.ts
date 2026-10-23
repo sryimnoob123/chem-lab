@@ -66,11 +66,11 @@ export type VesselAnchor = {
 };
 
 /** 器皿 id → 锚点；找不到返回 null（不认识的器皿不画动作，绝不瞎猜坐标）。 */
-export function anchorOf(id: string, offset?: VesselOffset | null): VesselAnchor | null {
+export function anchorOf(id: string, offset?: VesselOffset | null, shiftX = 0): VesselAnchor | null {
   const vessel = SCENE_VESSELS.find((item) => item.id === id);
   if (!vessel) return null;
   const scale = VESSEL_SCALE[vessel.kind];
-  const dx = offset?.dx ?? 0;
+  const dx = (offset?.dx ?? 0) + shiftX;
   const dy = offset?.dy ?? 0;
   const x = vessel.x + dx;
   const y = vessel.y + dy;

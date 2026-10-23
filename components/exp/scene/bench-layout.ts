@@ -56,9 +56,56 @@ export const BENCH = {
   maxSlot: 320,
   /** 洗涤槽原点（槽口左上角） */
   sink: { x: 92, y: 438 },
-  /** 工具导轨（托盘底框）：跟着台面放宽，从左槽右侧铺到仪器左侧 */
-  tray: { x: 640, y: 438, w: 900, h: 112 },
+  /** 工具导轨（托盘底框）：跟着台面放宽，从左槽右侧铺到仪器左侧。
+   *  宽度只是「右栏不挡时的满宽」—— 实际宽度由 fitTray() 按右栏左沿收边，
+   *  否则窄视口（≤1250px）托盘右端会钻到浮在台面上的任务/错误卡底下（2026-10-23 实测）。 */
+  tray: { x: 640, y: 432, w: 650, h: 112 },
 } as const;
+
+/** 器具与右栏之间留的净空（viewBox 单位）。16 单位在 1280 宽下约 12px。 */
+export const RAIL_GAP = 16;
+
+/** 托盘最窄也要放得下 8 件工具（每件约 56 单位宽 + 缝）。 */
+const TRAY_MIN_W = 480;
+
+export type BenchBox = { x: number; y: number; w: number; h: number };
+
+/**
+ * 把工具托盘收到右栏左沿以内。
+ *
+ * 为什么需要：右栏（任务看板 / 错误演示）是 `position: absolute` 的 HTML 卡，
+ * 宽度固定 px、右对齐；台面内容是 viewBox 单位、按容器宽度等比缩放。
+ * 两者之间没有任何布局关系 —— 视口一窄，托盘右端就跑到卡片底下（实测 1152 宽被压 21px）。
+ * `safeRight` 是右栏左沿换算成 viewBox 单位后的 x（见 use-safe-right.ts），
+ * 拿不到量测结果（右栏不在台面上 / 首帧）就返回满宽，行为与改前一致。
+ */
+export function fitTray(area: BenchBox, safeRight: number | null): BenchBox {
+  if (safeRight == null) return area;
+  const limit = Math.max(area.x + TRAY_MIN_W, Math.min(area.x + area.w, safeRight - RAIL_GAP));
+  return { ...area, w: Math.round(limit - area.x) };
+}
+
+/**
+ * 器皿行整体左移：让最右那一台也落在右栏左侧。
+ * 只动 x（相对间距、尺寸一律不缩），够不着就返回 0 —— 大屏上本来就够宽，别无缘无故挪器具。
+ *
+ * 返回的 `dx` 要同时给动作层（`anchorOf` 的第三参）：动作动画的锚点来自 palette 原始坐标，
+ * 玻璃左移了而动作没跟着走，就会出现"水柱浇在旁边"。
+ */
+export function shiftInsideRight<T extends { x: number; w: number }>(
+  items: readonly T[],
+  safeRight: number | null,
+  /* 内缩量（viewBox 单位）：palette 的 w 是包围盒宽度，实际画出来的玻璃/接地影会往外探 ~10 单位
+     （实测 1152 宽时按 pad=6 收完，DOM 里最右器皿离右栏只剩 2px，太贴）。26 单位在 1152 宽约 19px。 */
+  pad = 26,
+): { items: T[]; dx: number } {
+  if (safeRight == null || items.length === 0) return { items: [...items], dx: 0 };
+  const limit = safeRight - RAIL_GAP;
+  const over = Math.max(...items.map((i) => i.x + i.w)) + pad - limit;
+  if (over <= 0) return { items: [...items], dx: 0 };
+  const dx = -Math.round(over * 10) / 10;
+  return { items: items.map((i) => ({ ...i, x: Math.round((i.x + dx) * 10) / 10 })), dx };
+}
 
 export type PlacedVessel = {
   vessel: SceneVessel;

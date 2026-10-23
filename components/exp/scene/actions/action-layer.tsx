@@ -55,6 +55,8 @@ type Props = {
   action: SceneAction | null;
   /** 器皿当前位置（拖动偏移），动作要落在器皿现在的位置上 */
   offsets: Readonly<Record<string, VesselOffset>>;
+  /** 版面整体左移了多少（右栏安全边收边时器皿会一起左移，动作要跟着走） */
+  layoutDx?: number;
   /** 器皿原本的液位（0 空 / 0.38 有液）：事故结束回到这里，卸下层时液面不跳 */
   baseLevelOf?: (vesselId: string) => number;
   /** 时间线中途回调（事故在中间那一帧触发：播一声闷响 / 让台面轻震） */
@@ -94,7 +96,7 @@ function impactShake(el: Element | null): void {
   );
 }
 
-export function ActionLayer({ action, offsets, baseLevelOf, onCue, onDone }: Props) {
+export function ActionLayer({ action, offsets, layoutDx = 0, baseLevelOf, onCue, onDone }: Props) {
   const uid = useId().replace(/:/g, "");
   const groupRef = useRef<SVGGElement | null>(null);
   /** 回调放 ref：父组件每次渲染都换引用，直接进 deps 会让动画重播 */
@@ -106,30 +108,32 @@ export function ActionLayer({ action, offsets, baseLevelOf, onCue, onDone }: Pro
   /** 一条动作 = 一份渲染 + 一组 beat；动作变了就重建。 */
   const scene = useMemo(() => {
     if (!action) return null;
+    /** 所有动作的锚点都从这里取：拖动偏移 + 版面整体位移（右栏收边时器皿左移了多少） */
+    const an = (id: string) => anchorOf(id, offsets[id], layoutDx);
     switch (action.kind) {
       case "rinse": {
-        const a = anchorOf(action.vesselId, offsets[action.vesselId]);
+        const a = an(action.vesselId);
         return a ? buildRinse(a, { variant: "wash", clipId: `act-${uid}-a` }) : null;
       }
       case "dilute": {
-        const a = anchorOf(action.vesselId, offsets[action.vesselId]);
+        const a = an(action.vesselId);
         return a ? buildRinse(a, { variant: "dilute", clipId: `act-${uid}-a` }) : null;
       }
       case "drain": {
-        const a = anchorOf(action.vesselId, offsets[action.vesselId]);
+        const a = an(action.vesselId);
         return a ? buildDrain(a, { clipId: `act-${uid}-d` }) : null;
       }
       case "stir": {
-        const a = anchorOf(action.vesselId, offsets[action.vesselId]);
+        const a = an(action.vesselId);
         return a ? buildStir(a, { clipId: `act-${uid}-a` }) : null;
       }
       case "drops": {
-        const a = anchorOf(action.vesselId, offsets[action.vesselId]);
+        const a = an(action.vesselId);
         return a ? buildDrops(a, { clipId: `act-${uid}-a` }) : null;
       }
       case "transfer": {
-        const from = anchorOf(action.from, offsets[action.from]);
-        const to = anchorOf(action.to, offsets[action.to]);
+        const from = an(action.from);
+        const to = an(action.to);
         return from && to ? buildTransfer(from, to, { clipFrom: `act-${uid}-f`, clipTo: `act-${uid}-t` }) : null;
       }
       case "weigh":
@@ -137,15 +141,15 @@ export function ActionLayer({ action, offsets, baseLevelOf, onCue, onDone }: Pro
       case "read":
         return buildRead(action.value ?? 0);
       case "observe": {
-        const a = anchorOf(action.vesselId, offsets[action.vesselId]);
+        const a = an(action.vesselId);
         return a ? buildObserve(a) : null;
       }
       case "heat": {
-        const a = anchorOf(action.vesselId, offsets[action.vesselId]);
+        const a = an(action.vesselId);
         return a ? buildHeat(a, { clipId: `act-${uid}-a` }) : null;
       }
       case "incident": {
-        const a = anchorOf(action.vesselId, offsets[action.vesselId]);
+        const a = an(action.vesselId);
         if (!a) return null;
         return buildIncident(a, {
           fx: action.fx,
@@ -157,7 +161,7 @@ export function ActionLayer({ action, offsets, baseLevelOf, onCue, onDone }: Pro
       default:
         return null;
     }
-  }, [action, offsets, uid, baseLevelOf]);
+  }, [action, offsets, layoutDx, uid, baseLevelOf]);
 
   useEffect(() => {
     if (!scene) {

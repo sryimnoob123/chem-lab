@@ -81,11 +81,13 @@ export type BenchPourProps = {
   toLevel: number;
   svgRef: RefObject<SVGSVGElement | null>;
   offsets: Readonly<Record<string, VesselOffset>>;
+  /** 版面整体左移多少（右栏收边时器皿会一起左移，倾倒几何要跟着走） */
+  layoutDx?: number;
   /** 液面涨到位（动画落地）：这一刻才把液位记账 +1。 */
   onLanded?: (vesselId: string) => void;
 };
 
-export function BenchPour({ pour, fromLevel, toLevel, svgRef, offsets, onLanded }: BenchPourProps) {
+export function BenchPour({ pour, fromLevel, toLevel, svgRef, offsets, layoutDx = 0, onLanded }: BenchPourProps) {
   const rootRef = useRef<SVGGElement | null>(null);
   const onLandedRef = useRef(onLanded);
   useEffect(() => {
@@ -107,7 +109,7 @@ export function BenchPour({ pour, fromLevel, toLevel, svgRef, offsets, onLanded 
     if (!vessel) return;
     const offset = offsets[vessel.id] ?? { dx: 0, dy: 0 };
     const scale = VESSEL_SCALE[vessel.kind];
-    const baseX = vessel.x + offset.dx;
+    const baseX = vessel.x + offset.dx + layoutDx;
     const baseY = vessel.y + offset.dy;
     const mouth = mouthOf(vessel.kind);
     const box = liquidBox(vessel.kind);
@@ -266,7 +268,7 @@ export function BenchPour({ pour, fromLevel, toLevel, svgRef, offsets, onLanded 
       window.clearTimeout(landed);
       anims.forEach((anim) => anim.cancel());
     };
-  }, [key, pour, fromLevel, toLevel, offsets, svgRef]);
+  }, [key, pour, fromLevel, toLevel, offsets, svgRef, layoutDx]);
 
   if (!pour?.vesselId) return null;
 

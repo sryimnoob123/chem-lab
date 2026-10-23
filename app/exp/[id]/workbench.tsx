@@ -1649,7 +1649,9 @@ export function Workbench({
 
         </section>
 
-        <aside className={styles.rail} aria-label="操作面板">
+        {/* data-rail：台面按它的左沿收边（见 components/exp/scene/use-safe-right.ts）。
+            这张卡是浮在台面上的 HTML，和 SVG 之间没有布局关系，只能靠量。 */}
+        <aside className={styles.rail} data-rail aria-label="操作面板">
           {/* 大字读数（HUD 灵魂）：exp09 = 滴定管读数；其余实验只在本步有判据时报允许误差
               （没有读数就不摆一张空卡 —— 减法：不给"—"占地方） */}
           {isComputeStep ? (

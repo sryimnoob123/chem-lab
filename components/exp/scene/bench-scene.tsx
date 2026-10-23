@@ -14,7 +14,8 @@ import { hasLiquidContent } from "./vessels/glass-vessel";
 import { ActionLayer, type SceneAction } from "./actions/action-layer";
 
 import type { SceneToolId } from "@/lib/scene/tools";
-import { BENCH } from "./bench-layout";
+import { BENCH, fitTray, shiftInsideRight } from "./bench-layout";
+import { useSafeRight } from "./use-safe-right";
 import { LabBackdrop } from "./lab-backdrop";
 import {
   useBenchDrag,
@@ -308,6 +309,16 @@ export function BenchScene({
    * viewBox 单位），相邻热区横向重叠时把超出的部分收回到中缝，谁都不许盖住谁。
    */
   const svgRef = useRef<SVGSVGElement | null>(null);
+  /** 右栏（任务看板/错误演示）左沿在 viewBox 里的 x：托盘按它收边，别钻到卡片底下 */
+  const safeRight = useSafeRight(svgRef);
+  /** 按实验裁剪器皿：天平单独渲染，这里只管玻璃器皿。
+   *  器皿坐标来自 palette（固定），窄视口下最右那台会被右栏压住 ——
+   *  shiftInsideRight 只把它们整体左移，够不着时 dx=0（大屏版面不动）。
+   *  放在这里（而不是器械渲染前）是因为拖动范围要按平移后的原点算。 */
+  const vesselShift = shiftInsideRight(vesselIds ? SCENE_VESSELS.filter((v) => vesselIds.includes(v.id)) : SCENE_VESSELS, safeRight);
+  /** 取成基本类型再往回调里用：直接读 vesselShift.dx 会让 React Compiler 放弃这份 useCallback 的缓存 */
+  const layoutDx = vesselShift.dx;
+  const vessels = vesselShift.items;
   const artRefs = useRef<Record<string, SVGGElement | null>>({});
   /**
    * 器皿外层 <g> 的 ref。
@@ -339,7 +350,7 @@ export function BenchScene({
     const vessel = SCENE_VESSELS.find((item) => item.id === id);
     const w = vessel?.w ?? 90;
     const h = vessel?.h ?? 120;
-    const baseX = vessel?.x ?? 0;
+    const baseX = (vessel?.x ?? 0) + layoutDx;
     const baseY = vessel?.y ?? 0;
     /**
      * 可拖范围 = 整个可见台面（取实时 viewBox，不写死常量）。
@@ -359,7 +370,7 @@ export function BenchScene({
       minY: top + margin - baseY,
       maxY: bottom - h - margin - baseY,
     };
-  }, [svgRef]);
+  }, [svgRef, layoutDx]);
 
   /**
    * 拖动结束后浏览器会补发一个 click：如果漏掉，它会把刚写出的文案盖掉
@@ -473,8 +484,6 @@ export function BenchScene({
    * 只影响它自己的缩放 + 描边，整块台面与其它器皿的 transform 一律不动。
    */
   const [activeVesselId, setActiveVesselId] = useState<string | null>(null);
-  /** 按实验裁剪器皿：天平单独渲染，这里只管玻璃器皿。 */
-  const vessels = vesselIds ? SCENE_VESSELS.filter((v) => vesselIds.includes(v.id)) : SCENE_VESSELS;
 
   /**
    * viewBox 竖向按这一屏实际摆出来的器皿收紧：原 viewBox 顶部空着 ~150 单位，
@@ -565,6 +574,8 @@ export function BenchScene({
   return (
     <div
       className={styles.stage}
+      data-safe-right={safeRight ?? ""}
+      data-layout-dx={layoutDx || ""}
       onClick={(event) => {
         // 点空白取消选中；点器皿交给器皿自己的 handler
         const el = event.target as Element;
@@ -760,10 +771,11 @@ export function BenchScene({
         ) : null}
 
         {/* 工具托盘 + 洗涤槽：动作要在场景里做，不能靠点卡片一步过（用户 2026-10-22）。
-            托盘位置：用户 2026-10-23「小工具放右下角」—— 器皿行占 430..1005，托盘从 900 铺到台面右沿。 */}
+            托盘位置：用户 2026-10-23「小工具放右下角」—— 器皿行占 430..1005，托盘从 900 铺到台面右沿。
+            宽度按右栏左沿收边（fitTray）：右栏是浮在台面上的 HTML 卡，窄视口下托盘会钻到它底下。 */}
         {toolIds && toolIds.length > 0 && onSelectTool ? (
           <ToolTray
-            area={{ x: 640, y: 432, w: 650, h: 112 }}
+            area={fitTray(BENCH.tray, safeRight)}
             toolIds={toolIds}
             activeTool={activeTool}
             onSelectTool={onSelectTool}
@@ -1047,6 +1059,7 @@ export function BenchScene({
         {/* 倾倒：瓶子 / 液柱 / 涟漪全部画在这个 SVG 里，坐标就是器皿几何算出来的 */}
         <BenchPour
           pour={pour}
+          layoutDx={layoutDx}
           fromLevel={pourFrom}
           toLevel={pourTo}
           svgRef={svgRef}
@@ -1058,6 +1071,7 @@ export function BenchScene({
         <ActionLayer
           action={drain ?? action}
           offsets={offsets}
+          layoutDx={layoutDx}
           baseLevelOf={baseLevelOf}
           onCue={onActionCue}
           onDone={() => {
