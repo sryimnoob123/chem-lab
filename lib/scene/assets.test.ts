@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BENCH } from "@/components/exp/scene/bench-layout";
 import { DROPPABLE_KINDS, SCENE_VESSELS, getSceneVessel } from "./palette";
 import { REAGENTS, REAGENT_GROUPS, getSceneReagent } from "./reagents";
 
@@ -15,11 +16,15 @@ describe("exp01 场景资产", () => {
   it("器皿 id 唯一、坐标在画布内", () => {
     const ids = SCENE_VESSELS.map((v) => v.id);
     expect(new Set(ids).size).toBe(ids.length);
+    /* 画布上界跟着 BENCH 走（2026-10-23 台面放宽到 viewBox 20..1580 × bottom 560）：
+       写死 940/420 是旧窄画布的数，器皿一挪到右侧就假报错。 */
     for (const v of SCENE_VESSELS) {
       expect(v.x, v.id).toBeGreaterThanOrEqual(0);
       expect(v.y, v.id).toBeGreaterThanOrEqual(0);
-      expect(v.x + v.w, v.id).toBeLessThanOrEqual(940);
-      expect(v.y + v.h, v.id).toBeLessThanOrEqual(420);
+      expect(v.x + v.w, v.id).toBeLessThanOrEqual(BENCH.viewRight);
+      expect(v.y + v.h, v.id).toBeLessThanOrEqual(BENCH.front);
+      // 所有器皿底边都压在台面线上（BENCH.top；用户 2026-10-23：天平与器皿同一条线）
+      expect(v.y + v.h, `${v.id} 底边`).toBeLessThanOrEqual(BENCH.top + 1);
     }
   });
 

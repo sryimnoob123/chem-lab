@@ -392,23 +392,23 @@
 .rack {
   position: absolute;
   left: 18px;
-  /* 站在台面后沿上（台面后沿 BENCH.backEdge 落在舞台 ~115px 处）：
-     瓶子底边 + 那条台沿压在同一条视觉线上，读成「台面上的试剂架」。 */
-  top: 66px;
+  /* 台面左后角：三层小搁板（每瓶一层），从背板往台面方向排下来。
+     底边要停在洗槽上沿之上（洗槽 y≈287），否则第三瓶压住槽口。 */
+  top: 64px;
   z-index: 8;
   width: auto;
 }
 
-/* 台沿：一条 3px 的浅板 + 下沿一道细影，瓶子站在它上面 */
-.rack::after {
+/* 每瓶下面一条搁板：瓶子站在板上，读成「墙上/台后的试剂架」，不是一张卡片 */
+.reagent::before {
   content: "";
   position: absolute;
-  left: -8px;
-  right: -8px;
-  bottom: -3px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   height: 3px;
-  background: linear-gradient(180deg, var(--bench-line) 0%, var(--bench-seam) 100%);
-  opacity: 0.55;
+  background: linear-gradient(180deg, var(--bench-edge) 0%, var(--bench-line) 100%);
+  opacity: 0.75;
   border-radius: 1px;
   pointer-events: none;
 }
@@ -421,7 +421,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 4px 6px 6px;
+  padding: 3px 8px 7px;
   border: 1px solid transparent;
   background: none;
   color: var(--bench-text);
@@ -458,9 +458,9 @@
 
 .rackList {
   display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 14px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;

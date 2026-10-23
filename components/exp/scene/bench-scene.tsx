@@ -613,7 +613,9 @@ export function BenchScene({
         {instrument === "balance" ? (
         <g
           data-demo-id="demo-scene-instrument-balance"
-          transform={`translate(${BENCH.instrumentX} 214)`}
+          /* 2026-10-23：用户「器材颜色太平淡 / 器皿有实体感」——天平原来只有 132 宽（烧杯 168），
+             在台面上像个玩具。以底座为基准放大 1.32 倍，底边仍压 340 台面线。 */
+          transform={`translate(${BENCH.instrumentX} ${BENCH.top}) scale(1.2) translate(0 -126)`}
           role="button"
           tabIndex={0}
           aria-label="分析天平：点一下使用建议动作"
@@ -663,7 +665,12 @@ export function BenchScene({
 
         {/* pH 计（exp03 醋酸电离常数）：主机 + 电极杆，画法沿用天平（底座/屏/标签） */}
         {instrument === "ph" ? (
-        <g data-demo-id="demo-scene-instrument-ph" aria-hidden="true" transform={`translate(${BENCH.instrumentX} 196)`}>
+        <g
+          data-demo-id="demo-scene-instrument-ph"
+          aria-hidden="true"
+          /* 与天平同一口径：以底座为基准放大，底边压 340 台面线 */
+          transform={`translate(${BENCH.instrumentX} ${BENCH.top}) scale(1.18) translate(0 -140)`}
+        >
           {/* 电极杆 + 球泡 */}
           <line x1="34" y1="70" x2="34" y2="4" stroke="var(--canvas-glass-line)" strokeWidth={2.2} />
           <circle cx="34" cy="4" r="4.5" fill="var(--canvas-glass-fill)" stroke="var(--canvas-glass-line)" strokeWidth={1.4} />
