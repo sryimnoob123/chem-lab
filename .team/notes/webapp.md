@@ -666,3 +666,37 @@ DATABASE_URL=postgres://postgres@127.0.0.1:55432/chemlab DEVTOOLS=1 npm run dev
 - B：第 1 步判据删掉「认领单签字」或补勾选；M1 洗涤槽缺落点提示；M4 第 6 步要「放入锥形瓶」但场景里没有锥形瓶。
 - C：引导行字号（12→15px/600，现在是全场最弱一层）；台面渐变去掉冷蓝压脏（`#39485A@.075` → 暖棕）；无色液体加弯月面线；器皿加接地影。
 
+
+---
+
+# 2026-10-23 22:33–23:00 · t_a765004b 第 3 轮：指引说要用的器皿，台面上得真有
+
+## 做了什么（两处「指引要求学生在场景里找不到的东西」）
+| 问题 | 根因 | 改法 | 证据 |
+|---|---|---|---|
+| 第 6 步指引写「移取 25.00 mL 放入锥形瓶」，台面只有烧杯/两支试管/容量瓶 | exp01 白名单 `EXP01_BENCH_VESSELS` 里没有 flask；palette 里 flask 的 x=1180 被"右侧浮层面板会压住"挡掉 | palette flask 挪到 **x=1040 / y=126**（容量瓶右沿 1028 → 面板左沿 ≈1299 之间的唯一常驻空白），白名单加回 flask | 实拍：瓶底 457px 与烧杯 457 同一条台面线（y=146 时低 20 单位，已按实测校正）；右侧面板左沿 1213px、锥形瓶右沿 1130px，不重叠 |
+| 场景高亮（data-cue）在第 6 步指向**容量瓶** | `expectedVesselId` 走 `TYPE_PREFERENCE.transfer = [volumetric, beaker, flask]`，正确动作文案里没点名器皿 | 第 6 步正确动作文案补「…放出 25.00 mL 入锥形瓶」，文案点名优先于动作原语兜底 | `e2e/bench-flask.spec.ts`：第 6 步 `flask[data-cue=true]`、`volumetric[data-cue=false]`、`[data-cue-vessel='flask']` 存在（chromium+mobile 各 1 条） |
+| 第 1 步判据写「；认领单签字完整」，界面无认领单、定义里也没有对应动作 | 规格 §6 的 ① 核对签字（observe）从没实现 | 判据删掉这半句（现存唯一动作是洗涤；认领单实体仍缺，见下） | 第 1 步任务卡只剩「内壁形成均匀水膜、无水珠挂壁」 |
+
+## 门禁（本机实测）
+- `tsc --noEmit` 0 错
+- `npm run lint` 0 error / 22 warning（我改的文件无警告）
+- `vitest run` 47 files / **640 passed**（新增：第 6 步→锥形瓶、五只器皿不重叠不钻面板）
+- `npm run build` ✓（先 `taskkill /F /PID <3001>` 再 build，否则 `.next/standalone` EBUSY）
+- `playwright test`（对 `E2E_BASE_URL=http://localhost:3001`，生产态）**28 passed**
+- `scripts/exp01-seven-steps.mjs` 对 3001：七步 7/7 过 + 9 张图
+- 截图：`%TEMP%\chemlab-shots\bench-latest.png`（1440×900，已覆盖）、`exp01-steps\06-step-6.png`（高亮环在锥形瓶上）
+
+## 踩到的坑
+- **e2e 选浮层面板别用 CSS module 类名**：dev 下是 `trap-panel-module__xx__panel`，生产构建里变成 `SbjjAW_panel`，选择器在生产态直接 element=null。改用组件已有的 `data-demo-id="demo-trap-panel"`。
+- 判「器皿被浮层压住」不能只比 x 区间：移动端浮层折到台面下方，全宽面板的水平重叠恒为正 → 假报。两轴都相交才算压住。
+- 锥形瓶的包围盒和画出来的玻璃不同心：y 取 146 时瓶底比烧杯低 20 单位（实拍量），按实测收到 126。
+
+## ⚠️ 并发冲突（重要）
+本轮跑的同时 **t_d9fc1235「自动第 1 轮」也在同一个 dir workspace 里改同一棵树**（22:42–22:56 在写 bench-scene / bench-pour / action-layer / geometry / workbench / tool-tray / use-bench-drag，并新建 `use-safe-right.ts`、`bench-layout.test.ts`）。
+我只提交了自己这 6 个文件，他们的半成品原样留在工作树里，**没有** `git add -A`。下一个人合并时先看 `git status`。
+建议：同一仓库的接力轮次不要并行派，dir workspace 是共享的，会互相覆盖。
+
+## 下一轮（未做）
+- 第 1 步 ①「按认领清单核对并签字」仍没有实体：要么补一个 observe 动作 + 认领单卡（会让每步多一次点击，演示节奏要重排），要么就此作罢。
+- notes 五节剩的：洗涤槽落点提示、A 的右侧安全边三处、无色液体弯月面线。
