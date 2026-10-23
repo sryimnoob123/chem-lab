@@ -17,6 +17,8 @@
 1. `BENCH.surface`(286) ≠ `BENCH.top`(340)：surface 是墙台接缝，器皿基线是 top。放仪器用 top。
 2. 拖拽放大的真正来源是 `.vesselLift`（原 1.04），不是 use-drop-flow 的 1.06（被 `transform:none !important` 压着不生效）。
 3. 天平是线框+文字，SVG 只在「画了填充/描边」处命中 → 必须补 `fill:transparent` 热区（`fill:none` 不参与命中）。
+   热区尺寸别手写：用 `balanceHitBox()`（`BALANCE_ART` + 描边半宽 0.8 + 1 单位）；`getBBox` / `getBoundingClientRect`
+   **都不含描边**，拿它俩互比会得到「已经对齐」的假象，只有 `elementFromPoint` 在图形边缘外 0.5px 采样才看得出小一圈。
 4. WAAPI `fill:"both"` + delay 会把 0% 帧提前铺满整个 delay（涟漪/液柱因此刚松手就出现）→ 改 `forwards` + 基础态 `opacity:0`。
 5. 第 7 步做完不推进步号、直接结算 → 只认步号的脚本会误判「卡住」。
 6. 脚本/测试里别写「外层双引号里塞单引号」的选择器字符串（会被写成 `x"]'` 直接语法错），用 `[data-demo-id=x]`。
