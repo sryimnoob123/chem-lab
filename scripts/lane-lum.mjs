@@ -52,6 +52,11 @@ const H = rows.length;
 const ry = Math.max(2, Math.round((surface.h / 2) * DPR));
 const discEnd = Math.min(H - 2, Math.max(5, Math.round(ry * 0.85)));
 const discRows = rows.slice(3, discEnd);
+/* 空数组上 Math.max(...[]) 是 -Infinity，落进 JSON 变 null，看起来像「没测」而不是「样本不足」。
+   裁得太小时直接报错，别产出假证据。 */
+if (discRows.length === 0) {
+  throw new Error(`液面盘采样为空（crop 太小：H=${H} discEnd=${discEnd}）`);
+}
 const discPeak = Math.max(...discRows.map((r) => r.peak));
 const discMed = median(discRows.map((r) => r.med));
 const bodyRows = rows.slice(Math.min(H - 3, Math.max(4, Math.round(ry))), H - 3);

@@ -45,10 +45,15 @@ for (const vp of DESKTOPS) {
     const fs = (el) => (el ? Number.parseFloat(getComputedStyle(el).fontSize) : null);
     const label = document.querySelector("text[class*='vesselName']");
     const toolLabel = document.querySelector("text[class*='toolLabel']");
+    /* 任务卡正文 = 右栏迷你任务看板的步骤名（rail-mini.tsx 的 boardTitle）。
+       2026-10-24 二轮：原来的 demo-step-title / demo-task 全仓不存在，
+       fs(null) 静悄悄返回 null，D1「任务卡正文字号」其实一直没量到。量不到就抛，别报 null 当通过。 */
     const taskBody =
-      document.querySelector("[data-demo-id='demo-step-title']") ??
-      document.querySelector("[data-demo-id='demo-task'] h2") ??
-      document.querySelector("[data-demo-id='demo-task']");
+      document.querySelector("[data-demo-id='demo-task-board-mini'] p") ??
+      document.querySelector("[data-demo-id='demo-step-card'] p");
+    if (!taskBody) {
+      throw new Error("任务卡正文选择器失效：demo-task-board-mini p / demo-step-card p 都不在 DOM 里");
+    }
     return {
       vesselLabel: label?.textContent ?? null,
       vesselLabelPx: fs(label),

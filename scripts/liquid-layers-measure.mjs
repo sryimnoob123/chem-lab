@@ -96,6 +96,7 @@ function metrics(geom, rows) {
   const ry = Math.max(2, Math.round((geom.surface.h / 2) * DPR));
   const discEnd = Math.min(H - 2, Math.max(5, Math.round(ry * 0.85)));
   const discRows = rows.slice(3, discEnd);
+  if (discRows.length === 0) return { error: "crop too small", heightPx: H, ryPx: ry };
   const discPeak = Math.max(...discRows.map((r) => r.peak));
   const discMed = median(discRows.map((r) => r.med));
   const bodyRows = rows.slice(Math.min(H - 3, Math.max(4, Math.round(ry))), H - 3);
