@@ -123,3 +123,30 @@ D 事件驱动（`?demo=1&reagent=&vessel=` 与 `window.__chemLabDemoScene.add`�
 - 封面与实验室风格图（用户："暂时不用太去管"）
 - 恢复一键演示入口（已下线，代码保留）
 - 关闭登录鉴权（改为预填 + 一键，不动后端）
+
+---
+
+## D-031 ~ D-034 · 前测分数落库（2026-10-24）
+
+起因：二轮 E1 全链路 8/8 走通，报告页三段分却是 `预习 0 / 操作 100 / 报告 92`（总分 86）。
+根因是 `quiz_answers` 表**只有读路径**（`lib/persist/report.ts` + `lib/persist/score.ts`），
+前测（`components/exp/bopbps-gate.tsx`）只把「通过」写进 localStorage，答案从不提交；
+于是真实学生分数上限 90，而 `?auto=1` 演示靠 `finishRun` 的 override 反而更高。
+
+| # | 决策 | 为什么 | 证据 / 落点 |
+|---|---|---|---|
+| D-031 | 前测答案走「**run 创建后补写**」，`quiz_answers.run_id` 保持 notNull，不改 schema | 另一条路（`run_id` 允许为空）要加迁移 + 补 studentNo/experimentId 归属列，等于把「作答归属」做成两套；而门禁通过后操作台立刻建 run，补写窗口只差一次点击 | 门禁提交 → localStorage（`lib/pedagogy/quiz-store.ts`）→ `workbench.bootstrap` 拿到 runId 后 `POST /api/runs/[id]/quiz`；交卷前再补一次覆盖「重做前测」 |
+| D-032 | 判分在**服务端**，按 curriculum 的 `answer` 比对；同一 run 同一 phase **先删后插** | 客户端能拿到 `answer`（curriculum 打包进前端），传 `correct` 上来等于学生自己给自己判分；重做前测若只 insert 会让 3 题变 6 题，正确率被稀释 | `lib/persist/quiz.ts` 的 `gradeQuiz` / `recordQuizAnswers`；单测 `lib/persist/quiz.test.ts` 锁「重复写只保留最后一版」 |
+| D-033 | **收掉 `?auto=1` 的预习满分 override**；演示路径改成「按正确答案自动作答一遍前测」并真实落库 | override 让演示与真实学生走两套口径（教师端/导出/报告页看似一致，但库里那 100 分是凭空写的）。演示本来就是替学生跑完整个流程，前测按正确答案作答是同一件事，且数据可复核 | 删 `finishRun(runId, override)` 参数与 `finish/route.ts` 的 `?auto=1` 分支；`workbench` 在 `?autodemo=1` / auto 输入模式下用 curriculum 答案补 pre 行 |
+| D-034 | 后测答案也落库（`phase="post"`），但**不重算已冻结的 `runs.score_*`** | 后测页在交卷之后才出现，交卷口径是「交卷时结算」；写 post 行是为了让 `quiz_answers` 这张表的两半都有数据（目标 1 达成度 `(pre+post)/2` 将来看得到），不改现有分数口径 | `app/exp/[id]/postlab/postlab-stage.tsx` 提交时 POST quiz；报告页「后测回顾」仍走 `?post=` 显示，不碰 |
+
+### 忘了就会复发的点
+
+1. **`quiz_answers.run_id` 是 notNull，但没有外键** —— 别因为「run 还不存在」就往里写空 UUID，报告页读不到、教师端也对不上。
+2. **重启 dev/standalone 前删掉 `.pgdata-*` 临时库**，同一目录双进程会让全套 DB 接口 500（页面靠兜底渲染，看起来像业务 bug）。
+3. **预习分不再有特例**：谁再想在展示层给预习「补 10 分」，先看 D-033 —— 从答案算，不从分数改。
+
+### 本轮未做 / 明确不做
+
+- 后测进总分重算（要重开已交卷 run，破坏「交卷即冻结」口径）
+- 迁移历史 run 的前测答案（老 localStorage 只存了 `"pass"`，没有答案可补；这类 run 预习分仍为 0）
