@@ -22,7 +22,8 @@ export function buildStir(a: VesselAnchor, opts: { clipId: string; levelStart?: 
   const box = liquidBox(a.kind);
   /** 液位位移一律换算成器皿局部坐标（液体层在外层 `scale()` 里） */
   const shift = (level: number) => Number((levelShift(a, level) / a.scale).toFixed(2));
-  const level = shift(opts.levelStart ?? 0.5);
+  const start = Math.max(0, Math.min(0.9, opts.levelStart ?? 0.5));
+  const level = shift(start);
   const rodTop = a.mouthY - 46;
   const rodBottom = a.mouthY + (a.baseY - a.mouthY) * 0.52;
   const swirlY = a.surfaceY + 10;
@@ -89,9 +90,9 @@ export function buildStir(a: VesselAnchor, opts: { clipId: string; levelStart?: 
         <rect
           x={a.mouthX - 1.6}
           y={rodTop}
-          width={3.2}
+          width={4.6}
           height={rodBottom - rodTop}
-          rx={1.6}
+          rx={2.3}
           fill="var(--scene-glass-fill)"
           stroke={EDGE}
           strokeWidth={1.2}
@@ -112,10 +113,10 @@ export function buildStir(a: VesselAnchor, opts: { clipId: string; levelStart?: 
       frames: [
         { transform: "translate(-14px, -34px) rotate(-12deg)", opacity: 0 },
         { transform: "translate(0px, 0px) rotate(0deg)", opacity: 1, offset: 0.14 },
-        { transform: "translate(9px, 0px) rotate(7deg)", offset: 0.32 },
-        { transform: "translate(-9px, 0px) rotate(-7deg)", offset: 0.5 },
-        { transform: "translate(9px, 0px) rotate(7deg)", offset: 0.68 },
-        { transform: "translate(-9px, 0px) rotate(-7deg)", offset: 0.84 },
+        { transform: "translate(14px, 0px) rotate(9deg)", offset: 0.32 },
+        { transform: "translate(-14px, 0px) rotate(-9deg)", offset: 0.5 },
+        { transform: "translate(14px, 0px) rotate(9deg)", offset: 0.68 },
+        { transform: "translate(-14px, 0px) rotate(-9deg)", offset: 0.84 },
         { transform: "translate(-14px, -34px) rotate(-12deg)", opacity: 0 },
       ],
       duration: 1500,
@@ -168,9 +169,11 @@ export function buildDrops(a: VesselAnchor, opts: { clipId: string; levelStart?:
   const box = liquidBox(a.kind);
   /** 液位位移一律换算成器皿局部坐标（液体层在外层 `scale()` 里） */
   const shift = (level: number) => Number((levelShift(a, level) / a.scale).toFixed(2));
-  const level = shift(opts.levelStart ?? 0.55);
+  /** 第 4 轮修：从台面真实液位起画、只涨一格（+0.22），播完状态同步 +1，卸层时不跳 */
+  const startLevel = Math.max(0, Math.min(0.75, opts.levelStart ?? 0.22));
+  const level = shift(startLevel);
   const tipY = a.mouthY - 18;
-  const rise = shift(0.68);
+  const rise = shift(startLevel + 0.22);
 
   const node = (
     <>

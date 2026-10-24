@@ -439,7 +439,11 @@ const step3: StepDefinition = {
         // 差减称量做完，天平示数要跟着变（原来永远是 0.0000 g，学生看不出第 2 步和第 3 步的差别）
         entityPatch: {
           "balance-1": { reading: 1.0599, note: "m₁ 13.4055 g − m₂ 12.3456 g" },
-          "beaker-100": { note: "已称入 1.0599 g Na₂CO₃" },
+          "beaker-100": {
+            note: "已称入 1.0599 g Na₂CO₃",
+            /* 第 4 轮：加 30 mL 蒸馏水溶解 —— 液位也要落进状态，台面液面才有依据 */
+            liquid: { substance: "Na₂CO₃(aq)", level: 30, color: "#dce9f2", opacity: 0.25 },
+          },
         },
         feedback: fb(
           "info",
@@ -608,8 +612,8 @@ const step5: StepDefinition = {
   choices: [
     correct(
       "step5-shake",
-      "dilute",
-      "洗瓶加到刻度下方→滴管定容→盖塞倒转摇匀",
+      "addDrops",
+      "洗瓶往容量瓶加到刻度下方→滴管定容→盖塞倒转摇匀",
       "demo-op-step5-shake",
       "S2",
       {
@@ -704,6 +708,10 @@ const step6: StepDefinition = {
       {
         completesStep: true,
         ...P({ volume: 25 }),
+        /* 第 4 轮：移出来的 25 mL 要进锥形瓶的实体状态，否则台面上锥形瓶永远是空的 */
+        entityPatch: {
+          "flask-1": { liquid: { substance: "Na₂CO₃(aq)", level: 25, color: "#dce9f2", opacity: 0.25 } },
+        },
         observation: { text: "放出体积 25.00 mL；管尖外壁无液滴，停留 15 s" },
         feedback: fb(
           "info",
@@ -792,6 +800,8 @@ const step7: StepDefinition = {
         observation: { text: "c(H₂SO₄)=0.50 mol/L；标签含名称/浓度/日期/姓名" },
         entityPatch: {
           "reagent-bottle": { liquid: { substance: "H₂SO₄(aq)", level: 100, color: "#dce9f2", opacity: 0.2 } },
+          /* 第 4 轮：100 mL 稀硫酸配好了，台面烧杯里要看得见这 100 mL */
+          "beaker-250": { liquid: { substance: "H₂SO₄(aq)", level: 100, color: "#dce9f2", opacity: 0.2 } },
         },
         feedback: fb(
           "info",

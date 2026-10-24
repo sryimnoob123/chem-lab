@@ -227,9 +227,9 @@ const TOOL_TYPES: Readonly<Record<SceneToolId, readonly string[]>> = {
   brush: ["wash", "observe"],
   // 洗瓶要能「加水溶解」：第 4 步的「加约 30 mL 蒸馏水」是 dissolve 类，
   // 原来洗瓶只认 wash/dilute，学生拿洗瓶加水会被判「用不上」→ 第 4 步死锁
-  "wash-bottle": ["wash", "dilute", "dissolve"],
+  "wash-bottle": ["wash", "dilute", "dissolve", "addDrops"],
   rod: ["dissolve", "transfer"],
-  dropper: ["dilute", "readInstrument"],
+  dropper: ["dilute", "readInstrument", "addDrops"],
   // 器具 ↔ 动作对账（2026-10-22）：每件工具必须说清它能把哪类动作做完，
   // 对不上就回答「现在用不上」，而不是点了没反应。
   cloth: ["wash"],
@@ -689,6 +689,29 @@ export function Workbench({
       !performed.has(item.choiceId) &&
       !(item.requires ?? []).some((id) => !performed.has(id)),
   );
+  /**
+   * 第 4 轮：把实体状态里的液位换算成台面液面（0~1）。
+   * 台面的液面原来只按「倒过几次」推（0.22 一格），跟状态里的 mL 完全脱钩 ——
+   * 定容 100 mL 做完，容量瓶里还是半瓶。这里用 step 里 entityPatch 的 level(mL) / 容量归一，
+   * 只对 exp01 生效（其它实验台面还没有对应实体，保持原样）。
+   */
+  const entityLevels = useMemo(() => {
+    const MAP: Readonly<Record<string, { vessel: string; capacity: number }>> = {
+      "volumetric-100": { vessel: "volumetric", capacity: 100 },
+      "beaker-100": { vessel: "beaker", capacity: 100 },
+      "beaker-250": { vessel: "beaker", capacity: 250 },
+      "flask-1": { vessel: "flask", capacity: 150 },
+    };
+    const out: Record<string, number> = {};
+    for (const [id, spec] of Object.entries(MAP)) {
+      const liquid = ui.exp.entities[id]?.liquid;
+      if (!liquid || !(liquid.level > 0)) continue;
+      const level = Math.min(0.92, liquid.level / spec.capacity);
+      out[spec.vessel] = Math.max(out[spec.vessel] ?? 0, Number(level.toFixed(3)));
+    }
+    return out;
+  }, [ui.exp.entities]);
+
   const suggested =
     availableChoice ??
     step.choices.find((item) => item.role === "correct") ??
@@ -1438,6 +1461,7 @@ export function Workbench({
           */}
           <SceneStage
             expId={expId}
+            entityLevels={expId === "exp01" ? entityLevels : undefined}
             onCaption={handleSceneCaption}
             onInput={handleSceneInput}
             autoDrop={
@@ -1516,8 +1540,20 @@ export function Workbench({
               if (suggested && REAGENT_TYPES.has(suggested.type)) {
                 const verdict = resolveCurrentDrop(reagentId);
                 if (verdict.kind === "accept") {
-                  choose(verdict.choiceId);
-                  setSceneCaption(`${reagentName}加入${vesselLabel}：这一步做完了`);
+                  /**
+                   * 第 4 轮补：试剂拖对了也要把**场景动作**播出来。
+                   * 原来这里直接 choose()，于是「加蒸馏水溶解」只看到倒水（pour），
+                   * 溶解的搅拌（stir）、定容的滴加（drops）从来没播过 —— 六套动画里四套在主路径上是死的。
+                   * 顺序与工具路径一致：先播动作 → 播完 choose() 推进。
+                   * 同时更新 lastVesselRef：转移（第 6 步）靠它取源器皿，拖试剂不更新会让 from 永远为空。
+                   */
+                  const fromVessel = lastVesselRef.current;
+                  lastVesselRef.current = vesselId;
+                  chooseWithAction(
+                    verdict.choiceId,
+                    actionForChoice(suggested, { vesselId, tool: activeTool, from: fromVessel }),
+                    () => setSceneCaption(`${reagentName}加入${vesselLabel}：这一步做完了`),
+                  );
                   return;
                 }
                 handleDropRejected(verdict);

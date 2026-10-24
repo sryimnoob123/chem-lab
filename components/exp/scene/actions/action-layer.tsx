@@ -59,6 +59,12 @@ type Props = {
   layoutDx?: number;
   /** 器皿原本的液位（0 空 / 0.38 有液）：事故结束回到这里，卸下层时液面不跳 */
   baseLevelOf?: (vesselId: string) => number;
+  /**
+   * 器皿**当前**液位（0~1，含此前倒过几次）。
+   * 第 4 轮补：动作层的液体原来一律从 0 / 0.5 / 0.55 起画，跟台面上真实的液位对不上 ——
+   * 定容时滴加的水面浮在半瓶高、洗涤结束液面和状态差一格。现在由台面把真实液位传进来。
+   */
+  levelOf?: (vesselId: string) => number;
   /** 时间线中途回调（事故在中间那一帧触发：播一声闷响 / 让台面轻震） */
   onCue?: (kind: SceneCue["kind"]) => void;
   onDone: () => void;
@@ -71,7 +77,8 @@ function countUp(el: Element | null, to: number, decimals: number, ms: number): 
   const start = performance.now();
   let raf = 0;
   const tick = (now: number) => {
-    const t = Math.min(1, (now - start) / ms);
+    // 第 4 轮修：首帧 rAF 的 now 可能早于 start（chromium 上实测 −0.2605 g 闪一下），夹到 0
+    const t = Math.min(1, Math.max(0, (now - start) / ms));
     const eased = 1 - Math.pow(1 - t, 3);
     target.textContent = `${(to * eased).toFixed(decimals)} g`;
     if (t < 1) raf = requestAnimationFrame(tick);
@@ -96,7 +103,7 @@ function impactShake(el: Element | null): void {
   );
 }
 
-export function ActionLayer({ action, offsets, layoutDx = 0, baseLevelOf, onCue, onDone }: Props) {
+export function ActionLayer({ action, offsets, layoutDx = 0, baseLevelOf, levelOf, onCue, onDone }: Props) {
   const uid = useId().replace(/:/g, "");
   const groupRef = useRef<SVGGElement | null>(null);
   /** 回调放 ref：父组件每次渲染都换引用，直接进 deps 会让动画重播 */
@@ -110,14 +117,16 @@ export function ActionLayer({ action, offsets, layoutDx = 0, baseLevelOf, onCue,
     if (!action) return null;
     /** 所有动作的锚点都从这里取：拖动偏移 + 版面整体位移（右栏收边时器皿左移了多少） */
     const an = (id: string) => anchorOf(id, offsets[id], layoutDx);
+    /** 动作里液体的起点 = 台面当前液位（没有就退回 0） */
+    const levelAt = (id: string) => Math.max(0, Math.min(1, levelOf?.(id) ?? 0));
     switch (action.kind) {
       case "rinse": {
         const a = an(action.vesselId);
-        return a ? buildRinse(a, { variant: "wash", clipId: `act-${uid}-a` }) : null;
+        return a ? buildRinse(a, { variant: "wash", clipId: `act-${uid}-a`, levelStart: levelAt(action.vesselId) }) : null;
       }
       case "dilute": {
         const a = an(action.vesselId);
-        return a ? buildRinse(a, { variant: "dilute", clipId: `act-${uid}-a` }) : null;
+        return a ? buildRinse(a, { variant: "dilute", clipId: `act-${uid}-a`, levelStart: levelAt(action.vesselId) }) : null;
       }
       case "drain": {
         const a = an(action.vesselId);
@@ -125,11 +134,11 @@ export function ActionLayer({ action, offsets, layoutDx = 0, baseLevelOf, onCue,
       }
       case "stir": {
         const a = an(action.vesselId);
-        return a ? buildStir(a, { clipId: `act-${uid}-a` }) : null;
+        return a ? buildStir(a, { clipId: `act-${uid}-a`, levelStart: levelAt(action.vesselId) }) : null;
       }
       case "drops": {
         const a = an(action.vesselId);
-        return a ? buildDrops(a, { clipId: `act-${uid}-a` }) : null;
+        return a ? buildDrops(a, { clipId: `act-${uid}-a`, levelStart: levelAt(action.vesselId) }) : null;
       }
       case "transfer": {
         const from = an(action.from);
@@ -161,7 +170,7 @@ export function ActionLayer({ action, offsets, layoutDx = 0, baseLevelOf, onCue,
       default:
         return null;
     }
-  }, [action, offsets, layoutDx, uid, baseLevelOf]);
+  }, [action, offsets, layoutDx, uid, baseLevelOf, levelOf]);
 
   useEffect(() => {
     if (!scene) {

@@ -43,7 +43,8 @@ export function buildRinse(
   /** 液位位移一律换算成**器皿局部坐标**（液体层在外层 `scale()` 里，见 node） */
   const shift = (level: number) => Number((levelShift(a, level) / a.scale).toFixed(2));
   const empty = shift(0);
-  const wet = shift(isDilute ? 0.55 : 0.62);
+  /** 第 4 轮修：稀释从真实液位起画、涨一格；洗涤仍是冲满一器 */
+  const wet = shift(isDilute ? Math.min(0.9, (opts.levelStart ?? 0) + 0.22) : 0.62);
   const start = shift(opts.levelStart ?? 0);
   /** 水柱起点：洗瓶嘴在瓶口上方 58 单位处 */
   const spoutY = a.mouthY - 58;

@@ -206,6 +206,7 @@ export function SceneStage({
   forceBench,
   benchInstrument,
   balanceReading,
+  entityLevels,
   computeMode,
   observations,
   step,
@@ -264,6 +265,8 @@ export function SceneStage({
   benchInstrument?: "balance" | "ph" | "none";
   /** 天平示数（g）：直接取实验状态的 `balance-1.reading`，让第 2 步（空载 0）和第 3 步（1.0599）看得出差别。 */
   balanceReading?: number;
+  /** 实体状态里的液位（台面 id → 0~1）：定容/稀释这类「液面由数据决定」的动作靠它对账 */
+  entityLevels?: Readonly<Record<string, number>>;
   /** 数据处理步（exp09 第 7 步）：场景换成数据台，不再显示滴定管/锥形瓶。 */
   computeMode?: boolean;
   /** 本步已完成的观察文本，数据台据此点亮读数表 / 极差 / 浓度比。 */
@@ -291,9 +294,12 @@ export function SceneStage({
   const [sceneAction, setSceneAction] = useState<SceneAction | null>(null);
   const pendingActionRef = useRef<((ok: boolean) => void) | null>(null);
 
+  /** 第 4 轮：手动「跳过动作」时不许再自动接一拍 drain —— 用户按跳过就是要立刻到终态 */
+  const skippingRef = useRef(false);
   const finishAction = useCallback(() => {
     const pending = pendingActionRef.current;
     pendingActionRef.current = null;
+    skippingRef.current = true;
     setSceneAction(null);
     pending?.(true);
   }, []);
@@ -945,6 +951,7 @@ export function SceneStage({
                 }
                 instrument={benchInstrument ?? (expId === "exp03" ? "ph" : "balance")}
                 balanceReading={balanceReading}
+                levels={entityLevels}
                 contents={
                   expId === "exp03"
                     ? EXP03_BENCH_CONTENTS
@@ -976,6 +983,7 @@ export function SceneStage({
                 onClearSelection={() => undefined}
                 onReveal={() => undefined}
                 action={sceneAction}
+                skipDrainRef={skippingRef}
                 onActionDone={finishAction}
                 onActionCue={onIncidentCue}
                 pour={flow.pour}

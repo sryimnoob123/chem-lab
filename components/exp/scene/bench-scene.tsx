@@ -71,6 +71,11 @@ type BenchSceneProps = {
    * 原来这里写死 "0.0000 g"，学生做完第 3 步看到的还是 0，以为没称（2026-10-23 实测）。
    */
   balanceReading?: number;
+  /**
+   * 由实验状态推出来的液位（台面 id → 0~1）。有值就以它为准：
+   * 定容 100 mL 就该到刻度，不能还是「倒过一次 = 0.22」。
+   */
+  levels?: Readonly<Record<string, number>>;
   reaction: BenchReaction | null;
   selectedReagentId: string | null;
   draggingReagentId: string | null;
@@ -107,6 +112,8 @@ type BenchSceneProps = {
   action?: SceneAction | null;
   /** 动作播完（或跳过）后回调，工作台这时才 dispatch。 */
   onActionDone?: () => void;
+  /** 这次 action 是被「跳过动作」掐掉的（true = 不要再接 drain，直接回家） */
+  skipDrainRef?: { current: boolean };
   /** 动作时间线中途的回调（事故在「炸」的那一帧：出声 / 定格） */
   onActionCue?: (kind: "impact" | "settle") => void;
   /** 一次倾倒（画在本 SVG 里，坐标就是 viewBox 单位）。 */
@@ -127,6 +134,8 @@ export function BenchScene({
   vesselIds,
   instrument = "balance",
   balanceReading = 0,
+  levels,
+  skipDrainRef,
   reaction,
   selectedReagentId,
   draggingReagentId,
@@ -222,7 +231,12 @@ export function BenchScene({
    * 渲染用的液位：倾倒期间**立刻**按「倒完」的高度画，再由 bench-pour 用 scaleY
    * 从旧液位涨上来。动画落地后 onLanded 才把计数补上，液位在这一刻正好等于已经在画的高度。
    */
-  const levelOf = (id: string) => (pourPlan?.id === id ? pourPlan.to : levelAfter(id, pours[id] ?? 0));
+  const levelOf = (id: string) =>
+    levels?.[id] !== undefined
+      ? levels[id]
+      : pourPlan?.id === id
+        ? pourPlan.to
+        : levelAfter(id, pours[id] ?? 0);
   /** 动画落地：这一台「倒过一次」记账 +1（液位 = levelAfter(次数)，正好等于计划里的 to）。 */
   const landPour = useCallback((id: string) => {
     setPours((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
@@ -297,12 +311,18 @@ export function BenchScene({
     hadActionRef.current = Boolean(action);
     if (!had || action) return;
     const ended = endedRef.current;
+    const skipped = skipDrainRef?.current === true;
+    if (skipDrainRef) skipDrainRef.current = false;
+    if (skipped) {
+      sendHome();
+      return;
+    }
     if ((ended?.kind === "rinse" || ended?.kind === "dilute") && ended.vesselId) {
       setDrain({ kind: "drain", vesselId: ended.vesselId });
       return;
     }
     sendHome();
-  }, [action, sendHome]);
+  }, [action, sendHome, skipDrainRef]);
   /**
    * 命中框 = 实测的器皿绘制框（2026-10-22 用户反馈"框有点偏移，没在正中间"）。
    * 原来的 hitX = vessel.x + glassLeft*scale - 8 是经验偏移，实测烧杯中心偏 (+11, -16.5)。
@@ -1157,6 +1177,7 @@ export function BenchScene({
           offsets={offsets}
           layoutDx={layoutDx}
           baseLevelOf={baseLevelOf}
+          levelOf={levelOf}
           onCue={onActionCue}
           onDone={() => {
             if (drain) {
@@ -1164,6 +1185,13 @@ export function BenchScene({
               setDrain(null);
               sendHome();
               return;
+            }
+            /**
+             * 第 4 轮补：滴加/稀释这一格液体是动画层画出来的，播完必须让状态跟上（pours +1），
+             * 否则动作层一卸，液面立刻掉回原高度 —— 「动画演完状态没变」。
+             */
+            if (action && (action.kind === "drops" || action.kind === "dilute") && "vesselId" in action) {
+              landPour(action.vesselId);
             }
             onActionDone?.();
           }}

@@ -46,6 +46,14 @@ export function actionForChoice(choice: ChoiceLike, ctx: ActionContext): SceneAc
       return vessel ? { kind: "dilute", vesselId: vessel } : null;
     case "weigh":
       return { kind: "weigh", mass: num(choice.params?.mass) };
+    /**
+     * 第 4 轮补：校准/差减计算这两类也是「动仪器」的步骤（exp01 第 2/3 步），
+     * 原来 actionForChoice 没有这两个 case → 返回 null → 点天平直接跳状态、托盘不动、读数瞬间跳变。
+     */
+    case "calibrate":
+      return { kind: "read", value: num(choice.params?.initialReading) ?? num(choice.params?.mass) ?? 0 };
+    case "compute":
+      return { kind: "weigh", mass: num(choice.params?.mass) ?? 1.0599 };
     case "readInstrument":
       return { kind: "read", value: num(choice.params?.initialReading) ?? num(choice.params?.mass) ?? 0 };
     case "observe":
