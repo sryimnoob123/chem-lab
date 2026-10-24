@@ -1,0 +1,34 @@
+[
+  {
+    "name": "exp03",
+    "label": "exp03 醋酸电离度",
+    "w": 1440,
+    "h": 900,
+    "changedRatio": 0,
+    "maxDelta": 4
+  },
+  {
+    "name": "exp09",
+    "label": "exp09 酸碱滴定",
+    "w": 1440,
+    "h": 900,
+    "changedRatio": 0,
+    "maxDelta": 0
+  },
+  {
+    "name": "report",
+    "label": "报告页",
+    "w": 1440,
+    "h": 900,
+    "changedRatio": 0,
+    "maxDelta": 0
+  },
+  {
+    "name": "teacher",
+    "label": "教师端",
+    "w": 1440,
+    "h": 900,
+    "changedRatio": 0.00004,
+    "maxDelta": 473
+  }
+]

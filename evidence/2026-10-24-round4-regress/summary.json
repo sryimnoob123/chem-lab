@@ -1,0 +1,79 @@
+{
+  "base": "http://127.0.0.1:3000",
+  "out": "evidence\\2026-10-24-round4-regress",
+  "startedAt": "2026-10-24T03:01:28.748Z",
+  "ms": 112294,
+  "sessionSeeded": false,
+  "steps": [
+    {
+      "no": "01",
+      "name": "登录",
+      "ok": true,
+      "ms": 10948,
+      "detail": "学号=20250101 姓名=周若曦 chem_sid=czoyMDI1MDEw… url=/experiments api/session=200",
+      "shot": "evidence/2026-10-24-round4-regress/01-登录.png"
+    },
+    {
+      "no": "02",
+      "name": "前测",
+      "ok": true,
+      "ms": 12795,
+      "detail": "首选项未解锁（页面提示「还有错题，看解析后改选再提交」） → 按页面解析答案（D/B/C）重做后解锁",
+      "shot": "evidence/2026-10-24-round4-regress/02-前测.png"
+    },
+    {
+      "no": "03",
+      "name": "七步",
+      "ok": true,
+      "ms": 24187,
+      "detail": "7 步全过且自动交卷进后测 [1:容量瓶拖进洗涤槽 | 2:点天平（调平+内校） | 3:点天平（差减称量） | 4:蒸馏水拖到烧杯（溶解） | 5:蒸馏水拖到容量瓶（定容） | 6:移液管拖到锥形瓶（移取） | 7:浓硫酸拖到烧杯（稀释+贴签）] 步号=1→2→3→4→5→6→7",
+      "shot": "evidence/2026-10-24-round4-regress/03-七步.png"
+    },
+    {
+      "no": "04",
+      "name": "交卷+后测",
+      "ok": true,
+      "ms": 8783,
+      "detail": "后测 100/100，已进报告页 /exp/exp01/report",
+      "shot": "evidence/2026-10-24-round4-regress/04-后测.png"
+    },
+    {
+      "no": "05",
+      "name": "分数",
+      "ok": true,
+      "ms": 924,
+      "detail": "总分=85/100 三段分[预习100 操作73 报告92] 后测=100 事实=[完成步骤7/7 / 事故无 / 用时32 分钟]",
+      "shot": "evidence/2026-10-24-round4-regress/05-分数.png"
+    },
+    {
+      "no": "06",
+      "name": "拼接实验",
+      "ok": true,
+      "ms": 8460,
+      "detail": "主题=demo-topic-topic-hcl-standard 条目=28 项 评分=100（规则校验） 场景=demo-scenario-good → \"正在演「可行」这条路线…1/17分析天平称取基准物暂停直接看结果\"",
+      "shot": "evidence/2026-10-24-round4-regress/06-拼接实验.png"
+    },
+    {
+      "no": "07",
+      "name": "教师端",
+      "ok": true,
+      "ms": 38185,
+      "detail": "学生数=40 已完成=26 行数=40 本生行=[20250101 | 周若曦 | 化工 25-1 班 | 已完成 | 100% | 刚刚 | 85 | 2 | 详情]",
+      "shot": "evidence/2026-10-24-round4-regress/07-教师端.png"
+    },
+    {
+      "no": "08",
+      "name": "导出CSV",
+      "ok": true,
+      "ms": 6417,
+      "detail": "文件=chem-lab-学情-20261024.csv 字节=4549 行数=41 表头=\"学号,姓名,班级,实验,状态,完成度,操作分,报告分,总分,事故数,最近活跃\" 本生行=20250101,周若曦,化工 25-1 班,仪器的认领、天平使用及溶液配制,已完成,100,73,92,85,2,2026-10-24 11:02 页面提示=\"已导出 4 KB\"",
+      "shot": "evidence/2026-10-24-round4-regress/08-导出CSV.png"
+    }
+  ],
+  "networkErrors": [],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "notes": [
+    "前测不是「选第一个就能交」：首选项未解锁（页面提示「还有错题，看解析后改选再提交」）"
+  ]
+}

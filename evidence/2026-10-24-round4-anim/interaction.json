@@ -1,0 +1,543 @@
+{
+  "skip": {
+    "skipButtonPresent": true,
+    "stepBefore": 1,
+    "stepAfter": 2,
+    "skipGoneMs": 441,
+    "skippedToNextStep": true,
+    "noteAfter": true
+  },
+  "dragSuppress": {
+    "duringVesselDrag": [
+      {
+        "action": 0,
+        "pour": 0,
+        "running": 5,
+        "actionAnims": 0
+      }
+    ],
+    "duringReagentDrag": [
+      {
+        "action": 0,
+        "pour": 0,
+        "running": 3,
+        "actionAnims": 0
+      }
+    ],
+    "reagentMovingNoAction": {
+      "action": 0,
+      "pour": 0,
+      "running": 1,
+      "actionAnims": 0
+    },
+    "ok": true
+  },
+  "hitAreas": [
+    {
+      "viewport": "1440x900",
+      "balance": {
+        "w": 148,
+        "h": 142
+      },
+      "vessels": [
+        {
+          "id": "demo-scene-vessel-flask",
+          "w": 206,
+          "h": 250
+        },
+        {
+          "id": "demo-scene-vessel-beaker",
+          "w": 186,
+          "h": 238
+        },
+        {
+          "id": "demo-scene-vessel-tube-a",
+          "w": 85,
+          "h": 221
+        },
+        {
+          "id": "demo-scene-vessel-tube-b",
+          "w": 85,
+          "h": 221
+        },
+        {
+          "id": "demo-scene-vessel-volumetric",
+          "w": 181,
+          "h": 261
+        },
+        {
+          "id": "demo-scene-vessel-label-flask",
+          "w": 57,
+          "h": 26
+        }
+      ],
+      "tools": [
+        {
+          "id": "demo-tool-tray",
+          "w": 600,
+          "h": 103
+        },
+        {
+          "id": "demo-tool-brush",
+          "w": 55,
+          "h": 78
+        },
+        {
+          "id": "demo-tool-wash-bottle",
+          "w": 55,
+          "h": 78
+        },
+        {
+          "id": "demo-tool-rod",
+          "w": 55,
+          "h": 78
+        },
+        {
+          "id": "demo-tool-cloth",
+          "w": 55,
+          "h": 78
+        },
+        {
+          "id": "demo-tool-cylinder",
+          "w": 55,
+          "h": 78
+        },
+        {
+          "id": "demo-tool-pipette",
+          "w": 55,
+          "h": 78
+        },
+        {
+          "id": "demo-tool-bulb",
+          "w": 55,
+          "h": 78
+        }
+      ],
+      "chips": [
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        }
+      ],
+      "pointerCoarse": false,
+      "dockPresent": true,
+      "scrollW": 1440,
+      "clientW": 1440
+    },
+    {
+      "viewport": "1024x768",
+      "balance": {
+        "w": 106,
+        "h": 101
+      },
+      "vessels": [
+        {
+          "id": "demo-scene-vessel-flask",
+          "w": 146,
+          "h": 178
+        },
+        {
+          "id": "demo-scene-vessel-beaker",
+          "w": 132,
+          "h": 169
+        },
+        {
+          "id": "demo-scene-vessel-tube-a",
+          "w": 60,
+          "h": 158
+        },
+        {
+          "id": "demo-scene-vessel-tube-b",
+          "w": 60,
+          "h": 158
+        },
+        {
+          "id": "demo-scene-vessel-volumetric",
+          "w": 128,
+          "h": 186
+        },
+        {
+          "id": "demo-scene-vessel-label-flask",
+          "w": 41,
+          "h": 19
+        }
+      ],
+      "tools": [
+        {
+          "id": "demo-tool-tray",
+          "w": 358,
+          "h": 73
+        },
+        {
+          "id": "demo-tool-brush",
+          "w": 39,
+          "h": 55
+        },
+        {
+          "id": "demo-tool-wash-bottle",
+          "w": 39,
+          "h": 55
+        },
+        {
+          "id": "demo-tool-rod",
+          "w": 39,
+          "h": 55
+        },
+        {
+          "id": "demo-tool-cloth",
+          "w": 39,
+          "h": 55
+        },
+        {
+          "id": "demo-tool-cylinder",
+          "w": 39,
+          "h": 55
+        },
+        {
+          "id": "demo-tool-pipette",
+          "w": 39,
+          "h": 55
+        },
+        {
+          "id": "demo-tool-bulb",
+          "w": 39,
+          "h": 55
+        }
+      ],
+      "chips": [
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        },
+        {
+          "w": 0,
+          "h": 0
+        }
+      ],
+      "pointerCoarse": false,
+      "dockPresent": true,
+      "scrollW": 1024,
+      "clientW": 1024
+    },
+    {
+      "viewport": "390x844",
+      "balance": {
+        "w": 40,
+        "h": 38
+      },
+      "vessels": [
+        {
+          "id": "demo-scene-vessel-flask",
+          "w": 56,
+          "h": 68
+        },
+        {
+          "id": "demo-scene-vessel-beaker",
+          "w": 52,
+          "h": 64
+        },
+        {
+          "id": "demo-scene-vessel-tube-a",
+          "w": 36,
+          "h": 60
+        },
+        {
+          "id": "demo-scene-vessel-tube-b",
+          "w": 35,
+          "h": 60
+        },
+        {
+          "id": "demo-scene-vessel-volumetric",
+          "w": 50,
+          "h": 71
+        },
+        {
+          "id": "demo-scene-vessel-label-flask",
+          "w": 17,
+          "h": 7
+        }
+      ],
+      "tools": [
+        {
+          "id": "demo-tool-tray",
+          "w": 162,
+          "h": 28
+        },
+        {
+          "id": "demo-tool-brush",
+          "w": 15,
+          "h": 21
+        },
+        {
+          "id": "demo-tool-wash-bottle",
+          "w": 15,
+          "h": 21
+        },
+        {
+          "id": "demo-tool-rod",
+          "w": 15,
+          "h": 21
+        },
+        {
+          "id": "demo-tool-cloth",
+          "w": 15,
+          "h": 21
+        },
+        {
+          "id": "demo-tool-cylinder",
+          "w": 15,
+          "h": 21
+        },
+        {
+          "id": "demo-tool-pipette",
+          "w": 15,
+          "h": 21
+        },
+        {
+          "id": "demo-tool-bulb",
+          "w": 15,
+          "h": 21
+        }
+      ],
+      "chips": [
+        {
+          "w": 52,
+          "h": 44
+        },
+        {
+          "w": 65,
+          "h": 44
+        },
+        {
+          "w": 52,
+          "h": 44
+        },
+        {
+          "w": 63,
+          "h": 44
+        },
+        {
+          "w": 64,
+          "h": 44
+        },
+        {
+          "w": 113,
+          "h": 44
+        },
+        {
+          "w": 65,
+          "h": 44
+        },
+        {
+          "w": 52,
+          "h": 44
+        },
+        {
+          "w": 65,
+          "h": 44
+        },
+        {
+          "w": 52,
+          "h": 44
+        },
+        {
+          "w": 52,
+          "h": 44
+        },
+        {
+          "w": 65,
+          "h": 44
+        },
+        {
+          "w": 65,
+          "h": 44
+        }
+      ],
+      "pointerCoarse": true,
+      "dockPresent": true,
+      "scrollW": 390,
+      "clientW": 390
+    }
+  ],
+  "incidents": [
+    {
+      "id": "demo-trap-step1-wipe",
+      "text": "用纸巾/抹布擦拭容量瓶内壁L1",
+      "playedAnimation": false,
+      "showedConsequence": true,
+      "stepBefore": 1,
+      "stepAfter": 1,
+      "stateUnchanged": true
+    },
+    {
+      "id": "demo-trap-step1-oven",
+      "text": "把容量瓶、量筒放进 105 ℃ 烘箱烘干L2",
+      "playedAnimation": true,
+      "showedConsequence": true,
+      "stepBefore": 1,
+      "stepAfter": 1,
+      "stateUnchanged": true
+    },
+    {
+      "id": "demo-trap-step1-wash-wrong",
+      "text": "把烧杯／试管拖进洗涤槽L1",
+      "playedAnimation": false,
+      "showedConsequence": true,
+      "stepBefore": 1,
+      "stepAfter": 1,
+      "stateUnchanged": true
+    },
+    {
+      "id": "demo-trap-step1-poke",
+      "text": "拿玻璃棒在容量瓶里搅洗L3",
+      "playedAnimation": true,
+      "showedConsequence": true,
+      "stepBefore": 1,
+      "stepAfter": 1,
+      "stateUnchanged": true
+    }
+  ],
+  "hints": [
+    {
+      "counter": null,
+      "level": "2",
+      "bubble": [
+        "💡提示H11/3H 提示 · R 重做 · Enter 交卷",
+        "💡提示H11/3"
+      ]
+    },
+    {
+      "counter": null,
+      "level": "2",
+      "bubble": [
+        "💡提示H22/3H 提示 · R 重做 · Enter 交卷",
+        "💡提示H22/3"
+      ]
+    },
+    {
+      "counter": null,
+      "level": "2",
+      "bubble": [
+        "💡已用完H3H 提示 · R 重做 · Enter 交卷",
+        "💡已用完H3"
+      ]
+    },
+    {
+      "counter": null,
+      "level": "2",
+      "bubble": [
+        "💡已用完H3H 提示 · R 重做 · Enter 交卷",
+        "💡已用完H3"
+      ]
+    },
+    {
+      "counter": null,
+      "level": "2",
+      "bubble": [
+        "💡已用完H3H 提示 · R 重做 · Enter 交卷",
+        "💡已用完H3"
+      ]
+    },
+    {
+      "counter": null,
+      "level": "2",
+      "bubble": [
+        "💡已用完H3H 提示 · R 重做 · Enter 交卷",
+        "💡已用完H3"
+      ]
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,43 @@
+{
+  "tag": "before",
+  "base": "http://127.0.0.1:3000",
+  "shots": [
+    {
+      "name": "exp03",
+      "url": "/exp/exp03?force=1",
+      "status": 200,
+      "scrollW": 1440,
+      "clientW": 1440,
+      "chars": 369,
+      "title": "无机及分析化学实验 · 河南大学"
+    },
+    {
+      "name": "exp09",
+      "url": "/exp/exp09?force=1",
+      "status": 200,
+      "scrollW": 1440,
+      "clientW": 1440,
+      "chars": 485,
+      "title": "无机及分析化学实验 · 河南大学"
+    },
+    {
+      "name": "report",
+      "url": "/exp/exp01/report",
+      "status": 200,
+      "scrollW": 1440,
+      "clientW": 1440,
+      "chars": 1117,
+      "title": "无机及分析化学实验 · 河南大学"
+    },
+    {
+      "name": "teacher",
+      "url": "/teacher",
+      "status": 200,
+      "scrollW": 1440,
+      "clientW": 1440,
+      "chars": 1660,
+      "title": "无机及分析化学实验 · 河南大学"
+    }
+  ],
+  "errors": []
+}
