@@ -276,8 +276,8 @@ export function BenchScene({
 
   /**
    * 动作演完（action: null）→ 槽里的器皿立刻回家。
-   * 为什么还要这一条：洗涤动画长度是写在 rinse.tsx 里的常量，靠 2520ms 硬等会
-   * 「动画停了器皿还卡在槽里」（用户 2026-10-23 实测）。动作生命周期是准的，用它兜底。
+   * 为什么还要这一条：动作时长以 ActionScene.ms 为准（当前洗涤 rinse 是 1900ms），
+   * 靠硬等会「动画停了器皿还卡在槽里」（用户 2026-10-23 实测）。动作生命周期是准的，用它兜底。
    */
   const hadActionRef = useRef(false);
   /** 当前有没有动作在演（洗涤被拒时没有动作 → 器皿要立刻回家） */
@@ -395,7 +395,7 @@ export function BenchScene({
         onDropToSink?.(id);
         /**
          * 放在槽里洗，别立刻弹回原地（用户 2026-10-22：动作要在落点上发生）。
-         * 冲洗/刷洗/倒水播完（wash 时间线 2520ms）再滑回原位
+         * 动作时长以 ActionScene.ms 为准（当前 rinse 1900ms），播完再滑回原位
          * （用户 2026-10-23：互动完之后器皿要回原位，不能停在放下的地方）。
          */
         setOffsets((prev) => ({ ...prev, [id]: offset }));
@@ -590,6 +590,12 @@ export function BenchScene({
         // 点空白取消选中；点器皿交给器皿自己的 handler
         const el = event.target as Element;
         if (el.closest('[data-demo-id^="demo-scene-vessel"]')) return;
+        /**
+         * 窄屏控件带也在 stage 里（绝对定位在底部），它的 chip 是**控件**不是「空白」：
+         * 不挡掉的话，点 chip 的选中态会在同一帧被这里擦成 null（实测 aria-pressed 一直 false），
+         * 顺手还会把已选试剂 onClearSelection 掉（2026-10-24 修）。
+         */
+        if (el.closest('[data-demo-id="demo-mobile-dock"]')) return;
         setActiveVesselId(null);
         onClearSelection();
       }}
@@ -1177,8 +1183,23 @@ export function BenchScene({
         activeTool={activeTool}
         activeVesselId={activeVesselId}
         onSelectTool={onSelectTool}
-        onActivateVessel={onActivateVessel}
-        onUseTool={onUseTool}
+        /* D5 修（2026-10-24）：窄屏点器皿要跟桌面点器皿同一个状态机 ——
+           桌面点器皿先 setActiveVesselId 再判「手上有没有工具」（见本文件 onClick），
+           这里照抄，chip 才有 data-active/aria-pressed 的选中反馈，而不是点完没反应。 */
+        onActivateVessel={(id) => {
+          setActiveVesselId(id);
+          onActivateVessel(id);
+        }}
+        onUseTool={
+          onUseTool
+            ? (tool, id) => {
+                setActiveVesselId(id);
+                onUseTool(tool, id);
+              }
+            : undefined
+        }
+        /* 仪器入口：桌面"none" 时不摆仪器，dock 也不给 chip（null = 不渲染）。 */
+        instrument={instrument === "none" ? null : instrument}
       />
       </div>
     </>

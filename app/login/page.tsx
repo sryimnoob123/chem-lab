@@ -45,17 +45,30 @@ export default function LoginPage() {
   const [teacherError, setTeacherError] = useState("");
 
   /**
-   * 演示口径（用户 2026-10-22）：登录只做样子，不校验、不请求后端。
-   * 之前学生走 POST /api/session 查库，库里一有问题就 500、现场卡在登录页。
+   * 演示口径（用户 2026-10-22）：登录不校验、不挡人 —— **但不等于不提交**。
    *
-   * 例外是教师：`/teacher` 里的「导出学情 CSV」走 /api/teacher/export，
-   * 后端要 chem_teacher cookie（lib/session.ts 的 requireTeacher）。
-   * 2026-10-23 回归实测：登录页填了口令却谁也没种 cookie，
-   * 于是导出永远 403「请先在右上角教师解锁」。这里把填的口令真的提交上去，
-   * 留空则照旧直接进（演示不弹口令），口令错就留在本页给提示。
+   * 2026-10-24 全链路实测（.team/e1-chain.mjs）：点「进入实验」只做 router.push、
+   * 没请求 /api/session → 浏览器里没有 chem_sid → 后面报告/教师台账/动作落库
+   * 全按 `getStudent()` 的兜底身份记成 20250101：换任何学号登录都是同一个人。
+   * 所以学生端补一次 POST /api/session —— 后端本来就是 signInDemo（留空/乱填/不在白名单全放行），
+   * 永远不会因为名单问题挡人；只有网络/后端整体挂掉才走到 catch，照旧直接进。
+   *
+   * 教师：`/teacher` 的「导出学情 CSV」走 /api/teacher/export，后端要 chem_teacher cookie；
+   * 填了口令就真的提交，留空照旧直接进，口令错就留在本页给提示。
    */
   async function enter(nextRole: Role) {
     playSound("ok-l1");
+    if (nextRole === "student") {
+      try {
+        await fetch("/api/session", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ studentNo, name }),
+        });
+      } catch {
+        // 后端没起也不挡人：沿用兜底演示身份（和 2026-10-22 的口径一致）
+      }
+    }
     if (nextRole === "teacher" && passcode.trim()) {
       try {
         const res = await fetch("/api/teacher/unlock", {

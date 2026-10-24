@@ -13,7 +13,7 @@
  * 不是「一坨东西整体平移」。
  */
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import type { Beat } from "./timeline";
 import { EASE_BACK, EASE_IN_OUT, EASE_OUT } from "./timeline";
 import { bodyTransform, type VesselAnchor } from "./geometry";
@@ -92,7 +92,12 @@ function Cracks({ a, ix, iy }: HazardArgs) {
     top: box.y + 3,
     bottom: box.y + box.h - 3,
   });
-  const clipId = `incident-crack-${a.id}`;
+  /* clipPath 的 id 必须全局唯一：同一台器皿挂两条 hazard 时，只按 a.id 拼会撞 id，
+     浏览器取第一个 <clipPath> —— 第二条裂纹就按另一台的器身裁（2026-10-24 审查）。
+     useId 兜住重复；但 SVG 的 url(#id) 里不能带冒号（React 19 给的是 «r0» 这类），
+     所以先把非 [A-Za-z0-9_-] 的字符剔掉再拼。 */
+  const uid = useId().replace(/[^A-Za-z0-9_-]/g, "");
+  const clipId = `incident-crack-${uid}-${a.id}`;
   return (
     <>
       <defs>

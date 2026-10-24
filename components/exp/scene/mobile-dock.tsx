@@ -11,6 +11,13 @@
  * 交互与台面一致（DECISIONS §20 B 方案「点选投放」）：
  *   先点工具 → 再点器皿 = 对这台器皿用这个工具；没拿工具时点器皿 = 选中它。
  * 拖动仍可在 SVG 上做（PC 用），这里不抢它的活。
+ *
+ * 工具选择的生命与桌面一致：投放过一次**不**自动放下（桌面 workbench.tsx 的 onUseTool
+ * 只在拿错工具违规时 setActiveTool(null)），学生可以拿着同一把刷子连着洗几台器皿。
+ *
+ * 仪器（天平 / pH 计）用的是**桌面同一个入口**：桌面点 SVG 里的天平走的是
+ * bench-scene 的 onActivateVessel("balance")，这里也调它 —— 同一个函数 = 同一种选中态，
+ * 不另设一条仪器回调（少一层参数就少一处不一致）。
  */
 
 import styles from "./mobile-dock.module.css";
@@ -25,9 +32,8 @@ export type MobileDockProps = {
   onSelectTool?: (id: SceneToolId | null) => void;
   onActivateVessel: (vesselId: string) => void;
   onUseTool?: (tool: SceneToolId, vesselId: string) => void;
-  /** 天平：称量类实验才出现 */
+  /** 台面上的仪器：称量类实验是天平，exp03 是 pH 计；"none" 由调用方折成 null。 */
   instrument?: "balance" | "ph" | null;
-  onInstrument?: () => void;
 };
 
 export function MobileDock({
@@ -39,7 +45,6 @@ export function MobileDock({
   onActivateVessel,
   onUseTool,
   instrument = null,
-  onInstrument,
 }: MobileDockProps) {
   const vessels = SCENE_VESSELS.filter((v) => vesselIds.includes(v.id));
   const tools = SCENE_TOOLS.filter((t) => toolIds?.includes(t.id));
@@ -47,8 +52,9 @@ export function MobileDock({
 
   const pickVessel = (id: string) => {
     if (activeTool && onUseTool) {
+      // 用掉工具后**不**清 activeTool：与桌面 workbench.tsx 的 onUseTool 一致
+      // （桌面只在拿错工具违规时 setActiveTool(null)），学生能连着洗下一台。
       onUseTool(activeTool, id);
-      onSelectTool?.(null);
       return;
     }
     onActivateVessel(id);
@@ -56,14 +62,17 @@ export function MobileDock({
 
   return (
     <div className={styles.dock} data-demo-id="demo-mobile-dock" aria-label="操作台">
-      {instrument === "balance" && onInstrument ? (
+      {instrument ? (
         <button
           type="button"
           className={styles.chip}
-          data-demo-id="demo-dock-balance"
-          onClick={onInstrument}
+          data-demo-id={`demo-dock-${instrument}`}
+          /* 与桌面点 SVG 里的天平/pH 计同一条路：bench-scene 的 onActivateVessel。
+             scene-stage.activateVessel("balance"|"ph") 会置 targetVesselId 并给出台面文案，
+             该播的动作（称量/校准/读数）也在那里判 —— 所以这里是「同一个选中态」。 */
+          onClick={() => onActivateVessel(instrument)}
         >
-          天平
+          {instrument === "balance" ? "天平" : "pH 计"}
         </button>
       ) : null}
 

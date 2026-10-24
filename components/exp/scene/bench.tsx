@@ -28,6 +28,11 @@ function initialContents(): Contents {
  * 为什么需要：有些状态**用拖拽走不到**（现象表按组合精确匹配，拖进去的第二瓶多半是 MISS），
  * 但视觉上必须验得到 —— 比如「液体 + 器底沉淀」这一态，现有种子数据里没有任何一条路径能到。
  * 只在 URL 带参数时生效，不动拖拽/判定逻辑；挂载后一次性写入，避免 SSR 水合不一致。
+ *
+ * 两把锁（2026-10-24 审查）：
+ *   1. 只在 `NEXT_PUBLIC_QA=1` 时生效 —— 这是 QA 钩子，不是产品功能，生产不许常开；
+ *   2. 试剂 id 必须过 `getSceneReagent` —— 原来 `?contents=beaker=任意串` 会原样写进
+ *      contents，脏 id 一路流到液色/现象查表里（等于给外部留了一个能写任意数据的入口）。
  */
 function contentsFromQuery(): Contents | null {
   const raw = new URLSearchParams(window.location.search).get("contents");
@@ -38,10 +43,12 @@ function contentsFromQuery(): Contents | null {
     if (!id || !list) continue;
     const vesselId = id.trim();
     if (!getSceneVessel(vesselId)) continue;
-    out[vesselId] = list
+    const reagentIds = list
       .split(",")
       .map((s) => s.trim())
-      .filter(Boolean);
+      .filter((s) => Boolean(s) && Boolean(getSceneReagent(s)));
+    if (reagentIds.length === 0) continue;
+    out[vesselId] = reagentIds;
   }
   return Object.keys(out).length ? out : null;
 }
@@ -169,6 +176,11 @@ export function ReactionScene() {
 
   // QA 钩子：`?contents=` 挂载后一次性覆盖种子内容物（见 contentsFromQuery）
   useEffect(() => {
+    /* 生产构建一律不读这个参数（扣子部署 = NODE_ENV production），
+       dev/e2e 允许摆拍（e2e/liquid-layers.spec.ts 靠它验「液体+器底沉淀」这种拖拽走不到的态）；
+       想要生产也开，得显式 NEXT_PUBLIC_QA=1 构建。 */
+    const qaAllowed = process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_QA === "1";
+    if (!qaAllowed) return;
     const seeded = contentsFromQuery();
     // eslint-disable-next-line react-hooks/set-state-in-effect -- URL 参数只在挂载后读一次，避免 SSR 水合不一致
     if (seeded) setContents((prev) => ({ ...prev, ...seeded }));

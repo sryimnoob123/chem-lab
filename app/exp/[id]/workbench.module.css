@@ -1844,9 +1844,10 @@
     left: 8px;
     right: 8px;
     top: auto;
-    /* D5（2026-10-24）：台面底部多了一条 MobileDock（61px 高，44px 控件），
-       试剂架让到它上面 —— 否则两层叠在一起，截图里「碳酸钠」和「锥形瓶」糊成一片。 */
-    bottom: 74px;
+    /* D5 修（2026-10-24）：74px 是给台面底部那条 MobileDock 让位的，而 MobileDock
+       只在 ≤560px 出现（mobile-dock.module.css）—— 原来写在 900px 块里，561~900 就白空 74px
+       （800×700 实测：rack 底边 354、台面底 428）。挪进下面单独的 560px 块，这里恢复 8px。 */
+    bottom: 8px;
     width: auto;
     display: flex;
     align-items: center;
@@ -2031,6 +2032,15 @@
   .dockItem {
     min-width: 88px;
     height: 38px;
+  }
+}
+
+/* D5 修（2026-10-24）：试剂架抬高只跟「台面底部真有 MobileDock」的区间绑定。
+   MobileDock 的显示断点是 560px（components/exp/scene/mobile-dock.module.css:14），
+   所以这里的 74px 也只写到 560px —— 561~900 让试剂架贴回台面底（8px）。 */
+@media (max-width: 560px) {
+  .rack {
+    bottom: 74px;
   }
 }
 

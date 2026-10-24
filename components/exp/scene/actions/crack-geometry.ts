@@ -61,7 +61,11 @@ export function glassCrackPaths(lx: number, ly: number, bounds: CrackBounds): st
     const dy = Math.sin(rad);
     const avail = distanceToBounds(lx, ly, dx, dy, bounds);
     const total = Math.max(4, avail * reach);
-    const seg = total / turn.length;
+    /* 除零保护：turn 为空表时 total/0 = Infinity。现有 8 条 CRACK_SPECS 的 turn 都非空，
+       而且空表根本进不了下面的 for…of（seg 不会写进 d），所以不是线上可见的 NaN；
+       但那是靠「循环体恰好不执行」侥幸成立的，将来加一条空 turn 就会埋雷。
+       给出 0 段长，语义也对：没有折点 = 一条直裂纹（2026-10-24 审查）。 */
+    const seg = turn.length ? total / turn.length : 0;
     let x = lx;
     let y = ly;
     let a = rad;
