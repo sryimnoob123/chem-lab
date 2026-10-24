@@ -244,6 +244,12 @@ export function buildDrops(a: VesselAnchor, opts: { clipId: string; levelStart?:
   );
 
   const fall = a.mouthY + (a.baseY - a.mouthY) * 0.3;
+  /**
+   * 第五轮：整条压进 2 秒（口径 0.5~2s）。
+   * 原来 beats 总长 1920ms + 收尾 → 动作层实测 2134ms，超口径。
+   * 压的时候**一拍都没删**：滴管进出、三滴下落、液面涨、涟漪、悬滴、摇匀全留着，
+   * 只把各拍的 delay / duration 按比例收紧（最大重叠段从 1920 降到 1550）。
+   */
   const beats: Beat[] = [
     {
       sel: '[data-a="dropper"]',
@@ -253,7 +259,7 @@ export function buildDrops(a: VesselAnchor, opts: { clipId: string; levelStart?:
         { transform: "translate(0px, 0px)", opacity: 1, offset: 0.85 },
         { transform: "translate(0px, -12px)", opacity: 0 },
       ],
-      duration: 1500,
+      duration: 1180,
       delay: 20,
     },
     {
@@ -263,15 +269,15 @@ export function buildDrops(a: VesselAnchor, opts: { clipId: string; levelStart?:
         { transform: `translate(0px, ${(fall - tipY) * 0.6}px) scale(1)`, opacity: 1, offset: 0.6 },
         { transform: `translate(0px, ${fall - tipY}px) scale(.7)`, opacity: 0 },
       ],
-      duration: 460,
-      delay: 320,
-      stagger: 260,
+      duration: 420,
+      delay: 260,
+      stagger: 200,
     },
     {
       sel: '[data-a="water"]',
       frames: [{ transform: `translateY(${level}px)` }, { transform: `translateY(${rise}px)` }],
-      duration: 900,
-      delay: 500,
+      duration: 700,
+      delay: 380,
       easing: EASE_IN_OUT,
     },
     {
@@ -281,9 +287,8 @@ export function buildDrops(a: VesselAnchor, opts: { clipId: string; levelStart?:
         { transform: "scale(1.5)", opacity: 0.9, offset: 0.4 },
         { transform: "scale(2.1)", opacity: 0 },
       ],
-      duration: 520,
-      delay: 760,
-      stagger: 240,
+      duration: 440,
+      delay: 600,
       easing: EASE_OUT,
     },
     // 悬滴：涨大 → 挂住 → 落下（C6）
@@ -295,8 +300,8 @@ export function buildDrops(a: VesselAnchor, opts: { clipId: string; levelStart?:
         { opacity: 1, transform: "translate(0px, 2px) scale(1.15)", offset: 0.85 },
         { opacity: 0, transform: "translate(0px, 26px) scale(.6)" },
       ],
-      duration: 560,
-      delay: 1240,
+      duration: 470,
+      delay: 1000,
       easing: EASE_IN_OUT,
     },
     // 摇匀：液面弧线摆两下（C6）
@@ -308,11 +313,11 @@ export function buildDrops(a: VesselAnchor, opts: { clipId: string; levelStart?:
         { opacity: 0.9, transform: "rotate(-4deg) scaleX(.9)", offset: 0.6 },
         { opacity: 0, transform: "rotate(3deg) scaleX(.98)" },
       ],
-      duration: 620,
-      delay: 1300,
+      duration: 460,
+      delay: 1090,
       easing: EASE_IN_OUT,
     },
   ];
 
-  return { node, beats, ms: 1920 };
+  return { node, beats, ms: 1600 };
 }
