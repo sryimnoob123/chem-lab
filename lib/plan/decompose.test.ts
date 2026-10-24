@@ -34,6 +34,17 @@ describe("templatePhases", () => {
     }
   });
 
+  /**
+   * 段数不是恒 4：两个「滴定环节专项」主题本来就没有称量块。
+   * 这条表是给人看的 —— 谁改 featured 或 PHASE_TABLE 改到这段数，这里会红，
+   * 必须同时想清楚「这个主题到底有没有称量环节」，而不是把数字顺手改掉。
+   */
+  it("四主题的段数固定：4 / 4 / 3 / 3（后两个主题没有称量环节）", () => {
+    const counts = PLAN_TOPICS.map((topic) => templatePhases(topic).length);
+    expect(counts).toEqual([4, 4, 3, 3]);
+    expect(templatePhases(PLAN_TOPICS[2]).map((phase) => phase.id)).not.toContain("weigh");
+  });
+
   it("按主题过滤：只留 featured 里的块，空段整段不收", () => {
     const topic = PLAN_TOPICS[0];
     const filtered = templatePhases(topic);

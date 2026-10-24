@@ -430,6 +430,12 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
             </div>
           </section>
 
+          {/* 三种结果对照（2026-10-24）：设计阶段给一个「先看别人怎么错」的入口，
+              演完再回到自己的方案 —— 学生知道「能做完」「做得完但错」「根本不能做」差在哪。
+              放右栏、不放整页下方：右栏在参数区下面原本留一大片空白，剧场正好补上，
+              首屏就能看见「同一道题，三种结果」。 */}
+          {stage === "design" ? <ResultTheater /> : null}
+
           <section className={s.panel} aria-label="方案点评" aria-busy={busy} hidden={stage !== "score"}>
             <div className={s.panelHead}>
               <h2 className={s.panelTitle}>方案点评</h2>
@@ -478,9 +484,6 @@ export function PlanDesigner({ studentNo }: { studentNo: string }) {
         </div>
       </div>
 
-      {/* 三种结果对照（2026-10-24）：设计阶段给一个「先看别人怎么错」的入口，
-          演完再回到自己的方案 —— 学生知道「能做完」「做得完但错」「根本不能做」差在哪。 */}
-      {stage === "design" ? <ResultTheater /> : null}
         </>
       ) : null}
     </main>

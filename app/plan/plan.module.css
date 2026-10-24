@@ -312,11 +312,15 @@
   display: grid;
   grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
   gap: 16px;
-  align-items: start;
+  /* 两栏等高：右栏最后一格（剧场）吃掉剩余高度。
+     原来 align-items: start 让右栏只到内容高度，参数区下面留一大片空白（实测 1440 下 423px）。 */
+  align-items: stretch;
 }
 
 .right {
   display: grid;
+  grid-template-rows: min-content min-content minmax(169px, 1fr);
+  align-content: start;
   gap: 14px;
 }
 
@@ -354,9 +358,14 @@
 .groups {
   display: grid;
   gap: 14px;
-  max-height: 600px;
-  overflow: auto;
-  padding-right: 4px;
+  /* 主题 1 有 15 块、内容高 1291px，一屏（600px）放不下 —— 容器自己滚，
+     但组标题必须吸顶，否则滚到下面不知道自己在哪一组。 */
+  max-height: min(600px, calc(100dvh - 300px));
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: 6px;
 }
 
 .group {
@@ -365,11 +374,16 @@
 }
 
 .groupHead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  padding-bottom: 4px;
+  padding: 6px 0 4px;
+  /* 必须有底：否则卡片会从标题下面透出来 */
+  background: var(--card, #fff);
   border-bottom: 1px solid var(--line);
 }
 
@@ -505,8 +519,14 @@
   display: grid;
   gap: 2px;
   margin: 10px 0 0;
-  padding: 0;
+  padding: 0 4px 0 0;
   list-style: none;
+  /* 参考方案满载 21 项时有 1294px 高，会把参数区/点评顶到首屏外。
+     封顶自成滚动区，右栏高度回到可控区间。 */
+  max-height: clamp(240px, 46vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .planRow {
@@ -591,24 +611,25 @@
 /* ── 参数 ─────────────────────────────────────────────────────────── */
 .params {
   display: grid;
-  gap: 8px;
+  /* 三个参数摊平：原来一行只用掉面板左侧 310px，右边 430px 全是空白。 */
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px 18px;
   margin-top: 10px;
 }
 
 .paramRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: grid;
+  gap: 4px;
   font-size: var(--type-body);
   color: var(--ink-2);
 }
 
 .paramLabel {
-  min-width: 190px;
+  min-width: 0;
 }
 
 .input {
-  width: 110px;
+  width: 100%;
   min-height: 36px;
   padding: 4px 8px;
   border: 1px solid var(--line);

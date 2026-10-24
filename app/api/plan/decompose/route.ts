@@ -15,7 +15,7 @@ import { requireStudent } from "@/lib/session";
 import { getTopic } from "@/lib/plan/topics";
 import { complete, llmEnabled } from "@/lib/plan/llm-assess";
 import { buildDecomposePrompt, parseDecompose, templatePhases } from "@/lib/plan/decompose";
-import { handleError, json, readJsonBody } from "../../_lib/http";
+import { fail, handleError, json, readJsonBody } from "../../_lib/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,9 +25,13 @@ export async function POST(request: Request): Promise<Response> {
     await requireStudent();
     const body = await readJsonBody(request);
     const topic = getTopic(typeof body.topicId === "string" ? body.topicId : null);
+    /* 未知主题必须报错：以前 getTopic() 返回 undefined 会走「没给主题就全给」的分支，
+       于是随便传一个 id 都能拿到 4 段 / 32 块的全量模板，前端还当成功处理。 */
+    if (!topic) return fail("UNKNOWN_TOPIC", 400);
+
     const phases = templatePhases(topic);
 
-    if (!topic || !llmEnabled() || phases.length === 0) {
+    if (!llmEnabled() || phases.length === 0) {
       return json({ ok: true, source: "template", phases });
     }
 

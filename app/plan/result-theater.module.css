@@ -3,11 +3,17 @@
  *
  * 取色只用 token（--paper / --ink / --line / --card / --river-700 / --jade-600 / --danger / --warn），
  * 深浅差用 color-mix 兑 --ink，不写字面量。
- * 结构：标题一行 → 三个按钮（44px 高，移动端也不缩）→ 播放器 → 结论。
+ * 结构：标题一行 → 三个按钮（等分铺满，左缘一条色带，44px 以上）→ 播放器 → 结论。
+ *
+ * 2026-10-24 二轮改：原来三枚是 flex:0 0 auto + 88px，挤在左端、未选时颜色完全一样，
+ * 看不出这是「剧场」。现在三列等分、未选态就带分类色（绿/黄/红）、选中态满宽描边 + 「正在演」角标。
  */
 
 .theater {
-  margin-top: 18px;
+  /* 高度由右栏最后一行撑开（plan.module.css 的 .right 三行网格），
+     所以内部用 flex 把「空舞台」和播放器都拉满，别让卡片下半截空着。 */
+  display: flex;
+  flex-direction: column;
   padding: 16px 18px 18px;
   border: 1px solid var(--line);
   border-radius: 2px;
@@ -38,53 +44,115 @@
 }
 
 .tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 14px;
 }
 
 .tab {
-  flex: 0 0 auto;
-  min-width: 88px;
-  min-height: 44px;
-  padding: 0 16px;
+  --tone: var(--ink-2);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 8px 14px 8px 16px;
+  text-align: left;
   border: 1px solid var(--line);
+  border-left: 3px solid var(--tone);
   border-radius: 2px;
-  background: var(--paper, #f6f7f5);
-  color: var(--ink-2);
+  /* 未选态就带上分类色：只靠 3px 色带在 1440 下太弱，底和标题一起染一点才「一眼分三类」 */
+  background: color-mix(in srgb, var(--tone) 4%, var(--card, #fff));
+  color: var(--ink);
   font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
-  transition: border-color 140ms cubic-bezier(0.23, 1, 0.32, 1), background-color 140ms, color 140ms, transform 90ms;
+  transition:
+    border-color 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 140ms,
+    color 140ms,
+    box-shadow 140ms,
+    transform 90ms;
+}
+
+/* 三种结果的颜色就是它们各自的语义：绿=可行、黄=故障、红=危险。
+   不做渐变、不加阴影 —— 这里要的是「一眼分类」，不是装饰。 */
+.tab[data-tone="ok"] {
+  --tone: var(--jade-600);
+}
+
+.tab[data-tone="warn"] {
+  --tone: color-mix(in srgb, var(--warn) 62%, var(--ink));
+}
+
+.tab[data-tone="danger"] {
+  --tone: var(--danger);
+}
+
+.tab:hover {
+  border-color: color-mix(in srgb, var(--tone) 45%, var(--line));
+  background: color-mix(in srgb, var(--tone) 5%, var(--card, #fff));
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--river-700);
+  outline-offset: 2px;
 }
 
 .tab:active {
   transform: scale(0.97);
 }
 
-/* 三种结果的颜色就是它们各自的语义：绿=可行、黄=故障、红=危险。
-   不做渐变、不加阴影 —— 这里要的是「一眼分类」，不是装饰。 */
-.tab[data-tone="ok"][data-active="true"] {
-  border-color: var(--jade-600);
-  color: var(--jade-600);
-  background: color-mix(in srgb, var(--jade-600) 7%, var(--card, #fff));
+.tab[data-active="true"] {
+  border-color: var(--tone);
+  box-shadow: inset 0 0 0 1px var(--tone);
+  background: color-mix(in srgb, var(--tone) 10%, var(--card, #fff));
+  color: var(--tone);
 }
 
-.tab[data-tone="warn"][data-active="true"] {
-  border-color: color-mix(in srgb, var(--warn) 60%, var(--ink));
-  color: color-mix(in srgb, var(--warn) 60%, var(--ink));
-  background: color-mix(in srgb, var(--warn) 9%, var(--card, #fff));
+.tab[data-active="true"]::after {
+  content: "正在演";
+  position: absolute;
+  top: 7px;
+  right: 10px;
+  color: var(--tone);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
 }
 
-.tab[data-tone="danger"][data-active="true"] {
-  border-color: var(--danger);
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 7%, var(--card, #fff));
+.tabLabel {
+  color: var(--tone);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tab[data-active="true"] .tabLabel {
+  color: inherit;
+}
+
+.tab[data-active="true"] .tabLabel {
+  padding-right: 44px;
+}
+
+.tabSub {
+  color: var(--ink-2);
+  font-size: var(--type-meta, 12px);
+  line-height: 1.4;
+}
+
+.tab[data-active="true"] .tabSub {
+  color: inherit;
+  opacity: 0.8;
 }
 
 .stage {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 10px;
 }
@@ -129,20 +197,28 @@
   line-height: 1.5;
 }
 
+/* 空舞台：虚线框 + 垂直居中一句话，读起来是「这儿等着演」，不是「内容没加载出来」 */
 .empty {
+  display: grid;
+  flex: 1 1 auto;
+  place-content: center;
   margin: 0;
+  min-height: 120px;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 2px;
   color: var(--ink-2);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.7;
+  text-align: center;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 700px) {
   .tabs {
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .tab {
-    flex: 1 1 30%;
-    min-width: 0;
+    min-height: 48px;
   }
 }

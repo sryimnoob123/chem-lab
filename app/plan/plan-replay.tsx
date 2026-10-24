@@ -68,6 +68,10 @@ export function PlanReplay({
   /* 空格暂停 / 回车跳过：键盘用户不用去抓小按钮 */
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      // 输入控件里不抢键：designer 阶段同一页有 number/checkbox 输入（参数区），
+      // 全局拦空格会让复选框勾不动、页面也滚不了（实测）。
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable]")) return;
       if (event.key === " ") {
         event.preventDefault();
         setPlaying((v) => !v);

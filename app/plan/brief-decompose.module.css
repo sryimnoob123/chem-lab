@@ -105,6 +105,29 @@
   white-space: nowrap;
 }
 
+.retry {
+  min-height: 36px;
+  margin-top: 8px;
+  padding: 4px 14px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--card, #fff);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--type-meta, 12px);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms var(--ease-out, ease-out), transform 90ms;
+}
+
+.retry:hover {
+  border-color: var(--river-700);
+}
+
+.retry:active {
+  transform: scale(0.97);
+}
+
 .pieces {
   margin: 0 0 10px 36px;
   padding: 0;

@@ -96,6 +96,11 @@ function pick(ids: readonly string[], featured?: readonly string[]): string[] {
 /**
  * 模板拆解：四段流程，过滤掉本主题用不到的块。
  * 某段一块都不剩时**不返回这一段**（宁可少一段，也不要让学生看见空段）。
+ *
+ * 因此段数不恒等于 4：`topic-co2-blank` / `topic-soda-alkalinity` 是「滴定环节专项」主题，
+ * featured 里本来就没有天平/称量瓶/基准物，`weigh` 段自然是空的 → 这两个主题给 3 段。
+ * 界面文案用的是 `phases.length`（「这件事可以拆成 3 段」），不是写死的 4，所以不会前后矛盾；
+ * 别为了凑「4 段」把称量块硬塞进滴定主题 —— 那才是教错。单测 decompose.test.ts 把这张表钉住了。
  */
 export function templatePhases(topic?: PlanTopic): PlanPhase[] {
   return PHASE_TABLE.map((phase) => ({ ...phase, pieceIds: pick(phase.pieceIds, topic?.featured) })).filter(
