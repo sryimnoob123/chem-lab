@@ -28,7 +28,8 @@ export function BopbpsPostLab({
   postScore = null,
 }: {
   expId: string;
-  onSubmit?: (score: number) => void;
+  /** 提交后回调：带上这次选中的答案，后测页用它落库（quiz_answers phase="post"） */
+  onSubmit?: (score: number, picked: Record<string, string>) => void;
   readOnly?: boolean;
   /** 回顾时显示那次后测的成绩（从后测页带过来，报告页不再重算） */
   postScore?: number | null;
@@ -159,7 +160,7 @@ export function BopbpsPostLab({
               disabled={!answered}
               onClick={() => {
                 setManualDone(true);
-                onSubmit?.(score);
+                onSubmit?.(score, picked);
               }}
               className="btn btn--primary"
               style={{ minHeight: 44, padding: "0 18px" }}

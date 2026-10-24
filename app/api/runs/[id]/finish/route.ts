@@ -4,6 +4,10 @@
  * 服务端按 timeline 重放并用 lib/pedagogy/scoring.ts 结算，
  * 写 runs.status="finished" + finishedAt + 三段分/总分/score_detail，返回报告数据。
  * 幂等：已交卷直接返回原报告，不重复扣分。
+ *
+ * 预习分不再有「演示按满分」特例（2026-10-24 收掉 `?auto=1` override）：
+ * 前测答案由 POST /api/runs/[id]/quiz 真实落库，交卷时按 quiz_answers 的正确率结算，
+ * 真实学生与演示路径同一口径。
  */
 
 import { finishRun, buildReportPayload } from "@/lib/persist/report";
@@ -20,10 +24,7 @@ export async function POST(
   try {
     const { id } = await params;
     await accessRun(id);
-    // ?auto=1（一键演示）：预习门禁被绕过，预习分按满分落库，
-    // 保证教师端 / 报告页 / 导出读的是同一份数据。
-    const autoDemo = new URL(request.url).searchParams.get("auto") === "1";
-    const bundle = await finishRun(id, autoDemo ? { preview: 100 } : undefined);
+    const bundle = await finishRun(id);
     return json({ ok: true, ...buildReportPayload(bundle) });
   } catch (error) {
     return handleError(error);

@@ -50,6 +50,8 @@ import guide from "@/components/exp/guide/guide.module.css";
 import { SoundToggle } from "@/components/audio/sound-toggle";
 import { ensureAudio, playSound } from "@/lib/audio/engine";
 import type { FxKey as SceneFxKey } from "@/lib/scene/fx";
+import { getCurriculum } from "@/lib/pedagogy/curriculum";
+import { readPreSubmission, writePreSubmission } from "@/lib/pedagogy/quiz-store";
 import { ExperimentDock } from "./experiment-dock";
 import { exp01StepHow } from "@/experiments/exp01/step-how";
 import { rackIdsFor } from "./rack-ids";
@@ -428,6 +430,39 @@ export function Workbench({
     [demoReadonly],
   );
 
+  /**
+   * 把门禁里存下的前测答案补写进 quiz_answers。
+   *
+   * 前测发生在 run 创建之前（`quiz_answers.run_id` 是 notNull），所以走「run 创建后补写」：
+   * bootstrap 拿到 runId 补一次，交卷前再补一次（覆盖「重做前测」后的答案）。
+   * 失败不挡实验流程 —— 只是预习分会是 0，报告页照常出。
+   *
+   * `autoFill`（只有演示路径会传）：一键演示 `?autodemo=1` / auto 输入模式会绕过前测门禁，
+   * 浏览器里没有学生答案 —— 这时按课程数据的正确答案替演示做一遍前测并落库，
+   * 让演示报告也走「按答案算正确率」的正常口径（不再有 `?auto=1` 预习满分 override）。
+   */
+  const syncPreAnswers = useCallback(
+    async (runId: string, options?: { autoFill?: boolean }): Promise<void> => {
+      let submission = readPreSubmission(expId);
+      if (!submission && options?.autoFill) {
+        const curriculum = getCurriculum(expId);
+        if (curriculum?.pre.length) {
+          const answers: Record<string, string> = {};
+          for (const question of curriculum.pre) answers[question.id] = question.answer;
+          writePreSubmission(expId, answers);
+          submission = { answers, at: new Date().toISOString() };
+        }
+      }
+      if (!submission) return;
+      await fetch(`/api/runs/${runId}/quiz`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phase: "pre", answers: submission.answers }),
+      }).catch(() => null);
+    },
+    [expId],
+  );
+
   const bootstrap = useCallback(async (): Promise<string | null> => {
     try {
       // 演示只读模式既不落库也不需要会话：提前返回，避免匿名 fetch /api/session 在控制台打 401
@@ -460,6 +495,10 @@ export function Workbench({
       if (!data?.ok || typeof data.runId !== "string") return null;
 
       runIdRef.current = data.runId;
+      // 前测答案补写（预习分靠它成立）：不 await，别挡操作台的第一批动作。
+      // ?autodemo=1 演示路径没真人答前测，按正确答案补一份（见 syncPreAnswers）。
+      const autoDemoFromUrl = new URLSearchParams(window.location.search).get("autodemo") === "1";
+      void syncPreAnswers(data.runId, { autoFill: autoDemoFromUrl });
       const queued = queueRef.current.splice(0);
       queued.forEach((item) => sendAction(item.action, item.inputMode));
       const queuedDrops = dropQueueRef.current.splice(0);
@@ -472,7 +511,7 @@ export function Workbench({
       retryRef.current = () => window.location.reload();
       return null;
     }
-  }, [demoReadonly, expId, sendAction, sendDrop]);
+  }, [demoReadonly, expId, sendAction, sendDrop, syncPreAnswers]);
 
   useEffect(() => {
     if (!bootstrapRef.current) bootstrapRef.current = bootstrap();
@@ -1076,9 +1115,10 @@ export function Workbench({
       if (!runId) runId = await (bootstrapRef.current ?? Promise.resolve(null));
       if (runId) {
         await Promise.allSettled(inflightRef.current);
-        // 一键演示交卷带 auto=1：服务端用它给预�?100 分并�?10/40/50 重算总分�?
-        // 否则报告页比演示脚本�?10 分（Lead 2026-10-22 收尾口径）�?
-        const finishUrl = `/api/runs/${runId}/finish${mode === "auto" ? "?auto=1" : ""}`;
+        // 交卷前补写一次前测答案：覆盖「重做前测」后的版本，预习分要在结算前就位。
+        // auto 输入模式（一键演示）没真人答题，按正确答案补一份。
+        await syncPreAnswers(runId, { autoFill: mode === "auto" });
+        const finishUrl = `/api/runs/${runId}/finish`;
         const res = await fetch(finishUrl, { method: "POST" }).catch(() => null);
         finishedOk = Boolean(res?.ok);
       }
@@ -1101,7 +1141,7 @@ export function Workbench({
           : `/exp/${expId}/report${mode === "auto" ? "?auto=1" : ""}`,
       );
     }
-  }, [demoReadonly, expId, mode, router]);
+  }, [demoReadonly, expId, mode, router, syncPreAnswers]);
 
   // 一键演示：auto 模式下最后一步做完就自动交卷并落到报告页，
   // 不再停在"交卷并查看报�?让评委多点一下（用户 2026-10-21 要求）�?

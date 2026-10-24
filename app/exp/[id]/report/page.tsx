@@ -108,8 +108,9 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
 
   const scores = bundle?.scores ?? { preview: null, operation: null, report: null, total: null, detail: null };
   /**
-   * 一键演示（?auto=1）的预习满分已在交卷时按 ?auto=1 落库（lib/persist/report.ts 的 finishRun override），
-   * 这里一律读库，保证教师端 / 报告页 / 导出三个口径一致，不再在展示层加 10 分。
+   * 预习/操作/报告三段分一律读库（runs.score_pre / score_op / score_report）：预习分是
+   * quiz_answers 里 phase="pre" 的真实正确率（前测提交后由 /api/runs/[id]/quiz 落库），
+   * 展示层不再加分，保证教师端 / 报告页 / 导出三个口径一致。
    */
   const preview = scores.preview ?? 0;
   const operation = scores.operation ?? 0;

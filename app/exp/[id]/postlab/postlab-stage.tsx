@@ -37,9 +37,19 @@ export function PostlabStage({
     <div>
       <BopbpsPostLab
         expId={expId}
-        onSubmit={(value) => {
+        onSubmit={(value, answers) => {
           setScore(value);
           setDone(true);
+          // 后测答案落库（quiz_answers phase="post"）：与预习分同一条写路径。
+          // 交卷在进入本页之前已经发生，所以这次写入不重算已冻结的 runs 分数；
+          // 报告页的「后测回顾」仍按 URL 里的 ?post= 显示。
+          if (runId) {
+            void fetch(`/api/runs/${runId}/quiz`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ phase: "post", answers }),
+            }).catch(() => null);
+          }
         }}
       />
       {done || auto ? (
