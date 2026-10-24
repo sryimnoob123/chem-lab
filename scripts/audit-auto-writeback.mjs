@@ -1,7 +1,12 @@
 /**
- * 验证 ?auto=1 写库：交卷时带 auto=1，预习分应按满分 100 落库，且总分按 10/40/50 重算。
+ * 验证预习分落库：quiz_answers 里 phase="pre" 的答案决定预习分，`?auto=1` 不再有满分特例。
  *
- * 对照：不带 auto=1 时，同一实验预习分应为 0（演示路径不走前测门禁）。
+ * 三条对照：
+ *   A. 前测答案全对落库 → 交卷预习分 100，总分 = 10/40/50 重算值；
+ *   B. 前测答案错 1 题（2/3）→ 预习分 67（正确率 66.67 取整）；
+ *   C. 完全不落前测答案 → 预习分 0（历史 run / 没做前测）。
+ *   D. 交卷带 ?auto=1 与不带，结果一致（特例已收掉）。
+ *
  * 用法：node scripts/audit-auto-writeback.mjs
  */
 const BASE = process.env.BASE_URL ?? "http://127.0.0.1:3001";
@@ -44,36 +49,58 @@ async function readScores(cookie, runId) {
   return body.scores ?? {};
 }
 
+/** 写一次前测作答（题号规则与 lib/pedagogy/curriculum 一致：expNN-pre-1..3） */
+async function recordQuiz(cookie, runId, experimentId) {
+  const answers = {};
+  for (let i = 1; i <= 3; i += 1) answers[`${experimentId}-pre-${i}`] = "A";
+  const res = await fetch(`${BASE}/api/runs/${runId}/quiz`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie },
+    body: JSON.stringify({ phase: "pre", answers }),
+  });
+  const body = await res.json();
+  if (!res.ok || !body.ok) throw new Error(`quiz failed: ${JSON.stringify(body)}`);
+  return body;
+}
+
 const cookie = await login();
 console.log("已登录学生 20250101");
 
+const CASES = [
+  { label: "A 落前测答案", experimentId: "exp01", record: true, autoDemo: false },
+  { label: "B 不落前测答案", experimentId: "exp03", record: false, autoDemo: false },
+  { label: "C 落答案 + 交卷带 ?auto=1", experimentId: "exp01", record: true, autoDemo: true },
+];
+
 const rows = [];
-for (const autoDemo of [true, false]) {
-  const experimentId = autoDemo ? "exp01" : "exp03";
-  const runId = await openRun(cookie, experimentId);
-  const returned = await finish(cookie, runId, autoDemo);
+for (const item of CASES) {
+  const runId = await openRun(cookie, item.experimentId);
+  const quiz = item.record ? await recordQuiz(cookie, runId, item.experimentId) : null;
+  const returned = await finish(cookie, runId, item.autoDemo);
   const stored = await readScores(cookie, runId);
   rows.push({
-    实验: experimentId,
-    "auto=1": autoDemo ? "是" : "否",
+    用例: item.label,
+    实验: item.experimentId,
+    前测正确率: quiz ? `${quiz.correct}/${quiz.total}（${quiz.score.toFixed(1)}）` : "未提交",
     接口返回preview: returned.preview,
     库内preview: stored.preview,
     库内operation: stored.operation,
     库内report: stored.report,
     库内total: stored.total,
     按104050重算: Math.round(stored.preview * 0.1 + stored.operation * 0.4 + stored.report * 0.5),
+    前测应得preview: quiz ? Math.round(quiz.score) : 0,
   });
 }
 
 console.table(rows);
 
-const auto = rows.find((r) => r["auto=1"] === "是");
-const plain = rows.find((r) => r["auto=1"] === "否");
+const [a, b, c] = rows;
 const checks = [
-  ["auto=1 时预习分落库为 100", auto?.库内preview === 100],
-  ["auto=1 时接口返回值与库内一致", auto?.接口返回preview === auto?.库内preview],
-  ["auto=1 时总分 = 10/40/50 重算值", auto?.库内total === auto?.按104050重算],
-  ["不带 auto=1 时预习分仍为 0（真实学生不受影响）", plain?.库内preview === 0],
+  ["A 预习分 = 前测正确率（四舍五入）", a?.库内preview === a?.前测应得preview],
+  ["A 接口返回值与库内一致", a?.接口返回preview === a?.库内preview],
+  ["A 总分 = 10/40/50 重算值", a?.库内total === a?.按104050重算],
+  ["B 没落前测答案时预习分为 0", b?.库内preview === 0],
+  ["C 交卷带 ?auto=1 与不带结果一致（特例已收掉）", c?.库内preview === a?.库内preview],
 ];
 
 console.log("");

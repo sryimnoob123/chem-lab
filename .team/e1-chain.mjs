@@ -545,6 +545,20 @@ async function doScore(page) {
   if (!Number.isFinite(data.total)) fail(`总分不是数字：${data.raw}`);
   if (data.badWords) fail("报告页出现 NaN/undefined 字样");
   if (data.total === 0) fail(`报告页总分是 0（${data.raw}）—— 动作没有落库或没有身份，分数算不出来`);
+  // 前测分数必须真的进分数（2026-10-24：quiz_answers 只有读路径，预习分恒 0 的系统性缺口）
+  const pre = data.parts["预习"];
+  const op = data.parts["操作"];
+  const rep = data.parts["报告"];
+  if (pre === undefined || op === undefined || rep === undefined) {
+    fail(`三段分读不全：${JSON.stringify(data.parts)}`);
+  }
+  if (!(pre > 0)) {
+    fail(`预习分是 ${pre}（三段分 ${JSON.stringify(data.parts)}）—— 前测答案没落库，quiz_answers 里没有 phase="pre" 的行`);
+  }
+  const expectTotal = Math.round(0.1 * pre + 0.4 * op + 0.5 * rep);
+  if (data.total !== expectTotal) {
+    fail(`总分与三段分不自洽：页面 ${data.total}，按 10/40/50 重算 ${expectTotal}（${JSON.stringify(data.parts)}）`);
+  }
   const partsStr = Object.entries(data.parts).map(([k, v]) => `${k}${v}`).join(" ");
   return `总分=${data.total}/100 三段分[${partsStr}] 后测=${data.post ?? "?"} 事实=[${data.facts.join(" / ")}]`;
 }
