@@ -1,0 +1,46 @@
+{
+  "before": "E:\\workspace\\public\\NOBBBB\\chem-lab\\evidence\\2026-10-24-final\\regress-before",
+  "after": "E:\\workspace\\public\\NOBBBB\\chem-lab\\evidence\\2026-10-24-final\\regress",
+  "rows": [
+    {
+      "name": "exp03",
+      "label": "exp03 醋酸电离度",
+      "w": 1440,
+      "h": 900,
+      "changed": 0,
+      "total": 1296000,
+      "pct": 0,
+      "maxDelta": 1
+    },
+    {
+      "name": "exp09",
+      "label": "exp09 酸碱滴定",
+      "w": 1440,
+      "h": 900,
+      "changed": 0,
+      "total": 1296000,
+      "pct": 0,
+      "maxDelta": 2
+    },
+    {
+      "name": "report",
+      "label": "报告页",
+      "w": 1440,
+      "h": 900,
+      "changed": 0,
+      "total": 1296000,
+      "pct": 0,
+      "maxDelta": 0
+    },
+    {
+      "name": "teacher",
+      "label": "教师端",
+      "w": 1440,
+      "h": 900,
+      "changed": 45,
+      "total": 1296000,
+      "pct": 0.0035,
+      "maxDelta": 172
+    }
+  ]
+}

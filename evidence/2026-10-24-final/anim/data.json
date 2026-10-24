@@ -1,0 +1,399 @@
+{
+  "base": "http://127.0.0.1:3000",
+  "out": "E:\\workspace\\public\\NOBBBB\\chem-lab\\evidence\\2026-10-24-final\\anim",
+  "manifest": [
+    {
+      "id": "C1",
+      "file": "C1-洗涤.png",
+      "fileFull": "C1-洗涤-全段.png",
+      "ms": 1955,
+      "frames": 8
+    },
+    {
+      "id": "C5",
+      "file": "C5-称量.png",
+      "fileFull": "C5-称量-全段.png",
+      "ms": 953,
+      "frames": 8
+    },
+    {
+      "id": "C3",
+      "file": "C3-加试剂.png",
+      "fileFull": "C3-加试剂-全段.png",
+      "ms": 1099,
+      "frames": 8
+    },
+    {
+      "id": "C2",
+      "file": "C2-搅拌.png",
+      "fileFull": "C2-搅拌-全段.png",
+      "ms": 1895,
+      "frames": 8
+    },
+    {
+      "id": "C6",
+      "file": "C6-定容.png",
+      "fileFull": "C6-定容-全段.png",
+      "ms": 1674,
+      "frames": 8
+    },
+    {
+      "id": "C4",
+      "file": "C4-转移.png",
+      "fileFull": "C4-转移-全段.png",
+      "ms": 2049,
+      "frames": 7
+    }
+  ],
+  "shots": [
+    {
+      "label": "C1-洗涤",
+      "stepFrom": 1,
+      "stepTo": 2,
+      "metrics": {
+        "animMs": 1892,
+        "domMs": 1955,
+        "triggerToQuietMs": null,
+        "fps": {
+          "windowMs": 1955,
+          "frames": 93,
+          "avg": 20.2,
+          "p95": 24,
+          "max": 48,
+          "over33": 1
+        },
+        "layers": [
+          "add:action@1792815810959",
+          "remove:action@1792815812914"
+        ]
+      },
+      "clickableRatio": 0.19,
+      "before": {
+        "levels": [],
+        "readout": "0.0000 g"
+      },
+      "after": {
+        "levels": [],
+        "readout": "0.0000 g"
+      },
+      "segs": [
+        {
+          "start": 1792815810959,
+          "end": 1792815812914
+        }
+      ],
+      "segsUsed": {
+        "main": {
+          "start": 1792815810959,
+          "end": 1792815812914
+        },
+        "all": [
+          {
+            "start": 1792815810959,
+            "end": 1792815812914
+          }
+        ]
+      },
+      "captionAfter": [
+        "错误演示"
+      ]
+    },
+    {
+      "label": "C5-称量",
+      "stepFrom": 3,
+      "stepTo": 4,
+      "metrics": {
+        "animMs": 887,
+        "domMs": 953,
+        "triggerToQuietMs": null,
+        "fps": {
+          "windowMs": 953,
+          "frames": 36,
+          "avg": 24.5,
+          "p95": 30,
+          "max": 30,
+          "over33": 0
+        },
+        "layers": [
+          "add:action@1792815833741",
+          "remove:action@1792815834694"
+        ]
+      },
+      "clickableRatio": 0.09,
+      "before": {
+        "levels": [],
+        "readout": "0.00 g"
+      },
+      "after": {
+        "levels": [
+          {
+            "id": "beaker",
+            "level": 0.3,
+            "fill": "#DCE9F2",
+            "sediment": false
+          }
+        ],
+        "readout": "1.0599 g"
+      },
+      "segs": [
+        {
+          "start": 1792815833741,
+          "end": 1792815834694
+        }
+      ],
+      "segsUsed": {
+        "main": {
+          "start": 1792815833741,
+          "end": 1792815834694
+        },
+        "all": [
+          {
+            "start": 1792815833741,
+            "end": 1792815834694
+          }
+        ]
+      },
+      "captionAfter": [
+        "错误演示"
+      ]
+    },
+    {
+      "label": "C3C2-加试剂与搅拌",
+      "stepFrom": 4,
+      "stepTo": 5,
+      "metrics": {
+        "animMs": 2932,
+        "domMs": 2994,
+        "triggerToQuietMs": null,
+        "fps": {
+          "windowMs": 2994,
+          "frames": 112,
+          "avg": 26.13,
+          "p95": 30,
+          "max": 78,
+          "over33": 3
+        },
+        "layers": [
+          "add:pour@1792815846299",
+          "remove:pour@1792815847398",
+          "add:action@1792815847398",
+          "remove:action@1792815849293"
+        ]
+      },
+      "clickableRatio": 0.17,
+      "before": {
+        "levels": [
+          {
+            "id": "beaker",
+            "level": 0.3,
+            "fill": "#DCE9F2",
+            "sediment": false
+          }
+        ],
+        "readout": "1.0599 g"
+      },
+      "after": {
+        "levels": [
+          {
+            "id": "beaker",
+            "level": 0.3,
+            "fill": "#DCE9F2",
+            "sediment": false
+          }
+        ],
+        "readout": "1.0599 g"
+      },
+      "segs": [
+        {
+          "start": 1792815846299,
+          "end": 1792815847398
+        },
+        {
+          "start": 1792815847398,
+          "end": 1792815849293
+        }
+      ],
+      "segsUsed": {
+        "pour": {
+          "start": 1792815846299,
+          "end": 1792815847398
+        },
+        "act": {
+          "start": 1792815847398,
+          "end": 1792815849293
+        }
+      },
+      "captionAfter": [
+        "错误演示"
+      ]
+    },
+    {
+      "label": "C6-定容",
+      "stepFrom": 5,
+      "stepTo": 6,
+      "metrics": {
+        "animMs": 2710,
+        "domMs": 2778,
+        "triggerToQuietMs": null,
+        "fps": {
+          "windowMs": 2778,
+          "frames": 94,
+          "avg": 28.79,
+          "p95": 41,
+          "max": 73,
+          "over33": 8
+        },
+        "layers": [
+          "add:pour@1792815858766",
+          "remove:pour@1792815859870",
+          "add:action@1792815859870",
+          "remove:action@1792815861544"
+        ]
+      },
+      "clickableRatio": 0.14,
+      "before": {
+        "levels": [
+          {
+            "id": "beaker",
+            "level": 0.3,
+            "fill": "#DCE9F2",
+            "sediment": false
+          }
+        ],
+        "readout": "1.0599 g"
+      },
+      "after": {
+        "levels": [
+          {
+            "id": "beaker",
+            "level": 0.3,
+            "fill": "#DCE9F2",
+            "sediment": false
+          },
+          {
+            "id": "volumetric",
+            "level": 0.92,
+            "fill": "#DCE9F2",
+            "sediment": false
+          }
+        ],
+        "readout": "1.0599 g"
+      },
+      "segs": [
+        {
+          "start": 1792815858766,
+          "end": 1792815859870
+        },
+        {
+          "start": 1792815859870,
+          "end": 1792815861544
+        }
+      ],
+      "segsUsed": {
+        "main": {
+          "start": 1792815859870,
+          "end": 1792815861544
+        },
+        "all": [
+          {
+            "start": 1792815858766,
+            "end": 1792815859870
+          },
+          {
+            "start": 1792815859870,
+            "end": 1792815861544
+          }
+        ]
+      },
+      "captionAfter": [
+        "错误演示"
+      ]
+    },
+    {
+      "label": "C4-转移",
+      "stepFrom": 6,
+      "stepTo": 7,
+      "metrics": {
+        "animMs": 1964,
+        "domMs": 2049,
+        "triggerToQuietMs": null,
+        "fps": {
+          "windowMs": 2049,
+          "frames": 74,
+          "avg": 26.45,
+          "p95": 31,
+          "max": 36,
+          "over33": 1
+        },
+        "layers": [
+          "add:action@1792815871340",
+          "remove:action@1792815873389"
+        ]
+      },
+      "clickableRatio": 0.18,
+      "before": {
+        "levels": [
+          {
+            "id": "beaker",
+            "level": 0.3,
+            "fill": "#DCE9F2",
+            "sediment": false
+          },
+          {
+            "id": "volumetric",
+            "level": 0.92,
+            "fill": "#DCE9F2",
+            "sediment": false
+          }
+        ],
+        "readout": "1.0599 g"
+      },
+      "after": {
+        "levels": [
+          {
+            "id": "flask",
+            "level": 0.167,
+            "fill": "#DCE9F2",
+            "sediment": false
+          },
+          {
+            "id": "beaker",
+            "level": 0.3,
+            "fill": "#DCE9F2",
+            "sediment": false
+          },
+          {
+            "id": "volumetric",
+            "level": 0.92,
+            "fill": "#DCE9F2",
+            "sediment": false
+          }
+        ],
+        "readout": "1.0599 g"
+      },
+      "segs": [
+        {
+          "start": 1792815871340,
+          "end": 1792815873389
+        }
+      ],
+      "segsUsed": {
+        "main": {
+          "start": 1792815871340,
+          "end": 1792815873389
+        },
+        "all": [
+          {
+            "start": 1792815871340,
+            "end": 1792815873389
+          }
+        ]
+      },
+      "captionAfter": [
+        "错误演示"
+      ]
+    }
+  ],
+  "errors": [],
+  "frameCount": 408
+}
