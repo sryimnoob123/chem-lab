@@ -42,11 +42,25 @@ export { buildEnvelope, scheduleTones, type EnvelopePoint, type ToneSpan } from 
 /** 延迟播放上限，防止调用方传个离谱值把声音排到几秒后。 */
 const MAX_DELAY_MS = 2000;
 
-type AudioContextCtor = new () => AudioContext;
-
+/**
+ * 第一次 `new AudioContext()` 在本机会同步阻塞 **59~190ms**（实测 2026-10-24，第五轮）：
+ * 这一步是开音频设备，跟动画同一帧就会顶出一个 165ms 长帧。
+ * 所以：**绝不在手势回调里同步建**。改成
+ *   1. 页面空闲时先建（`primeAudio()`，构造完是 suspended 也无所谓）；
+ *   2. 手势里只 `resume()`（实测 0.2ms）；
+ *   3. 还没建好时来的声音先入队，建好后补播（超过 TTL 的丢掉，不补一声迟到的）。
+ */
 let audioContext: AudioContext | null = null;
 let masterGain: GainNode | null = null;
 let visibilityBound = false;
+/** 初始化已经排进空闲队列（防重复排） */
+let initScheduled = false;
+/** 还没建好时来的声音 */
+const pending: { id: SoundId; dueAt: number }[] = [];
+const MAX_PENDING = 4;
+const PENDING_TTL_MS = 600;
+
+type AudioContextCtor = new () => AudioContext;
 
 function getAudioContextCtor(): AudioContextCtor | null {
   if (typeof window === "undefined") return null;
@@ -87,10 +101,10 @@ function bindVisibility(ctx: AudioContext): void {
 }
 
 /**
- * 懒加载 AudioContext（必须在用户交互里首次调用才不违反自动播放策略）。
+ * 同步建 AudioContext（内部用；**只允许从空闲回调或非手势路径调**）。
  * 返回 null 表示当前环境不支持，调用方应静默降级。
  */
-export function ensureAudio(): AudioContext | null {
+function createAudio(): AudioContext | null {
   if (audioContext) return audioContext;
   const Ctor = getAudioContextCtor();
   if (!Ctor) return null;
@@ -110,6 +124,60 @@ export function ensureAudio(): AudioContext | null {
     masterGain = null;
     return null;
   }
+}
+
+/** 建好后把排队的声音补播（超过 TTL 的丢掉：宁可这一声不响，也不要迟到几百毫秒才响）。 */
+function flushPending(ctx: AudioContext): void {
+  if (!pending.length) return;
+  const now = typeof performance === "undefined" ? Date.now() : performance.now();
+  const due = pending.splice(0, pending.length);
+  for (const item of due) {
+    const late = now - item.dueAt;
+    if (late > PENDING_TTL_MS) continue;
+    playNow(ctx, item.id, Math.max(0, -late));
+  }
+}
+
+/** 把「建 AudioContext」排到空闲时（不阻塞当前帧）。 */
+function scheduleAudioInit(): void {
+  if (audioContext || initScheduled) return;
+  if (!getAudioContextCtor()) return;
+  initScheduled = true;
+  const run = () => {
+    initScheduled = false;
+    const ctx = createAudio();
+    if (!ctx) {
+      pending.length = 0;
+      return;
+    }
+    flushPending(ctx);
+  };
+  const idle = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number })
+    .requestIdleCallback;
+  if (typeof idle === "function") {
+    // timeout 保底：真忙的时候也别一直不建，1.5s 内必须建出来
+    idle(run, { timeout: 1500 });
+    return;
+  }
+  window.setTimeout(run, 0);
+}
+
+/**
+ * 预热音频：页面挂载后调一次，把「开音频设备」这 60~190ms 摊到没人看得见的空闲里。
+ * 建出来是 suspended 也没关系，真正出声前 `playSound` 会 resume（0.2ms）。
+ */
+export function primeAudio(): void {
+  scheduleAudioInit();
+}
+
+/**
+ * 确保 AudioContext 存在（调用点在手势里时**不会**同步建，改为排进空闲队列）。
+ * 返回 null 表示「还没建好 / 环境不支持」，调用方按静默降级处理。
+ */
+export function ensureAudio(): AudioContext | null {
+  if (audioContext) return audioContext;
+  scheduleAudioInit();
+  return null;
 }
 
 function noiseBuffer(ctx: AudioContext, durationMs: number): AudioBuffer {
@@ -191,22 +259,40 @@ export interface PlayOptions {
   delayMs?: number;
 }
 
+/** 立刻把一条音效排进给定的 context（不做建/恢复）。 */
+function playNow(ctx: AudioContext, id: SoundId, delaySec: number): void {
+  try {
+    const spec = getSound(id);
+    if (ctx.state === "suspended") void ctx.resume().catch(() => {});
+    const startSec = ctx.currentTime + 0.01 + delaySec;
+    scheduleSpec(ctx, spec, startSec);
+  } catch {
+    // 静默降级
+  }
+}
+
 /**
  * 播一条音效。**任何情况下都不抛错**：静音 / SSR / 不支持 / Context 创建失败均静默返回。
- * 需在用户交互链路里调用（点击、拖拽、键盘），否则浏览器会挂起音频。
+ *
+ * 注意：AudioContext 还没建好时**不在这里同步建**（那是 60~190ms 的主线程阻塞），
+ * 改为入队 + 排进空闲队列，建好后再补播；迟到的超过 600ms 就不响了。
  *
  * @example playSound("ok-l2")
  */
 export function playSound(id: SoundId, opts: PlayOptions = {}): void {
   try {
     if (isMuted()) return;
-    const spec = getSound(id);
-    const ctx = ensureAudio();
-    if (!ctx) return;
-    if (ctx.state === "suspended") void ctx.resume().catch(() => {});
-    const startSec =
-      ctx.currentTime + 0.01 + clampDelayMs(opts.delayMs, MAX_DELAY_MS) / 1000;
-    scheduleSpec(ctx, spec, startSec);
+    const delaySec = clampDelayMs(opts.delayMs, MAX_DELAY_MS) / 1000;
+    const ctx = audioContext;
+    if (!ctx) {
+      // 入队（丢了最旧的），等空闲建好后补播
+      if (pending.length >= MAX_PENDING) pending.shift();
+      const now = typeof performance === "undefined" ? Date.now() : performance.now();
+      pending.push({ id, dueAt: now + delaySec * 1000 });
+      scheduleAudioInit();
+      return;
+    }
+    playNow(ctx, id, delaySec);
   } catch {
     // 静默降级：音效永远不能把业务链路打挂
   }
@@ -223,4 +309,6 @@ export function disposeAudio(): void {
   }
   audioContext = null;
   masterGain = null;
+  initScheduled = false;
+  pending.length = 0;
 }

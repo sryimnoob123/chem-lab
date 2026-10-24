@@ -48,7 +48,7 @@ import {
 } from "@/components/exp/incident";
 import guide from "@/components/exp/guide/guide.module.css";
 import { SoundToggle } from "@/components/audio/sound-toggle";
-import { ensureAudio, playSound } from "@/lib/audio/engine";
+import { ensureAudio, playSound, primeAudio } from "@/lib/audio/engine";
 import type { FxKey as SceneFxKey } from "@/lib/scene/fx";
 import { getCurriculum } from "@/lib/pedagogy/curriculum";
 import { readPreSubmission, writePreSubmission } from "@/lib/pedagogy/quiz-store";
@@ -517,6 +517,12 @@ export function Workbench({
     if (!bootstrapRef.current) bootstrapRef.current = bootstrap();
     void bootstrapRef.current;
   }, [bootstrap]);
+
+  useEffect(() => {
+    // 第五轮：音频设备初始化（new AudioContext，实测 60~190ms 主线程阻塞）摊到页面空闲时，
+    // 别让它撞上第一次拖拽/投放那一帧（那条长帧曾达 165ms）。
+    primeAudio();
+  }, []);
 
   useEffect(() => {
     router.prefetch(`/exp/${expId}/report`);
