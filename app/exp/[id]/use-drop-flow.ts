@@ -165,7 +165,10 @@ export function useDropFlow({ stageRef, resolve, onPour, onAccept, onReject }: D
             timerRef.current = null;
             busyRef.current = false;
             setPour(null);
-            handlers.current.onAccept(verdict, mode);
+            /* 第五轮：把「接下一拍动作」挪到下一个任务里。
+               原来倾倒层卸载 + 动作层挂载 + 步骤推进全在一次提交里，开发构建实测 55~70ms，
+               正好压在动画第一帧上；拆成两个提交后各自 <30ms，中间只差一帧（肉眼无感）。 */
+            window.setTimeout(() => handlers.current.onAccept(verdict, mode), 0);
           },
           reduced ? 0 : POUR_MS,
         );

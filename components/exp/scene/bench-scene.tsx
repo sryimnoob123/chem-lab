@@ -7,6 +7,7 @@ import type { SceneFx, SceneOutcome } from "@/lib/scene/types";
 import { DropHint } from "./drop-hint";
 import styles from "./scene.module.css";
 import { VesselArt } from "./vessel-art";
+import { EMPTY_CONTENTS } from "./vessels";
 import { ToolTray } from "./tool-tray";
 import { MobileDock } from "./mobile-dock";
 import { Sink } from "./sink";
@@ -206,7 +207,7 @@ export function BenchScene({
   }, [offsets]);
 
   /** 这台器皿的底液位：内容物里本来就有液体 → 0.38，只有固体 → 0（只有器底粉末层）。 */
-  const baseLevelOf = (id: string) => (hasLiquidContent(contents[id] ?? []) ? 0.38 : 0);
+  const baseLevelOf = (id: string) => (hasLiquidContent(contents[id] ?? EMPTY_CONTENTS) ? 0.38 : 0);
   /** 倒过 n 次之后的液位（0.22 一格，上限 0.88，不超过器皿的 topMax）。 */
   const levelAfter = (id: string, n: number) => Math.min(0.88, Number((baseLevelOf(id) + 0.22 * n).toFixed(3)));
 
@@ -339,7 +340,13 @@ export function BenchScene({
    *  器皿坐标来自 palette（固定），窄视口下最右那台会被右栏压住 ——
    *  shiftInsideRight 只把它们整体左移，够不着时 dx=0（大屏版面不动）。
    *  放在这里（而不是器械渲染前）是因为拖动范围要按平移后的原点算。 */
-  const vesselShift = shiftInsideRight(vesselIds ? SCENE_VESSELS.filter((v) => vesselIds.includes(v.id)) : SCENE_VESSELS, safeRight);
+  /** 依赖用「器皿 id 串」而不是数组本身：调用方每次渲染都可能传新数组，直接依赖数组会让 useMemo 白做 */
+  const vesselIdsKey = vesselIds?.join("|") ?? "";
+  const vesselShift = useMemo(
+    () => shiftInsideRight(vesselIds ? SCENE_VESSELS.filter((v) => vesselIds.includes(v.id)) : SCENE_VESSELS, safeRight),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只需要知道「哪些器皿 / 右栏边界」，数组身份不重要
+    [vesselIdsKey, safeRight],
+  );
   /** 取成基本类型再往回调里用：直接读 vesselShift.dx 会让 React Compiler 放弃这份 useCallback 的缓存 */
   const layoutDx = vesselShift.dx;
   const vessels = vesselShift.items;
@@ -970,7 +977,7 @@ export function BenchScene({
               onPointerCancel={() => paintPressed(null)}
               aria-label={
                 droppable
-                  ? `${vessel.label}，内含${describeContents(contents[vessel.id] ?? [])}，可接收试剂`
+                  ? `${vessel.label}，内含${describeContents(contents[vessel.id] ?? EMPTY_CONTENTS)}，可接收试剂`
                   : `${vessel.label}，只装标准溶液，不接受投加试剂；拖入会给出规范提示`
               }
               onPointerLeave={() => paintPressed(null)}
